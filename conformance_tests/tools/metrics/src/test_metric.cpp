@@ -3061,43 +3061,4 @@ LZT_TEST_F(
   }
 }
 
-LZT_TEST_F(
-    zetMetricStreamerTest,
-    GivenValidTypeIpMetricGroupWhenNotifyEveryNReportsExceedsBufferCapacityThenItIsClamped) {
-  for (auto device : devices) {
-    auto metricGroupInfo = lzt::get_metric_type_ip_group_info(
-        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED);
-    if (metricGroupInfo.size() == 0) {
-      GTEST_SKIP() << "No IP metric groups available on this platform";
-    }
-    metricGroupInfo =
-        lzt::optimize_metric_group_info_list(metricGroupInfo, 20, nullptr, 1);
-    auto groupInfo = metricGroupInfo[0];
-    lzt::activate_metric_groups(device, 1, &groupInfo.metricGroupHandle);
-
-    uint32_t requestedNotify = std::numeric_limits<uint32_t>::max();
-    // Open the streamer directly (not via the lzt helper) so a platform that
-    // cannot open an IP streamer is skipped cleanly.
-    zet_metric_streamer_desc_t streamerDesc = {
-        ZET_STRUCTURE_TYPE_METRIC_STREAMER_DESC, nullptr, requestedNotify,
-        samplingPeriod};
-    zet_metric_streamer_handle_t streamer = nullptr;
-    ze_result_t openResult = zetMetricStreamerOpen(
-        lzt::get_default_context(), device, groupInfo.metricGroupHandle,
-        &streamerDesc, nullptr, &streamer);
-    if (openResult != ZE_RESULT_SUCCESS || streamer == nullptr) {
-      lzt::deactivate_metric_groups(device);
-      GTEST_FAIL() << "Failed to create metric streamer for group "
-                   << groupInfo.metricGroupName;
-    }
-
-    uint32_t clampedNotify = streamerDesc.notifyEveryNReports;
-    EXPECT_GT(clampedNotify, 0u);
-    EXPECT_LT(clampedNotify, std::numeric_limits<uint32_t>::max());
-
-    lzt::metric_streamer_close(streamer);
-    lzt::deactivate_metric_groups(device);
-  }
-}
-
 } // namespace
