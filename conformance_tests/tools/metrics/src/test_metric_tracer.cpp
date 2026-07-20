@@ -1128,7 +1128,8 @@ LZT_TEST_F(zetMetricTracerTest,
     ASSERT_GT(num_decodable_metrics, 0U);
     for (uint32_t i = 0U; i < num_decodable_metrics; i++) {
       bool valid_type;
-      zet_metric_properties_t metric_properties;
+      zet_metric_properties_t metric_properties = {
+          ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
       lzt::get_metric_properties(metric_handles[i], &metric_properties);
       size_t metric_name_string_length;
       metric_name_string_length =
@@ -1366,7 +1367,8 @@ LZT_TEST_F(
                set_entry_start + metric_entries_per_set_count[set_index];
                index++) {
             auto &metric_entry = metric_entries[index];
-            zet_metric_properties_t metric_properties = {};
+            zet_metric_properties_t metric_properties = {
+                ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
             lzt::get_metric_properties(
                 decodable_metric_handles[metric_entry.metricIndex],
                 &metric_properties);
@@ -1456,7 +1458,8 @@ LZT_TEST_F(zetMetricTracerTest,
     decodable_metric_count = to_u32(decodable_metric_handles.size());
     for (uint32_t i = 0; i < decodable_metric_count; i++) {
       bool valid_type;
-      zet_metric_properties_t decodable_metric_properties;
+      zet_metric_properties_t decodable_metric_properties = {
+          ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
       lzt::get_metric_properties(decodable_metric_handles[i],
                                  &decodable_metric_properties);
       size_t metric_name_string_length;

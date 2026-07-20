@@ -27,6 +27,7 @@ uint32_t get_metric_group_count(ze_device_handle_t device) {
   EXPECT_GT(metricGroupCount, 0);
   return metricGroupCount;
 }
+
 std::vector<zet_metric_group_handle_t>
 get_metric_group_handles(ze_device_handle_t device) {
   auto metricGroupCount = get_metric_group_count(device);
@@ -42,6 +43,7 @@ uint32_t get_metric_count(zet_metric_group_handle_t metricGroup) {
   EXPECT_GT(metricCount, 0);
   return metricCount;
 }
+
 std::vector<zet_metric_handle_t>
 get_metric_handles(zet_metric_group_handle_t metricGroup) {
   uint32_t metricCount = get_metric_count(metricGroup);
@@ -53,7 +55,8 @@ get_metric_handles(zet_metric_group_handle_t metricGroup) {
 
 void get_metric_properties(zet_metric_handle_t hMetric,
                            zet_metric_properties_t *metricProperties) {
-  *metricProperties = {ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
+  ASSERT_NE(nullptr, metricProperties);
+  ASSERT_EQ(ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, metricProperties->stype);
   EXPECT_ZE_RESULT_SUCCESS(zetMetricGetProperties(hMetric, metricProperties));
 }
 
@@ -118,7 +121,8 @@ void logMetricGroupDebugInfo(const metricGroupInfo_t &groupInfo) {
   metricHandles = lzt::get_metric_handles(groupInfo.metricGroupHandle);
 
   for (auto metricHandle : metricHandles) {
-    zet_metric_properties_t metricProperties;
+    zet_metric_properties_t metricProperties = {
+        ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
     lzt::get_metric_properties(metricHandle, &metricProperties);
     LOG_DEBUG << " ";
     LOG_DEBUG << "metric name " << metricProperties.name;
@@ -1180,7 +1184,10 @@ void collect_device_properties(ze_device_handle_t device,
     device_description.append(std::to_string(device_properties.subdeviceId));
     device_description.append(". ");
   } else {
-    device_description.append("test device is a root device.");
+    uint32_t subDeviceCount = lzt::get_ze_sub_device_count(device);
+    device_description.append("Test device is a root device with ");
+    device_description.append(std::to_string(subDeviceCount));
+    device_description.append(" sub-devices. ");
   }
 }
 
@@ -1676,7 +1683,8 @@ void generate_metric_handles_list_from_param_values(
   for (uint32_t handle_index = 0; handle_index < metric_handles_subset_size;
        ++handle_index) {
     const zet_metric_handle_t metric_handle = metric_handles[handle_index];
-    zet_metric_properties_t metric_properties = {};
+    zet_metric_properties_t metric_properties = {
+        ZET_STRUCTURE_TYPE_METRIC_PROPERTIES, nullptr};
     lzt::get_metric_properties(metric_handle, &metric_properties);
     LOG_DEBUG << "%%%%%%%%";
     LOG_DEBUG << "metric properties for index " << handle_index;
