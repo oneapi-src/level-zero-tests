@@ -7,8 +7,8 @@
  */
 
 #include "gtest/gtest.h"
-#include "helpers_test_image.hpp"
 #include "test_harness/test_harness.hpp"
+#include "test_image/utils.hpp"
 #include "logging/logging.hpp"
 
 namespace lzt = level_zero_tests;
@@ -129,22 +129,33 @@ public:
   ze_context_handle_t context = lzt::get_default_context();
   ze_device_handle_t device =
       lzt::get_default_device(lzt::get_default_driver());
+
+  ImageFuncDispatcher img_dispatcher;
+  void TearDown() override { img_dispatcher.apply(); }
 };
 
 LZT_TEST_P(zeImageDescriptorTest,
            GivenValidDescriptorWhenCreatingImageThenNotNullPointerIsReturned) {
   lzt::print_image_descriptor(image_descriptor);
-  auto image = lzt::create_ze_image(context, device, image_descriptor);
-  if (image) {
-    lzt::destroy_ze_image(image);
+  ze_image_handle_t image = nullptr;
+  if (img_dispatcher.ze_image_create(context, device, image_descriptor, image)
+          .check_or_expect()) {
+    return;
   }
+  ASSERT_NE(nullptr, image);
+  lzt::destroy_ze_image(image);
 }
 
 LZT_TEST_P(
     zeImageDescriptorTest,
     GivenValidDescriptorWhenCheckingImagePropertiesThenNotNullPointerIsReturned) {
   lzt::print_image_descriptor(image_descriptor);
-  check_image_properties(lzt::get_ze_image_properties(image_descriptor));
+  ze_image_properties_t properties = {};
+  if (img_dispatcher.ze_image_get_properties(image_descriptor, &properties)
+          .check_or_expect()) {
+    return;
+  }
+  check_image_properties(properties);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -246,7 +257,7 @@ public:
       img_depth = device_img_properties.maxImageDims3D >> 4;
     } else {
       EXPECT_EQ(image_type, ZE_IMAGE_TYPE_BUFFER);
-      img_width = device_img_properties.maxImageBufferSize >> 1;
+      img_width = buffer_image_num_elements;
     }
 
     if (image_type == ZE_IMAGE_TYPE_1DARRAY) {
@@ -264,7 +275,16 @@ public:
     img_fmt.w = ZE_IMAGE_FORMAT_SWIZZLE_A;
 
     image_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
-    image_desc.pNext = nullptr;
+    if (image_type == ZE_IMAGE_TYPE_BUFFER) {
+      buffer_ptr = lzt::allocate_device_memory(
+          buffer_image_num_elements * buffer_image_max_element_size, 0, 0,
+          device, context);
+      pitched_desc.stype = ZE_STRUCTURE_TYPE_PITCHED_IMAGE_EXP_DESC;
+      pitched_desc.ptr = buffer_ptr;
+      image_desc.pNext = &pitched_desc;
+    } else {
+      image_desc.pNext = nullptr;
+    }
     image_desc.flags = image_rw_flag | image_cache_flag;
     image_desc.type = image_type;
     image_desc.format = img_fmt;
@@ -276,20 +296,39 @@ public:
   }
 
 protected:
+  static constexpr size_t buffer_image_num_elements = 256;
+  static constexpr size_t buffer_image_max_element_size = 16;
+
   ze_image_format_type_t format_type;
   ze_image_format_layout_t layout;
   ze_image_flags_t image_rw_flag;
   ze_image_flags_t image_cache_flag;
   ze_image_type_t image_type;
   ze_image_desc_t image_desc;
+  ze_image_pitched_exp_desc_t pitched_desc = {};
+  void *buffer_ptr = nullptr;
   ze_context_handle_t context = lzt::get_default_context();
   ze_device_handle_t device =
       lzt::get_default_device(lzt::get_default_driver());
+
+  ImageFuncDispatcher img_dispatcher;
+  void TearDown() override {
+    if (buffer_ptr != nullptr) {
+      lzt::free_memory(context, buffer_ptr);
+      buffer_ptr = nullptr;
+    }
+    img_dispatcher.apply();
+  }
 };
 
 LZT_TEST_P(zeImagePropertiesTests,
            GivenValidImageWhenGettingAllocPropertiesThenSuccessIsReturned) {
-  auto img = lzt::create_ze_image(context, device, image_desc);
+  ze_image_handle_t img = nullptr;
+  if (img_dispatcher.ze_image_create(context, device, image_desc, img)
+          .check_or_expect()) {
+    return;
+  }
+  ASSERT_NE(nullptr, img);
 
   lzt::get_ze_image_alloc_properties_ext(img);
 
@@ -299,7 +338,12 @@ LZT_TEST_P(zeImagePropertiesTests,
 LZT_TEST_P(
     zeImagePropertiesTests,
     GivenValidImageWhenGettingMemoryPropertiesThenValidMemoryPropertiesIsReturned) {
-  auto img = lzt::create_ze_image(context, device, image_desc);
+  ze_image_handle_t img = nullptr;
+  if (img_dispatcher.ze_image_create(context, device, image_desc, img)
+          .check_or_expect()) {
+    return;
+  }
+  ASSERT_NE(nullptr, img);
 
   auto image_mem_properties = lzt::get_ze_image_mem_properties_exp(img);
 

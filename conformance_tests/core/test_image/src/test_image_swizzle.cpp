@@ -12,8 +12,8 @@
 
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include "test_image/utils.hpp"
 #include "logging/logging.hpp"
-#include "helpers_test_image.hpp"
 
 namespace lzt = level_zero_tests;
 
@@ -22,7 +22,8 @@ namespace {
 using lzt::to_u32;
 
 class zeCommandListAppendImageCopyWithSwizzleTests
-    : public ::testing::TestWithParam<
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
           std::tuple<ze_image_type_t, lzt::command_list_mode_t>> {
 protected:
   void SetUp() override {
@@ -36,8 +37,13 @@ protected:
   }
 
   void TearDown() override {
+    if (img_in != nullptr)
+      lzt::destroy_ze_image(img_in);
+    if (img_out != nullptr)
+      lzt::destroy_ze_image(img_out);
     if (module != nullptr)
       lzt::destroy_module(module);
+    img_dispatcher.apply();
   }
 
   void create_in_out_images(ze_image_type_t image_type);
@@ -49,11 +55,12 @@ public:
   static const bool skip_array_type = false;
   static const bool skip_buffer_type = true;
 
-  ze_image_handle_t img_in, img_out;
-  ze_module_handle_t module;
+  ze_image_handle_t img_in = nullptr, img_out = nullptr;
+  ze_module_handle_t module = nullptr;
   std::vector<ze_image_type_t> supported_image_types;
   Dims image_dims;
   size_t image_size;
+  ImageFuncDispatcher img_dispatcher;
 };
 
 void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
@@ -68,6 +75,9 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
                                    image_dims.depth);
 
   create_in_out_images(image_type);
+  if (img_dispatcher.triggered()) {
+    return;
+  }
 
   uint32_t *inbuff =
       (uint32_t *)lzt::allocate_host_memory_with_allocator_selector(
@@ -91,8 +101,18 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
                           group_size_z);
   lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
-  lzt::set_argument_value(kernel, 0, sizeof(img_in), &img_in);
-  lzt::set_argument_value(kernel, 1, sizeof(img_out), &img_out);
+  if (img_dispatcher
+          .ze_kernel_set_argument_value(kernel, 0, sizeof(img_in), &img_in)
+          .check_or_expect() ||
+      img_dispatcher
+          .ze_kernel_set_argument_value(kernel, 1, sizeof(img_out), &img_out)
+          .check_or_expect()) {
+    lzt::free_memory_with_allocator_selector(outbuff, is_shared_system);
+    lzt::free_memory_with_allocator_selector(inbuff, is_shared_system);
+    lzt::destroy_function(kernel);
+    lzt::destroy_command_bundle(bundle);
+    return;
+  }
 
   ze_group_count_t group_dems = {to_u32(image_dims.width / group_size_x),
                                  image_dims.height / group_size_y,
@@ -143,7 +163,8 @@ void zeCommandListAppendImageCopyWithSwizzleTests::create_in_out_images(
   image_descriptor_source.depth = image_dims.depth;
   image_descriptor_source.arraylevels = array_levels;
   image_descriptor_source.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
-  img_in = lzt::create_ze_image(image_descriptor_source);
+  img_dispatcher.ze_image_create(image_descriptor_source, img_in)
+      .check_or_expect();
 
   ze_image_desc_t image_descriptor_dest = {};
   image_descriptor_dest.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
@@ -160,7 +181,8 @@ void zeCommandListAppendImageCopyWithSwizzleTests::create_in_out_images(
   image_descriptor_dest.depth = image_dims.depth;
   image_descriptor_dest.arraylevels = array_levels;
   image_descriptor_dest.format.type = ZE_IMAGE_FORMAT_TYPE_UINT;
-  img_out = lzt::create_ze_image(image_descriptor_dest);
+  img_dispatcher.ze_image_create(image_descriptor_dest, img_out)
+      .check_or_expect();
 }
 
 LZT_TEST_P(

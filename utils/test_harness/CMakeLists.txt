@@ -58,6 +58,7 @@ target_link_libraries(test_harness
 target_include_directories(test_harness
     PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../conformance_tests/core/test_image/include>
     $<INSTALL_INTERFACE:include>
 )
 

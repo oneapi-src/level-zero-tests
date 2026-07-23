@@ -990,11 +990,7 @@ LZT_TEST(DeviceStatusTest,
          GivenValidDeviceHandlesWhenRequestingStatusThenSuccessReturned) {
 
   for (auto device : lzt::get_ze_devices()) {
-    ze_result_t ret = lzt::get_device_status(device);
-    if (lzt::check_unsupported(ret)) {
-      return;
-    }
-    EXPECT_ZE_RESULT_SUCCESS(ret);
+    EXPECT_ZE_RESULT_SUCCESS(lzt::get_device_status(device));
   }
 }
 
@@ -1006,11 +1002,7 @@ LZT_TEST(DeviceStatusTest,
         lzt::get_ze_sub_devices(device);
 
     for (auto sub_device : sub_devices) {
-      ze_result_t ret = lzt::get_device_status(sub_device);
-      if (lzt::check_unsupported(ret)) {
-        return;
-      }
-      EXPECT_ZE_RESULT_SUCCESS(ret);
+      EXPECT_ZE_RESULT_SUCCESS(lzt::get_device_status(sub_device));
     }
   }
 }

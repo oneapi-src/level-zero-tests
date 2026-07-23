@@ -1,0 +1,537 @@
+/*
+ *
+ * Copyright (C) 2019-2026 Intel Corporation
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ */
+
+#include "test_image/utils.hpp"
+
+#include <stdexcept>
+#include <string>
+
+#include "gtest/gtest.h"
+#include "logging/logging.hpp"
+#include "test_harness/test_harness.hpp"
+#include "utils/utils.hpp"
+#include <level_zero/ze_api.h>
+
+namespace lzt = level_zero_tests;
+
+namespace level_zero_tests {
+
+bool image_support() {
+  return image_support(lzt::zeDevice::get_instance()->get_device());
+}
+
+bool image_support(ze_device_handle_t device) {
+  ze_device_image_properties_t properties{};
+  properties.stype = ZE_STRUCTURE_TYPE_IMAGE_PROPERTIES;
+  properties.pNext = nullptr;
+  ze_result_t result = zeDeviceGetImageProperties(device, &properties);
+  if ((result != ZE_RESULT_SUCCESS) ||
+      ((properties.maxImageDims1D == 0) && (properties.maxImageDims2D == 0) &&
+       (properties.maxImageDims3D == 0) &&
+       (properties.maxImageBufferSize == 0) &&
+       (properties.maxImageArraySlices == 0) && (properties.maxSamplers == 0) &&
+       (properties.maxReadImageArgs == 0) &&
+       (properties.maxWriteImageArgs == 0))) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+void copy_image_from_mem(lzt::ImagePNG32Bit input, ze_image_handle_t output) {
+
+  auto command_list = lzt::create_command_list();
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyFromMemory(
+      command_list, output, input.raw_data(), nullptr, nullptr, 0, nullptr));
+  lzt::append_barrier(command_list, nullptr, 0, nullptr);
+  lzt::close_command_list(command_list);
+  auto command_queue = lzt::create_command_queue();
+  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+  lzt::synchronize(command_queue, UINT64_MAX);
+  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_list(command_list);
+}
+
+void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit output) {
+
+  auto command_list = lzt::create_command_list();
+  EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendImageCopyToMemory(
+      command_list, output.raw_data(), input, nullptr, nullptr, 0, nullptr));
+  lzt::append_barrier(command_list, nullptr, 0, nullptr);
+  lzt::close_command_list(command_list);
+  auto command_queue = lzt::create_command_queue();
+  lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+  lzt::synchronize(command_queue, UINT64_MAX);
+  lzt::destroy_command_queue(command_queue);
+  lzt::destroy_command_list(command_list);
+}
+
+#define DEFAULT_WIDTH 128
+#define DEFAULT_HEIGHT 128
+
+const ze_image_desc_t zeImageCreateCommon::dflt_ze_image_desc = {
+    ZE_STRUCTURE_TYPE_IMAGE_DESC,
+    nullptr,
+    ZE_IMAGE_FLAG_KERNEL_WRITE,
+    ZE_IMAGE_TYPE_2D,
+    {ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8, ZE_IMAGE_FORMAT_TYPE_UNORM,
+     ZE_IMAGE_FORMAT_SWIZZLE_R, ZE_IMAGE_FORMAT_SWIZZLE_G,
+     ZE_IMAGE_FORMAT_SWIZZLE_B, ZE_IMAGE_FORMAT_SWIZZLE_A},
+    DEFAULT_WIDTH,
+    DEFAULT_HEIGHT,
+    1,
+    0,
+    0};
+
+zeImageCreateCommon::zeImageCreateCommon()
+    : dflt_host_image_(DEFAULT_WIDTH, DEFAULT_HEIGHT) {
+  skip.ze_image_create(dflt_ze_image_desc, dflt_device_image_)
+      .check_or_expect();
+  skip.ze_image_create(dflt_ze_image_desc, dflt_device_image_2_)
+      .check_or_expect();
+  if (!skip.triggered()) {
+    write_image_data_pattern(dflt_host_image_, dflt_data_pattern);
+  }
+}
+
+zeImageCreateCommon::~zeImageCreateCommon() {
+
+  if (dflt_device_image_ != nullptr) {
+    auto result = zeImageDestroy(dflt_device_image_);
+    if (result != ZE_RESULT_SUCCESS) {
+      LOG_ERROR << "Failed to destroy image: " << result;
+    }
+  }
+  if (dflt_device_image_2_ != nullptr) {
+    auto result = zeImageDestroy(dflt_device_image_2_);
+    if (result != ZE_RESULT_SUCCESS) {
+      LOG_ERROR << "Failed to destroy image: " << result;
+    }
+  }
+}
+
+size_t get_format_component_count(ze_image_format_layout_t layout) {
+  size_t components = 1;
+  switch (layout) {
+  case ZE_IMAGE_FORMAT_LAYOUT_8:
+  case ZE_IMAGE_FORMAT_LAYOUT_16:
+  case ZE_IMAGE_FORMAT_LAYOUT_32:
+    components = 1;
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_8_8:
+  case ZE_IMAGE_FORMAT_LAYOUT_16_16:
+  case ZE_IMAGE_FORMAT_LAYOUT_32_32:
+    components = 2;
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_11_11_10:
+  case ZE_IMAGE_FORMAT_LAYOUT_5_6_5:
+    components = 3;
+    break;
+  case ZE_IMAGE_FORMAT_LAYOUT_8_8_8_8:
+  case ZE_IMAGE_FORMAT_LAYOUT_16_16_16_16:
+  case ZE_IMAGE_FORMAT_LAYOUT_32_32_32_32:
+  case ZE_IMAGE_FORMAT_LAYOUT_10_10_10_2:
+  case ZE_IMAGE_FORMAT_LAYOUT_5_5_5_1:
+  case ZE_IMAGE_FORMAT_LAYOUT_4_4_4_4:
+    components = 4;
+    break;
+  default:
+    throw std::runtime_error("Unhandled layout");
+  }
+  return components;
+}
+
+void print_image_format_descriptor(const ze_image_format_t descriptor) {
+  LOG_DEBUG << "   LAYOUT = " << descriptor.layout
+            << "   TYPE = " << descriptor.type << "   X = " << descriptor.x
+            << "   Y = " << descriptor.y << "   Z = " << descriptor.z
+            << "   w = " << descriptor.w;
+}
+
+void print_image_descriptor(const ze_image_desc_t descriptor) {
+  LOG_DEBUG << "STYPE= " << descriptor.stype
+            << "   FLAGS = " << descriptor.flags
+            << "   TYPE = " << descriptor.type;
+  print_image_format_descriptor(descriptor.format);
+  LOG_DEBUG << "   WIDTH = " << descriptor.width
+            << "   HEIGHT = " << descriptor.height
+            << "   DEPTH = " << descriptor.depth
+            << "   ARRAYLEVELS = " << descriptor.arraylevels
+            << "   MIPLEVELS = " << descriptor.miplevels;
+}
+
+static inline uint32_t mask_and_shift(int8_t v, uint8_t m, size_t s) {
+  return static_cast<uint32_t>(v & m) << s;
+}
+
+static inline uint32_t make_pixel(int8_t r, uint8_t r_idx, int8_t g,
+                                  uint8_t g_idx, int8_t b, uint8_t b_idx,
+                                  int8_t a, uint8_t a_idx) {
+  return mask_and_shift(r, 0xff, r_idx) | mask_and_shift(g, 0xff, g_idx) |
+         mask_and_shift(b, 0xff, b_idx) | mask_and_shift(a, 0xff, a_idx);
+}
+
+static void clip_to_uint8_t(int8_t &sd, int8_t addvalue) {
+  int16_t sd16 = sd;
+  sd16 += addvalue;
+  if ((sd16 > 127) || (sd16 < -128)) {
+    sd = 0;
+  } else {
+    sd = static_cast<int8_t>(sd16);
+  }
+}
+
+enum RGBA_index {
+  X_IDX = 0,
+  Y_IDX = 8,
+  Z_IDX = 16,
+  W_IDX = 24,
+  UNKNOWN_IDX = 255
+};
+
+static inline uint8_t lookup_idx(ze_image_format_swizzle_t s,
+                                 const ze_image_format_t &fmt) {
+  if (s == fmt.x) {
+    return X_IDX;
+  } else if (s == fmt.y) {
+    return Y_IDX;
+  } else if (s == fmt.z) {
+    return Z_IDX;
+  } else if (s == fmt.w) {
+    return W_IDX;
+  } else {
+    return UNKNOWN_IDX;
+  }
+}
+
+static void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp,
+                                     const ze_image_format_t &image_format,
+                                     uint32_t originX, uint32_t originY,
+                                     uint32_t width, uint32_t height) {
+  int8_t pixel_r = dp * 1;
+  uint8_t r_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_R, image_format);
+  int8_t pixel_g = dp * 2;
+  uint8_t g_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_G, image_format);
+  int8_t pixel_b = dp * 3;
+  uint8_t b_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_B, image_format);
+  int8_t pixel_a = dp * 4;
+  uint8_t a_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_A, image_format);
+
+  for (uint32_t y = originY; y < height; y++) {
+    for (uint32_t x = originX; x < width; x++) {
+      uint32_t pixel = make_pixel(pixel_r, r_idx, pixel_g, g_idx, pixel_b,
+                                  b_idx, pixel_a, a_idx);
+      image.set_pixel(x, y, pixel);
+      clip_to_uint8_t(pixel_r, dp * 1);
+      clip_to_uint8_t(pixel_g, dp * 2);
+      clip_to_uint8_t(pixel_b, dp * 3);
+      clip_to_uint8_t(pixel_a, dp * 4);
+    }
+  }
+}
+
+void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp,
+                              const ze_image_format_t &image_format) {
+  write_image_data_pattern(image, dp, image_format, 0U, 0U, image.width(),
+                           image.height());
+}
+
+void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp) {
+  ze_image_desc_t img_desc = zeImageCreateCommon::dflt_ze_image_desc;
+
+  write_image_data_pattern(image, dp, img_desc.format, 0U, 0U, image.width(),
+                           image.height());
+}
+
+static inline uint32_t get_pixel(const uint32_t *image, uint32_t x, uint32_t y,
+                                 uint32_t row_width) {
+  return image[y * row_width + x];
+}
+
+int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
+                         const lzt::ImagePNG32Bit &imagepng2, uint32_t origin1X,
+                         uint32_t origin1Y, uint32_t width1, uint32_t height1,
+                         uint32_t origin2X, uint32_t origin2Y, uint32_t width2,
+                         uint32_t height2) {
+  ze_image_desc_t img_desc = zeImageCreateCommon::dflt_ze_image_desc;
+
+  return compare_data_pattern(imagepng1, img_desc.format, imagepng2,
+                              img_desc.format, origin1X, origin1Y, width1,
+                              height1, origin2X, origin2Y, width2, height2);
+}
+
+static void decompose_pixel(uint32_t pixel, uint8_t &r, uint8_t r_idx,
+                            uint8_t &g, uint8_t g_idx, uint8_t &b,
+                            uint8_t b_idx, uint8_t &a, uint8_t a_idx) {
+  r = (pixel >> r_idx) & 0xff;
+  g = (pixel >> g_idx) & 0xff;
+  b = (pixel >> b_idx) & 0xff;
+  a = (pixel >> a_idx) & 0xff;
+}
+
+// Returns number of errors found, color order for both images are
+// define in the image_format parameters:
+int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
+                         const ze_image_format_t &image1_format,
+                         const lzt::ImagePNG32Bit &imagepng2,
+                         const ze_image_format_t &image2_format,
+                         uint32_t origin1X, uint32_t origin1Y, uint32_t width1,
+                         uint32_t height1, uint32_t origin2X, uint32_t origin2Y,
+                         uint32_t width2, uint32_t height2) {
+  uint8_t r1_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_R, image1_format);
+  uint8_t g1_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_G, image1_format);
+  uint8_t b1_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_B, image1_format);
+  uint8_t a1_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_A, image1_format);
+  uint8_t r2_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_R, image2_format);
+  uint8_t g2_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_G, image2_format);
+  uint8_t b2_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_B, image2_format);
+  uint8_t a2_idx = lookup_idx(ZE_IMAGE_FORMAT_SWIZZLE_A, image2_format);
+
+  const bool must_decompose_colors = (r1_idx != r2_idx) || (g1_idx != g2_idx) ||
+                                     (b1_idx != b2_idx) || (a1_idx != a2_idx);
+  const uint32_t *image1 = imagepng1.raw_data();
+  const uint32_t *image2 = imagepng2.raw_data();
+  int errCnt = 0, successCnt = 0;
+  for (uint32_t y1 = origin1Y, y2 = origin2Y;
+       (y1 < (origin1Y + height1)) && (y2 < (origin2Y + height2)); y1++, y2++) {
+    for (uint32_t x1 = origin1X, x2 = origin2X;
+         (x1 < (origin1X + width1)) && (x2 < (origin2X + width2)); x1++, x2++) {
+      if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0)
+        continue;
+
+      uint32_t pixel1 = get_pixel(image1, x1, y1, width1);
+      uint32_t pixel2 = get_pixel(image2, x2, y2, width2);
+      bool correct;
+      if (must_decompose_colors) {
+        uint8_t r1, g1, b1, a1;
+        uint8_t r2, g2, b2, a2;
+        decompose_pixel(pixel1, r1, r1_idx, g1, g1_idx, b1, b1_idx, a1, a1_idx);
+        decompose_pixel(pixel2, r2, r2_idx, g2, g2_idx, b2, b2_idx, a2, a2_idx);
+        if ((r1 != r2) || (g1 != g2) || (b1 != b2) || (a1 != a2)) {
+          correct = false;
+        } else {
+          correct = true;
+        }
+      } else {
+        if (pixel1 != pixel2) {
+          correct = false;
+        } else {
+          correct = true;
+        }
+      }
+      if (!correct) {
+        LOG_DEBUG << "errCnt: " << errCnt << " successCnt: " << successCnt
+                  << " x1: " << x1 << " y1: " << y1 << " x2: " << x2
+                  << " y2: " << y2 << " pixel1: 0x" << std::hex << pixel1
+                  << " pixel2: 0x" << pixel2;
+        errCnt++;
+      } else {
+        successCnt++;
+      }
+    }
+  }
+  return errCnt;
+}
+
+int compare_data_pattern(
+    const lzt::ImagePNG32Bit &image, const ze_image_region_t *region,
+    const lzt::ImagePNG32Bit &expected_fg, // expected foreground
+    const lzt::ImagePNG32Bit &expected_bg) {
+  const ze_image_region_t full_image_region = {
+      0U, 0U, 0U, image.width(), image.height(), 1U};
+  if (region == nullptr) {
+    region = &full_image_region;
+  }
+  int errCnt = 0;
+  LOG_DEBUG << "region: originX: " << region->originX
+            << " originY: " << region->originY
+            << " originZ: " << region->originZ << " width: " << region->width
+            << " height: " << region->height << std::endl;
+  for (uint32_t row = 0; row < image.height(); row++) {
+    for (uint32_t column = 0; column < image.width(); column++) {
+      uint32_t pixel = image.get_pixel(column, row);
+      const lzt::ImagePNG32Bit *expected_image;
+      LOG_DEBUG << "row: " << row << " and column: " << column
+                << " corresponds to the ";
+      if ((row >= region->originY &&
+           row < (region->originY + region->height)) &&
+          (column >= region->originX &&
+           column < (region->originX + region->width))) {
+        // The pixel is expected to be in the foreground image:
+        LOG_DEBUG << "foreground." << std::endl;
+        expected_image = &expected_fg;
+      } else {
+        // The pixel is expected to be in the background image:
+        LOG_DEBUG << "background." << std::endl;
+        expected_image = &expected_bg;
+      }
+      if (row >= expected_image->height() ||
+          column >= expected_image->width()) {
+        LOG_DEBUG << "expected image does not have a pixel for row: " << row
+                  << " and column: " << column << std::endl;
+        errCnt++;
+      } else {
+        if (pixel != expected_image->get_pixel(column, row)) {
+          LOG_DEBUG << "image's pixel: " << pixel
+                    << " does not match expected image's pixel: "
+                    << expected_image->get_pixel(column, row)
+                    << " for row: " << row << " and column: " << column
+                    << std::endl;
+          errCnt++;
+        }
+      }
+    }
+  }
+  return errCnt;
+}
+
+} // namespace level_zero_tests
+
+bool ImageFuncDispatcher::record(ze_result_t result, const char *api) {
+  if (result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT ||
+      result == ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION ||
+      result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    if (triggered()) {
+      reason_ << "; ";
+    }
+    reason_ << api << ": " << lzt::to_string(result);
+    return true;
+  }
+  return false;
+}
+
+void ImageFuncDispatcher::apply() const {
+  if (triggered()) {
+    GTEST_SKIP() << reason();
+  }
+}
+
+bool ImageCall::check_or_expect() {
+  if (!owner_.record(result_, api_)) {
+    EXPECT_ZE_RESULT_SUCCESS(result_);
+  }
+  return result_ != ZE_RESULT_SUCCESS;
+}
+
+ImageCall ImageFuncDispatcher::ze_image_create(ze_context_handle_t context,
+                                               ze_device_handle_t device,
+                                               ze_image_desc_t image_descriptor,
+                                               ze_image_handle_t &out) {
+  ze_result_t result =
+      lzt::create_ze_image(context, device, image_descriptor, out);
+  return ImageCall(*this, result, "zeImageCreate");
+}
+
+ImageCall ImageFuncDispatcher::ze_image_create(ze_device_handle_t device,
+                                               ze_image_desc_t image_descriptor,
+                                               ze_image_handle_t &out) {
+  ze_result_t result = lzt::create_ze_image(device, image_descriptor, out);
+  return ImageCall(*this, result, "zeImageCreate");
+}
+
+ImageCall ImageFuncDispatcher::ze_image_create(ze_image_desc_t image_descriptor,
+                                               ze_image_handle_t &out) {
+  ze_result_t result = lzt::create_ze_image(image_descriptor, out);
+  return ImageCall(*this, result, "zeImageCreate");
+}
+
+ImageCall
+ImageFuncDispatcher::ze_image_get_properties(ze_image_desc_t image_descriptor,
+                                             ze_image_properties_t *out) {
+  ze_result_t result = ZE_RESULT_SUCCESS;
+  ze_image_properties_t properties =
+      lzt::get_ze_image_properties(image_descriptor, &result);
+  if (out) {
+    *out = properties;
+  }
+  return ImageCall(*this, result, "zeImageGetProperties");
+}
+
+ImageCall ImageFuncDispatcher::ze_kernel_set_argument_value(
+    ze_kernel_handle_t kernel, uint32_t index, size_t size, const void *value) {
+  ze_result_t result = zeKernelSetArgumentValue(kernel, index, size, value);
+  return ImageCall(*this, result, "zeKernelSetArgumentValue");
+}
+
+std::string shortened_string(ze_image_type_t type) {
+  switch (type) {
+  case ZE_IMAGE_TYPE_1D:
+    return "img_1d";
+  case ZE_IMAGE_TYPE_1DARRAY:
+    return "img_1d_arr";
+  case ZE_IMAGE_TYPE_2D:
+    return "img_2d";
+  case ZE_IMAGE_TYPE_2DARRAY:
+    return "img_2d_arr";
+  case ZE_IMAGE_TYPE_3D:
+    return "img_3d";
+  case ZE_IMAGE_TYPE_BUFFER:
+    return "img_buffer";
+  default:
+    return "Unknown ze_image_type_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+Dims get_sample_image_dims(ze_image_type_t image_type) {
+  switch (image_type) {
+  case ZE_IMAGE_TYPE_1DARRAY:
+    return {256, 2, 1};
+  case ZE_IMAGE_TYPE_2D:
+    return {32, 16, 1};
+  case ZE_IMAGE_TYPE_2DARRAY:
+    return {16, 16, 2};
+  case ZE_IMAGE_TYPE_3D:
+    return {8, 8, 8};
+  default:
+    return {512, 1, 1};
+  }
+}
+
+std::vector<ze_image_type_t>
+get_supported_image_types(ze_device_handle_t device, bool exclude_arrays,
+                          bool exclude_buffer) {
+  std::vector<ze_image_type_t> supported_types{};
+
+  auto properties = lzt::get_image_properties(device);
+
+  if (properties.maxImageDims1D > 0) {
+    supported_types.emplace_back(ZE_IMAGE_TYPE_1D);
+  } else {
+    LOG_INFO << lzt::to_string(ZE_IMAGE_TYPE_1D) << " unsupported";
+  }
+  if (properties.maxImageDims2D > 0) {
+    supported_types.emplace_back(ZE_IMAGE_TYPE_2D);
+  } else {
+    LOG_INFO << lzt::to_string(ZE_IMAGE_TYPE_2D) << " unsupported";
+  }
+  if (properties.maxImageDims3D > 0) {
+    supported_types.emplace_back(ZE_IMAGE_TYPE_3D);
+  } else {
+    LOG_INFO << lzt::to_string(ZE_IMAGE_TYPE_3D) << " unsupported";
+  }
+
+  if (properties.maxImageArraySlices > 0) {
+    if (!exclude_arrays) {
+      supported_types.insert(supported_types.end(),
+                             {ZE_IMAGE_TYPE_1DARRAY, ZE_IMAGE_TYPE_2DARRAY});
+    }
+  } else {
+    LOG_INFO << lzt::to_string(ZE_IMAGE_TYPE_1DARRAY) << ", "
+             << lzt::to_string(ZE_IMAGE_TYPE_2DARRAY) << " unsupported";
+  }
+
+  if (properties.maxImageBufferSize > 0) {
+    if (!exclude_buffer) {
+      supported_types.emplace_back(ZE_IMAGE_TYPE_BUFFER);
+    }
+  } else {
+    LOG_INFO << lzt::to_string(ZE_IMAGE_TYPE_BUFFER) << " unsupported";
+  }
+  return supported_types;
+}

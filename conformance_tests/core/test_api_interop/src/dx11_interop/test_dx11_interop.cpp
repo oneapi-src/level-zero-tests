@@ -7,6 +7,7 @@
  */
 
 #include "test_harness/test_harness.hpp"
+#include "test_image/utils.hpp"
 #include "utils/utils.hpp"
 #include "random/random.hpp"
 

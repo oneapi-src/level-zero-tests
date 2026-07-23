@@ -13,6 +13,9 @@ add_lzt_test(
     src/test_empty_copy.cpp
     src/test_kernel_copy.cpp
     src/test_multicontext_copy.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../test_image/src/utils.cpp
+  INCLUDE_DIRECTORIES
+    ${CMAKE_CURRENT_SOURCE_DIR}/../test_image/include
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::image

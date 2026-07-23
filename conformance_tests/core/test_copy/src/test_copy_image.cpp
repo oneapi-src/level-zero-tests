@@ -12,6 +12,7 @@
 
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include "test_image/utils.hpp"
 #include "logging/logging.hpp"
 
 namespace lzt = level_zero_tests;

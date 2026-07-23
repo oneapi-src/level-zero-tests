@@ -10,6 +10,9 @@ add_lzt_test(
     src/test_cmdlist_mixed.cpp
     src/test_cmdlist_and_functions.cpp
     src/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../test_image/src/utils.cpp
+  INCLUDE_DIRECTORIES
+    ${CMAKE_CURRENT_SOURCE_DIR}/../test_image/include
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils

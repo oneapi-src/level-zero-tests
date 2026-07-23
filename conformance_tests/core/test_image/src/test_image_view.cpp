@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
-#include "helpers_test_image.hpp"
+#include "test_image/utils.hpp"
 
 namespace lzt = level_zero_tests;
 
@@ -55,6 +55,9 @@ public:
   ze_image_desc_t img_desc;
   ze_image_handle_t img;
   std::vector<ze_image_type_t> supported_img_types;
+
+  ImageFuncDispatcher img_dispatcher;
+  void TearDown() override { img_dispatcher.apply(); }
 };
 
 ze_image_desc_t zeImageViewCreateTests::create_image_desc_view(
@@ -104,9 +107,13 @@ void zeImageViewCreateTests::run_test(ze_image_type_t img_type,
     return;
   }
   img_desc = create_image_desc_view(img_type, layout);
-  img = lzt::create_ze_image(lzt::get_default_context(),
-                             lzt::get_default_device(lzt::get_default_driver()),
-                             img_desc);
+  if (img_dispatcher
+          .ze_image_create(lzt::get_default_context(),
+                           lzt::get_default_device(lzt::get_default_driver()),
+                           img_desc, img)
+          .check_or_expect()) {
+    return;
+  }
   EXPECT_TRUE(img != nullptr);
 
   switch (layout) {

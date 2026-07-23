@@ -10,8 +10,8 @@
 
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
+#include "test_image/utils.hpp"
 #include "logging/logging.hpp"
-#include "helpers_test_image.hpp"
 #include <complex>
 
 namespace lzt = level_zero_tests;
@@ -37,19 +37,6 @@ public:
         get_supported_image_types(device, skip_array_type, skip_buffer_type);
   }
 
-  ze_result_t set_kernel_arg(ze_kernel_handle_t hFunction, uint32_t argIndex,
-                             size_t argSize, const void *pArgValue) {
-    ze_result_t result =
-        zeKernelSetArgumentValue(hFunction, argIndex, argSize, pArgValue);
-    if (result == ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT) {
-      skip_message << "zeKernelSetArgumentValue[" << std::to_string(argIndex)
-                   << "] Unsupported image format";
-    } else {
-      EXPECT_ZE_RESULT_SUCCESS(result);
-    }
-    return result;
-  }
-
   void run_test(ze_image_type_t image_type,
                 ze_image_format_layout_t base_layout,
                 ze_image_format_layout_t convert_layout,
@@ -58,10 +45,6 @@ public:
     LOG_INFO << "TYPE - " << image_type << " FORMAT - " << format_type;
     LOG_INFO << "LAYOUT: BASE - " << base_layout << " CONVERT - "
              << convert_layout;
-    auto cmd_bundle = lzt::create_command_bundle(mode);
-    std::string kernel_name = get_kernel(format_type, image_type);
-    LOG_DEBUG << "kernel_name = " << kernel_name;
-    ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
     image_dims = get_sample_image_dims(image_type);
     image_size = static_cast<size_t>(image_dims.width * image_dims.height *
                                      image_dims.depth);
@@ -72,12 +55,36 @@ public:
         create_image_desc_layout(base_layout, image_type, format_type);
     auto image_convert =
         create_image_desc_layout(convert_layout, image_type, format_type);
+    if (skip.triggered()) {
+      if (image_in != nullptr)
+        lzt::destroy_ze_image(image_in);
+      if (image_out != nullptr)
+        lzt::destroy_ze_image(image_out);
+      if (image_convert != nullptr)
+        lzt::destroy_ze_image(image_convert);
+      return;
+    }
+
+    auto cmd_bundle = lzt::create_command_bundle(mode);
+    std::string kernel_name = get_kernel(format_type, image_type);
+    LOG_DEBUG << "kernel_name = " << kernel_name;
+    ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
 
     size_t buffer_size = image_size * get_pixel_bytes(base_layout);
     auto buffer_in = lzt::allocate_host_memory_with_allocator_selector(
         buffer_size, is_shared_system);
     auto buffer_out = lzt::allocate_host_memory_with_allocator_selector(
         buffer_size, is_shared_system);
+
+    auto cleanup = [&] {
+      lzt::free_memory_with_allocator_selector(buffer_in, is_shared_system);
+      lzt::free_memory_with_allocator_selector(buffer_out, is_shared_system);
+      lzt::destroy_ze_image(image_in);
+      lzt::destroy_ze_image(image_out);
+      lzt::destroy_ze_image(image_convert);
+      lzt::destroy_function(kernel);
+      lzt::destroy_command_bundle(cmd_bundle);
+    };
 
     if (format_type == ZE_IMAGE_FORMAT_TYPE_FLOAT) {
       float *ptr1 = static_cast<float *>(buffer_in);
@@ -120,12 +127,14 @@ public:
                               group_size_y, group_size_z);
       lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
-      if (set_kernel_arg(kernel, 0, sizeof(image_in), &image_in) !=
-          ZE_RESULT_SUCCESS) {
+      if (skip.ze_kernel_set_argument_value(kernel, 0, sizeof(image_in),
+                                            &image_in)
+              .check_or_expect(cleanup)) {
         return;
       }
-      if (set_kernel_arg(kernel, 1, sizeof(image_convert), &image_convert) !=
-          ZE_RESULT_SUCCESS) {
+      if (skip.ze_kernel_set_argument_value(kernel, 1, sizeof(image_convert),
+                                            &image_convert)
+              .check_or_expect(cleanup)) {
         return;
       }
 
@@ -149,12 +158,14 @@ public:
                                 group_size_x, group_size_y, group_size_z);
         lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
-        if (set_kernel_arg(kernel, 0, sizeof(image_convert), &image_convert) !=
-            ZE_RESULT_SUCCESS) {
+        if (skip.ze_kernel_set_argument_value(kernel, 0, sizeof(image_convert),
+                                              &image_convert)
+                .check_or_expect(cleanup)) {
           return;
         }
-        if (set_kernel_arg(kernel, 1, sizeof(image_out), &image_out) !=
-            ZE_RESULT_SUCCESS) {
+        if (skip.ze_kernel_set_argument_value(kernel, 1, sizeof(image_out),
+                                              &image_out)
+                .check_or_expect(cleanup)) {
           return;
         }
 
@@ -179,15 +190,14 @@ public:
 
     // compare results
     EXPECT_EQ(memcmp(buffer_in, buffer_out, buffer_size), 0);
-    lzt::free_memory_with_allocator_selector(buffer_in, is_shared_system);
-    lzt::free_memory_with_allocator_selector(buffer_out, is_shared_system);
-    lzt::destroy_command_bundle(cmd_bundle);
+    cleanup();
   }
 
   void TearDown() override {
     if (module != nullptr) {
       lzt::destroy_module(module);
     }
+    skip.apply();
   }
 
   ze_image_handle_t create_image_desc_layout(ze_image_format_layout_t layout,
@@ -204,7 +214,7 @@ public:
   std::vector<ze_image_type_t> supported_image_types;
   Dims image_dims;
   size_t image_size;
-  std::stringstream skip_message;
+  ImageFuncDispatcher skip;
 };
 
 size_t ImageLayoutFixture::get_pixel_bytes(ze_image_format_layout_t layout) {
@@ -306,10 +316,11 @@ ImageLayoutFixture::create_image_desc_layout(ze_image_format_layout_t layout,
   image_desc.height = image_dims.height;
   image_desc.depth = image_dims.depth;
 
-  auto image = lzt::create_ze_image(lzt::get_default_context(),
-                                    lzt::zeDevice::get_instance()->get_device(),
-                                    image_desc);
-  EXPECT_NE(nullptr, image);
+  ze_image_handle_t image = nullptr;
+  skip.ze_image_create(lzt::get_default_context(),
+                       lzt::zeDevice::get_instance()->get_device(), image_desc,
+                       image)
+      .check_or_expect();
 
   return image;
 }
@@ -318,15 +329,7 @@ class zeImageLayoutOneOrNoKernelTests
     : public ImageLayoutFixture,
       public ::testing::WithParamInterface<
           std::tuple<ze_image_type_t, ze_image_format_type_t,
-                     ze_image_format_layout_t, lzt::command_list_mode_t>> {
-protected:
-  void TearDown() override {
-    ImageLayoutFixture::TearDown();
-    if (!skip_message.str().empty()) {
-      GTEST_SKIP() << skip_message.str();
-    }
-  }
-};
+                     ze_image_format_layout_t, lzt::command_list_mode_t>> {};
 
 LZT_TEST_P(zeImageLayoutOneOrNoKernelTests,
            GivenImageLayoutWhenConvertingImageToMemory) {
@@ -459,11 +462,10 @@ public:
                             bool is_shared_system) {
     run_test(image_type, base_layout, convert_layout, format_type, test, mode,
              is_shared_system);
-    if (!skip_message.str().empty()) {
-      LOG_INFO << skip_message.str();
+    if (skip.triggered()) {
+      LOG_INFO << skip.reason();
+      skip.clear();
     }
-    skip_message.str("");
-    skip_message.clear();
   }
 };
 
@@ -521,13 +523,6 @@ class zeImageDepthFormatLayoutTests
           std::tuple<ze_image_type_t, ze_image_format_type_t,
                      ze_image_format_layout_t, lzt::command_list_mode_t>> {
 protected:
-  void TearDown() override {
-    ImageLayoutFixture::TearDown();
-    if (!skip_message.str().empty()) {
-      GTEST_SKIP() << skip_message.str();
-    }
-  }
-
   ze_image_handle_t
   create_image_desc_depth_format(ze_image_format_layout_t layout,
                                  ze_image_type_t type,
@@ -563,10 +558,11 @@ ze_image_handle_t zeImageDepthFormatLayoutTests::create_image_desc_depth_format(
   image_desc.height = image_dims.height;
   image_desc.depth = image_dims.depth;
 
-  auto image = lzt::create_ze_image(lzt::get_default_context(),
-                                    lzt::zeDevice::get_instance()->get_device(),
-                                    image_desc);
-  EXPECT_NE(nullptr, image);
+  ze_image_handle_t image = nullptr;
+  skip.ze_image_create(lzt::get_default_context(),
+                       lzt::zeDevice::get_instance()->get_device(), image_desc,
+                       image)
+      .check_or_expect();
 
   return image;
 }
@@ -591,6 +587,12 @@ LZT_TEST_P(zeImageDepthFormatLayoutTests,
                                    image_dims.depth);
 
   auto image_in = create_image_desc_depth_format(layout, image_type, format);
+  if (skip.triggered()) {
+    if (image_in != nullptr)
+      lzt::destroy_ze_image(image_in);
+    lzt::destroy_command_bundle(cmd_bundle);
+    return;
+  }
   size_t buffer_size = image_size * get_pixel_bytes(layout);
   auto buffer_in = lzt::allocate_host_memory(buffer_size);
   auto buffer_out = lzt::allocate_host_memory(buffer_size);
@@ -642,16 +644,34 @@ LZT_TEST_P(
 
   auto image_in = create_image_desc_depth_format(layout, image_type, format);
   auto image_out = create_image_desc_depth_format(layout, image_type, format);
+  if (skip.triggered()) {
+    if (image_in != nullptr)
+      lzt::destroy_ze_image(image_in);
+    if (image_out != nullptr)
+      lzt::destroy_ze_image(image_out);
+    lzt::destroy_function(kernel);
+    lzt::destroy_command_bundle(cmd_bundle);
+    return;
+  }
 
   size_t buffer_size = image_size * get_pixel_bytes(layout);
   auto buffer_in = lzt::allocate_host_memory(buffer_size);
   auto buffer_out = lzt::allocate_host_memory(buffer_size);
 
-  uint8_t *ptr1 = static_cast<uint8_t *>(buffer_in);
-  uint8_t *ptr2 = static_cast<uint8_t *>(buffer_out);
-  for (size_t i = 0; i < buffer_size; ++i) {
-    ptr1[i] = to_u8((0xff) - (i & 0xff));
-    ptr2[i] = 0xff;
+  if (format == ZE_IMAGE_FORMAT_TYPE_FLOAT) {
+    float *ptr1 = static_cast<float *>(buffer_in);
+    float *ptr2 = static_cast<float *>(buffer_out);
+    for (size_t i = 0; i < buffer_size / sizeof(float); ++i) {
+      ptr1[i] = to_f32((0xff) - (i & 0xff));
+      ptr2[i] = 0xff;
+    }
+  } else {
+    uint8_t *ptr1 = static_cast<uint8_t *>(buffer_in);
+    uint8_t *ptr2 = static_cast<uint8_t *>(buffer_out);
+    for (size_t i = 0; i < buffer_size; ++i) {
+      ptr1[i] = to_u8((0xff) - (i & 0xff));
+      ptr2[i] = 0xff;
+    }
   }
 
   lzt::append_image_copy_from_mem(cmd_bundle.list, image_in, buffer_in,
@@ -664,24 +684,22 @@ LZT_TEST_P(
                           group_size_z);
   lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
-  if (set_kernel_arg(kernel, 0, sizeof(image_in), &image_in) !=
-      ZE_RESULT_SUCCESS) {
+  auto cleanup = [&] {
     lzt::free_memory(buffer_in);
     lzt::free_memory(buffer_out);
     lzt::destroy_ze_image(image_in);
     lzt::destroy_ze_image(image_out);
     lzt::destroy_function(kernel);
     lzt::destroy_command_bundle(cmd_bundle);
+  };
+
+  if (skip.ze_kernel_set_argument_value(kernel, 0, sizeof(image_in), &image_in)
+          .check_or_expect(cleanup)) {
     return;
   }
-  if (set_kernel_arg(kernel, 1, sizeof(image_out), &image_out) !=
-      ZE_RESULT_SUCCESS) {
-    lzt::free_memory(buffer_in);
-    lzt::free_memory(buffer_out);
-    lzt::destroy_ze_image(image_in);
-    lzt::destroy_ze_image(image_out);
-    lzt::destroy_function(kernel);
-    lzt::destroy_command_bundle(cmd_bundle);
+  if (skip.ze_kernel_set_argument_value(kernel, 1, sizeof(image_out),
+                                        &image_out)
+          .check_or_expect(cleanup)) {
     return;
   }
 
@@ -699,12 +717,7 @@ LZT_TEST_P(
 
   EXPECT_EQ(memcmp(buffer_in, buffer_out, buffer_size), 0);
 
-  lzt::free_memory(buffer_in);
-  lzt::free_memory(buffer_out);
-  lzt::destroy_ze_image(image_in);
-  lzt::destroy_ze_image(image_out);
-  lzt::destroy_function(kernel);
-  lzt::destroy_command_bundle(cmd_bundle);
+  cleanup();
 }
 
 LZT_TEST_P(
@@ -729,6 +742,12 @@ LZT_TEST_P(
                                    image_dims.depth);
 
   auto image_in = create_image_desc_depth_format(layout, image_type, format);
+  if (skip.triggered()) {
+    if (image_in != nullptr)
+      lzt::destroy_ze_image(image_in);
+    lzt::destroy_command_bundle(cmd_bundle);
+    return;
+  }
   size_t buffer_size = image_size * get_pixel_bytes(layout);
   auto buffer_in =
       lzt::allocate_host_memory_with_allocator_selector(buffer_size, true);

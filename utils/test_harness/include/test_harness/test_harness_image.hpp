@@ -100,15 +100,18 @@ const std::vector<ze_image_format_swizzle_t> image_format_swizzles_all = {
     ZE_IMAGE_FORMAT_SWIZZLE_0, ZE_IMAGE_FORMAT_SWIZZLE_1,
     ZE_IMAGE_FORMAT_SWIZZLE_X};
 
-size_t get_format_component_count(ze_image_format_layout_t layout);
-bool image_support();
-bool image_support(ze_device_handle_t device);
-void print_image_format_descriptor(const ze_image_format_t descriptor);
-void print_image_descriptor(const ze_image_desc_t descriptor);
-void print_image_descriptor_unsupported(const ze_image_desc_t descriptor);
-void generate_ze_image_creation_flags_list(
-    std::vector<ze_image_flag_t> &image_creation_flags_list);
+ze_result_t create_ze_image(ze_context_handle_t context, ze_device_handle_t dev,
+                            ze_image_desc_t image_descriptor,
+                            ze_image_handle_t &image);
+ze_result_t create_ze_image(ze_device_handle_t dev,
+                            ze_image_desc_t image_descriptor,
+                            ze_image_handle_t &image);
+ze_result_t create_ze_image(ze_image_desc_t image_descriptor,
+                            ze_image_handle_t &image);
 
+// Convenience overloads returning the created handle directly, for callers that
+// do not need the ze_result_t. Prefer the ze_result_t-returning variants above
+// in new code.
 ze_image_handle_t create_ze_image(ze_context_handle_t context,
                                   ze_device_handle_t dev,
                                   ze_image_desc_t image_descriptor);
@@ -118,11 +121,16 @@ ze_image_handle_t create_ze_image(ze_image_desc_t image_descriptor);
 
 void destroy_ze_image(ze_image_handle_t image);
 
+ze_result_t create_ze_image_view_ext(ze_device_handle_t device,
+                                     const ze_image_desc_t *desc,
+                                     ze_image_handle_t image,
+                                     ze_image_handle_t &image_view);
 ze_image_handle_t create_ze_image_view_ext(ze_device_handle_t device,
                                            const ze_image_desc_t *desc,
                                            ze_image_handle_t image);
 
-ze_image_properties_t get_ze_image_properties(ze_image_desc_t image_descriptor);
+ze_image_properties_t get_ze_image_properties(ze_image_desc_t image_descriptor,
+                                              ze_result_t *result = nullptr);
 
 ze_image_allocation_ext_properties_t
 get_ze_image_alloc_properties_ext(ze_image_handle_t image);
@@ -132,61 +140,6 @@ get_ze_image_mem_properties_exp(ze_image_handle_t image);
 
 uint64_t get_image_device_offset_exp(ze_image_handle_t image,
                                      uint64_t *device_offset);
-
-void copy_image_from_mem(lzt::ImagePNG32Bit input, ze_image_handle_t output);
-void copy_image_to_mem(ze_image_handle_t input, lzt::ImagePNG32Bit output);
-
-class zeImageCreateCommon {
-public:
-  zeImageCreateCommon();
-  ~zeImageCreateCommon();
-  static const ze_image_desc_t dflt_ze_image_desc;
-
-  static const int8_t dflt_data_pattern = 1;
-  level_zero_tests::ImagePNG32Bit dflt_host_image_;
-  ze_image_handle_t dflt_device_image_ = nullptr;
-  ze_image_handle_t dflt_device_image_2_ = nullptr;
-};
-
-// write_image_data_pattern() writes the image in the default color order,
-// that I define here:
-// a bits  0 ...  7
-// b bits  8 ... 15
-// g bits 16 ... 23
-// r bits 24 ... 31
-void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp);
-// The following uses arbitrary color order as defined in image_format:
-void write_image_data_pattern(lzt::ImagePNG32Bit &image, int8_t dp,
-                              const ze_image_format_t &image_format);
-
-// Returns number of errors found, assumes default color order:
-int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
-                         const lzt::ImagePNG32Bit &imagepng2, uint32_t origin1X,
-                         uint32_t origin1Y, uint32_t width1, uint32_t height1,
-                         uint32_t origin2X, uint32_t origin2Y, uint32_t width2,
-                         uint32_t height2);
-// Returns number of errors found, color order for both images are
-// define in the image_format parameters:
-int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
-                         const ze_image_format_t &image1_format,
-                         const lzt::ImagePNG32Bit &imagepng2,
-                         const ze_image_format_t &image2_format,
-                         uint32_t origin1X, uint32_t origin1Y, uint32_t width1,
-                         uint32_t height1, uint32_t origin2X, uint32_t origin2Y,
-                         uint32_t width2, uint32_t height2);
-
-// The following function, compares all of the pixels in image
-// against the pixels that are expected in the foreground and background of the
-// image. The foreground pixels are chosen when the pixels reside in the
-// specified region, else the background pixels are chosen. Returns number of
-// errors found:
-int compare_data_pattern(
-    const lzt::ImagePNG32Bit &image, const ze_image_region_t *region,
-    const lzt::ImagePNG32Bit &expected_fg, // expected foreground
-    const lzt::ImagePNG32Bit &expected_bg  // expected background
-);
-// Check if the functionality being testing is unsupported
-bool check_unsupported(ze_result_t result);
 
 }; // namespace level_zero_tests
 
