@@ -399,7 +399,10 @@ bool ImageFuncDispatcher::record(ze_result_t result, const char *api) {
     if (triggered()) {
       reason_ << "; ";
     }
-    reason_ << api << ": " << lzt::to_string(result);
+    std::string result_name = lzt::to_string(result);
+    std::transform(result_name.begin(), result_name.end(), result_name.begin(),
+                   ::tolower);
+    reason_ << api << ": " << result_name;
     return true;
   }
   return false;
