@@ -1605,15 +1605,16 @@ LZT_TEST_F(
 
   uint32_t val = 1;
   ze_result_t initial_result = zeCommandListAppendMemoryFill(
-      command_list, memory, &val, sizeof(uint32_t), 1, nullptr, 0, nullptr);
+      command_list, memory, &val, sizeof(uint32_t), sizeof(uint32_t), nullptr,
+      0, nullptr);
 
   zeCommandListReset(command_list);
 
   lzt::enable_ltracer(tracer_handle);
 
   ASSERT_EQ(initial_result, zeCommandListAppendMemoryFill(
-                                command_list, memory, &val, sizeof(uint32_t), 1,
-                                nullptr, 0, nullptr));
+                                command_list, memory, &val, sizeof(uint32_t),
+                                sizeof(uint32_t), nullptr, 0, nullptr));
 }
 
 LZT_TEST_F(
