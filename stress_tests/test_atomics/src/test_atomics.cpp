@@ -81,6 +81,8 @@ LZT_TEST_P(zeDriverAtomicsStressTest, RunAtomicWithMemoryLimit) {
   uint64_t tmp_count = test_single_allocation_memory_size / sizeof(uint32_t);
   uint64_t test_single_allocation_count =
       tmp_count - tmp_count % workgroup_size_x_;
+  test_single_allocation_memory_size =
+      test_single_allocation_count * sizeof(uint32_t);
 
   LOG_INFO << "Test one allocation data count: "
            << test_single_allocation_count;
