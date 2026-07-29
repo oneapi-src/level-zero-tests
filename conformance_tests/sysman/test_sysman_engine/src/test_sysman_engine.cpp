@@ -138,7 +138,7 @@ LZT_TEST_F(
         ASSERT_NE(nullptr, engine_handle);
         auto properties = lzt::get_engine_properties(engine_handle);
         EXPECT_GE(properties.type, ZES_ENGINE_GROUP_ALL);
-        EXPECT_LE(properties.type, ZES_ENGINE_GROUP_3D_ALL);
+        EXPECT_LE(properties.type, ZES_ENGINE_GROUP_MEDIA_CODEC_SINGLE);
         if (properties.onSubdevice) {
           EXPECT_LT(properties.subdeviceId, deviceProperties.numSubdevices);
         }
