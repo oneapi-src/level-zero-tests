@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022-2025 Intel Corporation
+ * Copyright (C) 2022-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -495,6 +495,34 @@ ze_image_type_t to_image_type(const std::string type) {
   } else {
     std::cout << "Unknown ze_image_type_t value: ";
     return ZE_IMAGE_TYPE_FORCE_UINT32;
+  }
+}
+
+std::string to_string(const ze_sampler_address_mode_t mode) {
+  if (mode == ZE_SAMPLER_ADDRESS_MODE_NONE) {
+    return "ZE_SAMPLER_ADDRESS_MODE_NONE";
+  } else if (mode == ZE_SAMPLER_ADDRESS_MODE_REPEAT) {
+    return "ZE_SAMPLER_ADDRESS_MODE_REPEAT";
+  } else if (mode == ZE_SAMPLER_ADDRESS_MODE_CLAMP) {
+    return "ZE_SAMPLER_ADDRESS_MODE_CLAMP";
+  } else if (mode == ZE_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER) {
+    return "ZE_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER";
+  } else if (mode == ZE_SAMPLER_ADDRESS_MODE_MIRROR) {
+    return "ZE_SAMPLER_ADDRESS_MODE_MIRROR";
+  } else {
+    return "Unknown ze_sampler_address_mode_t value: " +
+           std::to_string(static_cast<int>(mode));
+  }
+}
+
+std::string to_string(const ze_sampler_filter_mode_t mode) {
+  if (mode == ZE_SAMPLER_FILTER_MODE_NEAREST) {
+    return "ZE_SAMPLER_FILTER_MODE_NEAREST";
+  } else if (mode == ZE_SAMPLER_FILTER_MODE_LINEAR) {
+    return "ZE_SAMPLER_FILTER_MODE_LINEAR";
+  } else {
+    return "Unknown ze_sampler_filter_mode_t value: " +
+           std::to_string(static_cast<int>(mode));
   }
 }
 

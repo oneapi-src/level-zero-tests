@@ -107,7 +107,7 @@ bool image_support(ze_device_handle_t device);
 void copy_image_from_mem(level_zero_tests::ImagePNG32Bit input,
                          ze_image_handle_t output);
 void copy_image_to_mem(ze_image_handle_t input,
-                       level_zero_tests::ImagePNG32Bit output);
+                       level_zero_tests::ImagePNG32Bit &output);
 
 class zeImageCreateCommon {
 public:

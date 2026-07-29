@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2022-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -38,6 +38,8 @@ std::string to_string(const ze_image_format_type_t type);
 std::string to_string(const ze_image_format_swizzle_t swizzle);
 std::string to_string(const ze_image_flag_t flag);
 std::string to_string(const ze_image_type_t type);
+std::string to_string(const ze_sampler_address_mode_t mode);
+std::string to_string(const ze_sampler_filter_mode_t mode);
 std::string to_string(const ze_memory_type_t type);
 std::string to_string(const ze_device_fp_flag_t flags);
 std::string to_string(const ze_memory_access_cap_flag_t flags);
