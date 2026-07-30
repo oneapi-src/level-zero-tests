@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 #include <vector>
 #include <string>
+#include <map>
 
 namespace level_zero_tests {
 
@@ -131,11 +132,11 @@ void validate_metrics(
 
 void validate_metrics_std(zet_metric_group_handle_t matchedGroupHandle,
                           const size_t rawDataSize, const uint8_t *rawData);
-// Consider 20% of the metric groups in each domain for test input as default
-std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
+
+bool optimize_metric_group_info_list(
     std::vector<metricGroupInfo_t> &metricGroupInfoList,
-    uint32_t percentOfMetricGroupForTest = 20,
-    const char *MetricGroupName = nullptr);
+    uint32_t percentOfMetricGroupForTest, const char *MetricGroupName,
+    uint32_t minCount, std::vector<metricGroupInfo_t> &optimizedList);
 
 bool validateMetricsStructures(zet_metric_group_handle_t hMetricGroup);
 
@@ -270,11 +271,8 @@ void get_all_device_concurrent_metric_groups(
     uint32_t &concurrentGroupCount,
     std::vector<uint32_t> &countPerConcurrentGroup);
 
-std::vector<zet_metric_group_handle_t> get_device_metric_groups_for_source_id(
-    const std::vector<zet_metric_group_handle_t> &metricGroupHandleList,
-    uint32_t sourceId);
-
-std::vector<uint32_t> get_device_metric_groups_metric_sources(
+std::map<uint32_t, std::vector<zet_metric_group_handle_t>>
+get_device_metric_groups_by_source_id(
     const std::vector<zet_metric_group_handle_t> &metricGroupHandleList);
 
 void metric_tracer_create(

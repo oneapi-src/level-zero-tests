@@ -14,7 +14,6 @@
 #include <cstdlib>
 #include <cmath>
 #include <map>
-#include <set>
 
 namespace lzt = level_zero_tests;
 
@@ -234,30 +233,14 @@ void get_all_device_concurrent_metric_groups(
       &concurrentGroupCount));
 }
 
-std::vector<zet_metric_group_handle_t> get_device_metric_groups_for_source_id(
-    const std::vector<zet_metric_group_handle_t> &metricGroupHandleList,
-    uint32_t sourceId) {
-  std::vector<zet_metric_group_handle_t> metric_group_list_per_source{};
-  for (auto metricGroupHandle : metricGroupHandleList) {
-    zet_metric_group_properties_t props = {};
-    props.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
-    zet_metric_source_id_exp_t sourceIdExt = {};
-    sourceIdExt.stype = ZET_STRUCTURE_TYPE_METRIC_SOURCE_ID_EXP;
-    sourceIdExt.pNext = nullptr;
-    props.pNext = &sourceIdExt;
-    EXPECT_ZE_RESULT_SUCCESS(
-        zetMetricGroupGetProperties(metricGroupHandle, &props));
-
-    if (sourceIdExt.sourceId == sourceId) {
-      metric_group_list_per_source.push_back(metricGroupHandle);
-    }
-  }
-  return metric_group_list_per_source;
-}
-
-std::vector<uint32_t> get_device_metric_groups_metric_sources(
+std::map<uint32_t, std::vector<zet_metric_group_handle_t>>
+get_device_metric_groups_by_source_id(
     const std::vector<zet_metric_group_handle_t> &metricGroupHandleList) {
-  std::set<uint32_t> sourceIdSet;
+  // Query each handle's source ID exactly once and group the handles by it.
+  // Using std::map keeps source IDs in ascending order for deterministic
+  // iteration.
+  std::map<uint32_t, std::vector<zet_metric_group_handle_t>>
+      metric_groups_by_source;
   for (auto metricGroupHandle : metricGroupHandleList) {
     zet_metric_group_properties_t props = {};
     props.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
@@ -267,16 +250,17 @@ std::vector<uint32_t> get_device_metric_groups_metric_sources(
     props.pNext = &sourceIdExt;
     EXPECT_ZE_RESULT_SUCCESS(
         zetMetricGroupGetProperties(metricGroupHandle, &props));
-    sourceIdSet.insert(sourceIdExt.sourceId);
+    metric_groups_by_source[sourceIdExt.sourceId].push_back(metricGroupHandle);
   }
-  return std::vector<uint32_t>(sourceIdSet.begin(), sourceIdSet.end());
+  return metric_groups_by_source;
 }
 
-std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
+bool optimize_metric_group_info_list(
     std::vector<metricGroupInfo_t> &metricGroupInfoList,
-    uint32_t percentOfMetricGroupForTest, const char *metricGroupName) {
+    uint32_t percentOfMetricGroupForTest, const char *metricGroupName,
+    uint32_t minCount, std::vector<metricGroupInfo_t> &optimizedList) {
 
-  std::vector<metricGroupInfo_t> optimizedList;
+  optimizedList.clear();
 
   const char *specificMetricGroupName = nullptr;
 
@@ -296,15 +280,9 @@ std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
         LOG_INFO << "specific name push_back "
                  << metricGroupInfo.metricGroupName;
         optimizedList.push_back(metricGroupInfo);
-        return optimizedList;
+        return optimizedList.size() >= minCount;
       }
     }
-  }
-
-  std::map<uint32_t, std::vector<metricGroupInfo_t>> domainMetricGroupMap;
-  // Split the metric group info based on domains
-  for (auto const &metricGroupInfo : metricGroupInfoList) {
-    domainMetricGroupMap[metricGroupInfo.domain].push_back(metricGroupInfo);
   }
 
   optimizedList.reserve(metricGroupInfoList.size());
@@ -320,17 +298,45 @@ std::vector<metricGroupInfo_t> optimize_metric_group_info_list(
   LOG_INFO << "percentage of metric groups " << percentOfMetricGroupForTest;
 
   double metricGrpTestPerc = to_f64(percentOfMetricGroupForTest) * 0.01;
+  minCount = std::max(minCount, 1u);
 
-  for (auto const &mapEntry : domainMetricGroupMap) {
-    auto grpInfos = mapEntry.second;
-    uint32_t cnt = to_u32(to_f64(grpInfos.size()) * metricGrpTestPerc);
-    std::copy(grpInfos.begin(), grpInfos.begin() + (cnt > 0 ? cnt : 1),
-              std::back_inserter(optimizedList));
+  // Collect all handles and build a handle -> metricGroupInfo lookup
+  std::vector<zet_metric_group_handle_t> MetricGroupHandles;
+  MetricGroupHandles.reserve(metricGroupInfoList.size());
+  std::map<zet_metric_group_handle_t, const metricGroupInfo_t *>
+      MetricGroupHandleToInfo;
+  for (auto const &metricGroupInfo : metricGroupInfoList) {
+    MetricGroupHandles.push_back(metricGroupInfo.metricGroupHandle);
+    MetricGroupHandleToInfo[metricGroupInfo.metricGroupHandle] =
+        &metricGroupInfo;
+  }
+
+  // Group all handles by their source ID in a single pass over the device
+  std::map<uint32_t, std::vector<zet_metric_group_handle_t>>
+      metricGroupsBySource =
+          get_device_metric_groups_by_source_id(MetricGroupHandles);
+
+  // For each source: take x% of metric groups from that source
+  for (auto const &sourceEntry : metricGroupsBySource) {
+    const std::vector<zet_metric_group_handle_t> &MetricGroupHandlePerSource =
+        sourceEntry.second;
+
+    uint32_t sourceCnt =
+        std::max(minCount, to_u32(to_f64(MetricGroupHandlePerSource.size()) *
+                                  metricGrpTestPerc));
+    sourceCnt = std::min(sourceCnt, to_u32(MetricGroupHandlePerSource.size()));
+
+    std::transform(MetricGroupHandlePerSource.begin(),
+                   MetricGroupHandlePerSource.begin() + sourceCnt,
+                   std::back_inserter(optimizedList),
+                   [&MetricGroupHandleToInfo](auto handle) {
+                     return *MetricGroupHandleToInfo.at(handle);
+                   });
   }
 
   LOG_INFO << "size of optimizedList based on percentage "
            << optimizedList.size();
-  return optimizedList;
+  return optimizedList.size() >= minCount;
 }
 
 std::vector<metricGroupInfo_t> get_device_metric_groups_for_sampling_type(
@@ -1216,7 +1222,13 @@ void generate_device_list_with_activatable_metric_group_handles(
       continue;
     }
 
-    metric_group_info = lzt::optimize_metric_group_info_list(metric_group_info);
+    std::vector<lzt::metricGroupInfo_t> metric_group_info_optimized;
+    const bool optimized = lzt::optimize_metric_group_info_list(
+        metric_group_info, 20, nullptr, 1, metric_group_info_optimized);
+    if (!optimized) {
+      continue;
+    }
+    metric_group_info = metric_group_info_optimized;
 
     std::vector<zet_metric_group_handle_t> activatable_metric_group_handle_list;
     lzt::generate_activatable_metric_group_list_for_device(
