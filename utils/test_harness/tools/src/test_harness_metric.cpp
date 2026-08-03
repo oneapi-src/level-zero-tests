@@ -332,11 +332,16 @@ bool optimize_metric_group_info_list(
                    [&MetricGroupHandleToInfo](auto handle) {
                      return *MetricGroupHandleToInfo.at(handle);
                    });
+
+    if (sourceCnt < minCount) {
+      LOG_WARNING << "source " << sourceEntry.first << " has " << sourceCnt
+                  << " metric groups, less than minCount " << minCount;
+    }
   }
 
   LOG_INFO << "size of optimizedList based on percentage "
            << optimizedList.size();
-  return optimizedList.size() >= minCount;
+  return optimizedList.size() >= minCount * to_u32(metricGroupsBySource.size());
 }
 
 std::vector<metricGroupInfo_t> get_device_metric_groups_for_sampling_type(
