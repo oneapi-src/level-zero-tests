@@ -25,7 +25,7 @@ swig_add_library(zes_wrap
 
 swig_link_libraries(zes_wrap
         PRIVATE
-          LevelZero::LevelZero
+          ${LZT_LEVEL_ZERO_TARGET}
      )
 
 set(destination "${CMAKE_INSTALL_PREFIX}/zesysman")

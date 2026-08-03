@@ -53,7 +53,7 @@ target_link_libraries(test_harness
     level_zero_tests::image
     level_zero_tests::logging
     level_zero_tests::utils
-    LevelZero::LevelZero
+    ${LZT_LEVEL_ZERO_TARGET}
 )
 target_include_directories(test_harness
     PRIVATE

@@ -56,7 +56,22 @@ else()
 endif()
 message(STATUS "Boost_FOUND: ${Boost_FOUND}")
 
-find_package(LevelZero REQUIRED COMPONENTS ${LevelZero_COMPONENTS})
+option(ENABLE_STATIC_LOADER
+  "Build tests against BUILD_STATIC=ON loader"
+  OFF
+)
+
+if(NOT ENABLE_STATIC_LOADER)
+  find_package(LevelZero REQUIRED COMPONENTS ${LevelZero_COMPONENTS})
+endif()
+
+if(ENABLE_STATIC_LOADER)
+  include(static_loader)
+  set(LZT_LEVEL_ZERO_TARGET level_zero_tests::level_zero)
+  add_compile_definitions(LZT_USE_STATIC_LOADER)
+else()
+  set(LZT_LEVEL_ZERO_TARGET LevelZero::LevelZero)
+endif()
 
 option(REQUIRE_OPENCL_BENCHMARKS
   "Ensures that the OpenCL benchmarks are also built (requires OpenCL)"
@@ -207,7 +222,7 @@ function(add_lzt_test_executable)
 
     target_link_libraries(${ADD_LZT_TEST_EXECUTABLE_NAME}
       PRIVATE
-        LevelZero::LevelZero
+        ${LZT_LEVEL_ZERO_TARGET}
         ${ADD_LZT_TEST_EXECUTABLE_LINK_LIBRARIES}
     )
 

@@ -12,5 +12,5 @@ add_core_library(net
 target_link_libraries(net
     PUBLIC
     level_zero_tests::logging
-    LevelZero::LevelZero
+    ${LZT_LEVEL_ZERO_TARGET}
 )

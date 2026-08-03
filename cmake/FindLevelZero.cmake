@@ -36,5 +36,13 @@ if(LevelZero_FOUND AND NOT TARGET LevelZero::LevelZero)
     )
 endif()
 
+# Headers-only target: the Level Zero API declarations without linking ze_loader.
+if(LevelZero_FOUND AND NOT TARGET LevelZero::Headers)
+    add_library(LevelZero::Headers INTERFACE IMPORTED)
+    set_target_properties(LevelZero::Headers
+      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${LevelZero_INCLUDE_DIRS}"
+    )
+endif()
+
 MESSAGE(STATUS "LevelZero_LIBRARIES: " ${LevelZero_LIBRARIES})
 MESSAGE(STATUS "LevelZero_INCLUDE_DIRS: " ${LevelZero_INCLUDE_DIRS})

@@ -9,7 +9,7 @@ add_core_library(utils_string
 target_link_libraries(utils_string
   PUBLIC
   level_zero_tests::logging
-  LevelZero::LevelZero
+  ${LZT_LEVEL_ZERO_TARGET}
   )
 
 if(NOT BUILD_ZE_PERF_TESTS_ONLY)

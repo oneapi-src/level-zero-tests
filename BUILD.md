@@ -156,6 +156,24 @@ cmake -D CMAKE_INSTALL_PREFIX=$PWD/../out ..
 cmake --build . --config Release --target install
 ```
 
+### Static Level Zero loader (opt-in)
+
+Configure with `-DENABLE_STATIC_LOADER=ON` to build and statically link the
+Level Zero loader. On the first configure the loader source is cloned into
+`third_party/level-zero/` (only for static-loader builds), defaulting to the
+**latest upstream release tag**.
+
+```
+cmake -DENABLE_STATIC_LOADER=ON ..
+```
+
+To pin a specific revision or avoid cloning, use:
+
+- `-DLZT_LEVEL_ZERO_GIT_TAG=<tag-or-commit>` — clone a specific revision
+  instead of the latest release.
+- `-DLZT_LEVEL_ZERO_SOURCE_DIR=<path>` — use an existing Level Zero source
+  checkout.
+
 ### Building a Subset of the Test Executables
 
 Test executables are divided into a group hierarchy, and it is possible to

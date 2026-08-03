@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-# Copyright (C) 2025 Intel Corporation
+# Copyright (C) 2025-2026 Intel Corporation
 # SPDX-License-Identifier: MIT
 import argparse
 import logging
 import re
+import subprocess
 import sys
 from pathlib import Path
+
+SOURCE_GLOBS = ["*.h", "*.hpp", "*.cpp", "*.c"]
+
+SKIP_FILENAMES = {"utils_gtest_helper.hpp"}
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -42,17 +47,21 @@ def setup_parser(root_parser):
     )
 
 
+def list_repo_sources(workspace: Path) -> list[Path]:
+    result = subprocess.run(
+        ["git", "-C", str(workspace), "ls-files", "-z", "--", *SOURCE_GLOBS],
+        stdout=subprocess.PIPE,
+        text=True,
+        check=True,
+    )
+    return [workspace / rel for rel in result.stdout.split("\0") if rel]
+
+
 def scan_codebase(workspace: Path) -> int:
-    extensions = {".h", ".hpp", ".cpp", ".c"}
     invalid = False
-    for path in workspace.rglob("*"):
-        if not path.is_file() or path.suffix not in extensions:
-            continue
-        if "third_party" in str(path):
-            logger.debug("Skipping third-party file: %s", path)
-            continue
-        if "utils_gtest_helper.hpp" in str(path):
-            logger.debug("Skipping utils_gtest_helper.hpp file: %s", path)
+    for path in list_repo_sources(workspace):
+        if path.name in SKIP_FILENAMES:
+            logger.debug("Skipping macro-definition helper: %s", path)
             continue
         logger.debug("Found source file: %s", path)
 
