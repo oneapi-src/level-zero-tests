@@ -39,7 +39,9 @@ typedef struct {
 int read_fd_from_socket(int socket, char *data);
 template <typename T> int receive_ipc_handle(char *data);
 int write_fd_to_socket(int socket, int fd, char *data);
-template <typename T> void send_ipc_handle(const T &ipc_handle);
+template <typename T>
+void send_ipc_handle(const T &ipc_handle,
+                     std::chrono::milliseconds timeout = CONNECTION_TIMEOUT);
 
 // definition
 template <typename T> int receive_ipc_handle(char *data) {
@@ -95,7 +97,8 @@ template <typename T> int receive_ipc_handle(char *data) {
   return ipc_descriptor;
 }
 
-template <typename T> void send_ipc_handle(const T &ipc_handle) {
+template <typename T>
+void send_ipc_handle(const T &ipc_handle, std::chrono::milliseconds timeout) {
   const char *socket_path = "/tmp/lzt_ipc_socket";
 
   struct sockaddr_un remote_addr;
@@ -115,7 +118,7 @@ template <typename T> void send_ipc_handle(const T &ipc_handle) {
     LOG_DEBUG << "Connection error, sleeping and retrying..." << std::endl;
     std::this_thread::sleep_for(CONNECTION_WAIT);
     wait += CONNECTION_WAIT;
-    if (wait > CONNECTION_TIMEOUT) {
+    if (wait > timeout) {
       close(unix_send_socket);
       perror("Error: ");
       throw std::runtime_error("[Client] Timed out waiting to send ipc handle");
