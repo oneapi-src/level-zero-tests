@@ -1,4 +1,3 @@
 # test_context
 
-## Description
-test_context is a conformance test which validates context features in a oneAPI Level Zero driver as described in https://spec.oneapi.com/versions/latest/oneL0/core/PROG.html#context. 
+Context related test content - Level Zero Specification reference: [Contexts](https://oneapi-src.github.io/level-zero-spec/level-zero/latest/core/PROG.html#contexts)

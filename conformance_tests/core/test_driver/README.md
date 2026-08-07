@@ -1,4 +1,3 @@
 # test_driver
 
-## Description
-test_driver is a conformance test which validates Driver features in a oneAPI Level Zero driver as described in https://spec.oneapi.com/versions/latest/oneL0/core/api.html#driver.
+Driver related test content - Level Zero Specification reference: [Driver](https://oneapi-src.github.io/level-zero-spec/level-zero/latest/core/api.html#driver)

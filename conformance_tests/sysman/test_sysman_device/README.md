@@ -1,4 +1,4 @@
-# testSysmanDevice
+# test_sysman_device
 
 This test suite is for validating device APIs provided in sysman. There are
 specific CTS for different device APIs. Ensure that this test should run with

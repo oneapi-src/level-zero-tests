@@ -1,3 +1,3 @@
-# testSysmanInit
+# test_sysman_init
 
-This test suite is for validating sysman init function works correctly both with and without core init
+Sysman initialization, with and without core init related test content - Level Zero Specification reference: [Sysman Programming Guide](https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html)

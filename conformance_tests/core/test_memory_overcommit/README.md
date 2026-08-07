@@ -1,12 +1,7 @@
-# test_device_memory_overcommit
+# test_memory_overcommit
 
-## Description
-Conformance test suite which tests device memory
-allocation to demonstrate that
-when one allocates more device memory than the
-device has physically, the device
-could effectively page memory onto and off of the
-device, without that memory being corrupted.
+Device memory overcommit related test content - Level Zero Specification reference: [Memory](https://oneapi-src.github.io/level-zero-spec/level-zero/latest/core/api.html#memory)
 
-A memory pattern test is used to test for
-memory corruption.
+Verifies that allocating more device memory than the device physically has lets the
+device page memory on and off the device without corrupting it. A memory pattern test
+is used to detect corruption.

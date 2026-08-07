@@ -1,3 +1,3 @@
-# testSysmanVfManagement
+# test_sysman_vf_management
 
-This test suite is for validating Sysman VF management APIs provided in L0 sysman Spec.
+Sysman Virtual Function (VF) management related test content - Level Zero Specification reference: [Virtual Function Management](https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/api.html#virtualfunctionmanagement)

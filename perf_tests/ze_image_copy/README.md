@@ -10,8 +10,6 @@ ze_image_copy  measures image (size is configurable via commandline)  transfer b
 * Configurable image width,height,depth,xoffset,yoffset,zoffset
 * Configurable number of iterations per image transfer
 
-# How to Build it
-See Build instructions in [BUILD](../BUILD.md) file.
 
 # How to Run it
 To run all benchmarks using the default settings: 

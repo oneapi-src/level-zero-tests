@@ -1,4 +1,4 @@
-# test_frequency
+# test_sysman_frequency
 This test suite is for checking sysman frequency functionality.There are specific CTS for different frequency API's.
 
 ## Description

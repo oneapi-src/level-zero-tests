@@ -17,7 +17,7 @@ For this API there are two test cases.
 * GivenValidFabricPortHandleWhenRetrievingFabricPortPropertiesThenExpectSamePropertiesReturnedTwice :- Test checks whether API returns consistent values by retrieving fabricPort properties twice and comparing them.
 
 ### zetSysmanFabricPortGetConfig
-#zetSysmanFabricPortSetConfig
+### zetSysmanFabricPortSetConfig
 For both of these APIs there is one test case.
 * GivenValidFabricPortHandleWhenSettingPortConfigThenGetSamePortConfig :- In this test case, first we are getting already/default set config value. And then we change that config value. And then we set that config, and finally again get config. Now test case will pass if the config value retrieved in the end is similar to the one that is set.
 

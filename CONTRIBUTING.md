@@ -6,13 +6,24 @@ We encourage anyone who wants to contribute to submit
 
 ## C++ Coding Standards
 
-* C++14 maximum support
+* C++20 — maximum supported standard
 * Avoid C Arrays, replace with `std::array<>` / `std::vector<>`
 * Avoid "magic numbers"
 * Avoid C-style memory allocations in favor of C++
 * Use `nullptr` instead of `NULL`
 * Don’t add `void` to empty argument lists
 * Use `std::unique_ptr` in place of `std::auto_ptr`
+* Prefer `enum class` over unscoped enums
+* Use `= default` / `= delete` instead of hand-written or private special members
+* Prefer `"\n"` over `std::endl` unless a flush is actually required
+* `std::span<T>` instead of a raw pointer plus length pair
+* `std::string_view` for non-owning, read-only string parameters
+* `std::optional<T>` instead of sentinel values or out-parameters signalling absence
+* Use `const` for locals, `const&` parameters, `const auto&` loop variables, and
+  non-mutating member functions
+* `constexpr` / `consteval` for values and helpers computable at compile time
+* `[[nodiscard]]` where ignoring the result is a bug; `[[maybe_unused]]` instead of `(void)x;`
+* `std::size()` / range-based `for` instead of manual index arithmetic
 
 ## Naming Conventions
 
@@ -87,9 +98,9 @@ All tests are meant to be written as "Vendor & Platform agnostic" to ensure usag
 * Functional Tests
   * All tests verifying functionality are written in Google Test Format, see here for a guide: https://google.github.io/googletest/
     * Conformance
-      * Tests which verify the correct usage of oneAPI Level Zero APIs per the specification: https://spec.oneapi.io/level-zero/latest/index.html
+      * Tests which verify the correct usage of oneAPI Level Zero APIs per the specification: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/index.html
     * Negative
-      * Tests which verify the failure conditions described in the oneAPI Level Zero specification: https://spec.oneapi.io/level-zero/latest/index.html
+      * Tests which verify the failure conditions described in the oneAPI Level Zero specification: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/index.html
       * Is is strongly recommended to enable the environment variables ZE_ENABLE_VALIDATION_LAYER=1 and ZE_ENABLE_PARAMETER_VALIDATION=1 to enable the Validation Layer and verify the Parameters for these tests.
       * NOTE: The test may or may not verify the error handling thru support in the Validation Layer, the error handling is expected to be present between the Level Zero Driver and the Validation Layer.
     * Layer
@@ -97,10 +108,10 @@ All tests are meant to be written as "Vendor & Platform agnostic" to ensure usag
       * Test are expected to enable the tested layers during init. For example, ZE_ENABLE_TRACING_LAYER=1 is required for testing the Tracing Layer provided by the oneAPI Level Zero Loader.
     * Stress
       * Tests which stress the Level Zero Driver through resource limit testing and longevity.
-      * These test verify the correct usage of oneAPI Level Zero APIs per the specification: https://spec.oneapi.io/level-zero/latest/index.html.
+      * These test verify the correct usage of oneAPI Level Zero APIs per the specification: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/index.html.
 * Performance Tests
   * Performance tests are not required to follow the Google Test Format as the Functional tests since the goal is not checking for binary pass/fail results.
-  * These tests are expected to demonstrate valid usage of oneAPI Level Zero APIs per the specification: https://spec.oneapi.io/level-zero/latest/index.html.
+  * These tests are expected to demonstrate valid usage of oneAPI Level Zero APIs per the specification: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/index.html.
   * Performance tests are meant to provide usecases to analyze the quality of a given Level Zero Driver or Device under test.
 
 ## Code Review
@@ -113,7 +124,7 @@ When performing a code review please refer to this checklist to guide your comme
 
 * Does the code follow C++ Coding Standards? [C++ Coding Standards](#c-coding-standards)
 * Does the code follow the naming conventions? [Naming Conventions](#naming-conventions)
-* Are the tests using Level Zero Specification APIs per the spec? See here for the latest spec: https://spec.oneapi.io/level-zero/latest/index.html
+* Are the tests using Level Zero Specification APIs per the spec? See here for the latest spec: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/index.html
 * Are the tests using Level Zero APIs "Vendor & Platform agnostic"?
 * Is the Code Modular or can the code be Modular? ie Can the code expand the test_harness to simplify the next written test (where applicable).
 * Can the code handle Multiple Driver or Device environments?

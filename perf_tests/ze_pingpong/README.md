@@ -12,8 +12,6 @@ ze_pingpong measures the following:
 * Round-trip time for kernel integer argument in Shared Memory and memcpy to Host for decrement (Note:  this is intended to resemeble the OpenCL mapping operation)
 * Host overhead for transfer/mapping operations
 
-# How to Build it
-See Build instructions in [BUILD](../BUILD.md) file.
 
 # How to Run it
 To run all benchmarks, use the following command. 

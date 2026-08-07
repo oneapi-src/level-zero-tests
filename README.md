@@ -8,11 +8,10 @@ oneAPI Level Zero test source repository contains:
 ## Getting Started
 
 **Prerequisites:**
- * oneAPI Level Zero Loader v1.3.6 
- * Compiler with C++11 support
- * GCC 5.4 or newer
- * Clang 3.8 or newer
- * CMake 3.8 or newer
+ * Compiler with C++20 support
+ * GCC 10 or newer
+ * Clang 10 or newer
+ * CMake 3.12 or newer
 
 ## Build
 

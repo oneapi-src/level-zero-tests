@@ -220,18 +220,18 @@ The `graph` view provides output intended for graphviz tools like dot, neato, tw
 The `info` view lists the fabric identifier and attach points for each device. For each attach point, it provides a list of ports, and for each port it identifies the remote fabric identifier, attach point, and port to which it is connected. As with component queries, the output defaults to `list` format and other formats may be specified by the `-f`/`--format` option.
 
 
-[1]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html
-[2]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#querying-temperature
-[3]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#operations-on-power-domains
-[4]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#operations-on-frequency-domains
-[5]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#operations-on-engine-groups
-[6]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#querying-memory-modules
-[7]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#pci-link-operations
-[8]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#operations-on-fabric-ports
-[9]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#operations-on-standby-domains
-[10]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#querying-ras-errors
-[11]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#device-properties
-[12]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#host-processes
-[13]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#scheduler-operations
-[14]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#performing-diagnostics
-[15]: https://spec.oneapi.com/level-zero/1.0.4/sysman/PROG.html#device-reset
+[1]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html
+[2]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#querying-temperature
+[3]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#operations-on-power-domains
+[4]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#operations-on-frequency-domains
+[5]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#operations-on-engine-groups
+[6]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#querying-memory-modules
+[7]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#pci-link-operations
+[8]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#operations-on-fabric-ports
+[9]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#operations-on-standby-domains
+[10]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#querying-ras-errors
+[11]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#device-properties
+[12]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#host-processes
+[13]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#scheduler-operations
+[14]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#performing-diagnostics
+[15]: https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#device-reset

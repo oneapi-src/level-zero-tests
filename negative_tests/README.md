@@ -1,27 +1,14 @@
 # oneAPI Level Zero Negative Tests
 
-Negative test content for validating all features of the oneAPI Level Zero validation layer which checks and handles all invalid inputs to the oneAPI Level Zero APIs.
+Negative test content for validating all features of the oneAPI Level Zero validation
+layer, which checks and handles all invalid inputs to the oneAPI Level Zero APIs.
 
-Validation Layer must be enabled via setting the `ZE_ENABLE_VALIDATION_LAYER` environment variable to `1` to get valid results.
+## Environment
 
-Parameter Validation is enabled via the setting the `ZE_ENABLE_PARAMETER_VALIDATION` environment variable to `1` which will enable checking the individual arguments to an L0 API. This requires that ZE_ENABLE_VALIDATION_LAYER was already enabled.
+* `ZE_ENABLE_VALIDATION_LAYER` - set to `1` to enable the Validation Layer; required to
+  get valid results.
+* `ZE_ENABLE_PARAMETER_VALIDATION` - set to `1` to enable checking of individual
+  arguments to an L0 API. Requires `ZE_ENABLE_VALIDATION_LAYER` to be enabled as well.
 
-## Getting Started
-
-**Prerequisites:**
- * oneAPI Level Zero
- * Compiler with C++11 support
- * GCC 5.4 or newer
- * Clang 3.8 or newer
- * CMake 3.8 or newer
-
-## Build
-
-Build instructions in [BUILD](BUILD.md) file.
-
-## Running
-
-**Executing the conformance tests on Linux**
- * Execute each test individually
-    * (Optional) Set LD_LIBRARY_PATH= "path to libze_loader.so.*"
-    * ./test_<filename>
+See the top-level [BUILD.md](../BUILD.md) for prerequisites, build and run
+instructions.

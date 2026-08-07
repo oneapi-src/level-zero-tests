@@ -13,8 +13,6 @@ ze_bandwidth measures the following:
 * Configurable number of iterations per transfer size
 * Optional user flag enables verification of first and last byte of every transfer
   
-# How to Build it
-See Build instructions in [BUILD](../BUILD.md) file.
 
 # How to Run it
 To run all benchmarks using the default settings: 

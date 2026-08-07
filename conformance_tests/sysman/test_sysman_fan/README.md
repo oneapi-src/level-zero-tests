@@ -1,4 +1,4 @@
-# testSysmanFan
+# test_sysman_fan
 
 This test suite is for checking sysman operations on Fan module. There are specific CTS for different Fan module APIs.
 # zesDeviceEnumFans

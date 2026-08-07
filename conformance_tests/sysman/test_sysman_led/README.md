@@ -1,4 +1,4 @@
-# testSysmanLed
+# test_sysman_led
 
 Test Suite for validating information about the Led modules. There are specific CTS for different Led APIs.
 

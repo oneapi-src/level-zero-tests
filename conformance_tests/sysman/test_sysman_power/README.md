@@ -1,4 +1,3 @@
-# test_power
+# test_sysman_power
 
-## Description
-test_power is a conformance test which validates Power Features of the System Management interface in a oneAPI Level Zero driver as described in https://spec.oneapi.com/versions/latest/oneL0/tools/SYSMAN.html#operations-on-power-domains.
+Sysman Power related test content - Level Zero Specification reference: [Operations on Power Domains](https://oneapi-src.github.io/level-zero-spec/level-zero/latest/sysman/PROG.html#operations-on-power-domains)

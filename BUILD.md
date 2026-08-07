@@ -185,7 +185,7 @@ cmake flag. The following group specifiers are available:
   - `/conformance_tests/core`: All of the conformance tests for the core API.
   - `/conformance_tests/tools`: All of the conformance tests for the tools API.
   - `/conformance_tests/tools/debug`: All the conformance tests for debugger.
-  - `/conformance_tests/tools/metrics`: All the conformance tests for debugger.
+  - `/conformance_tests/tools/metrics`: All the conformance tests for metrics.
   - `/conformance_tests/tools/pin`: All of the tools API conformance tests relating to instrumentation of L0 applications.
   - `/conformance_tests/tools/sysman`: All of the tools API conformance tests relating to system management.
   - `/conformance_tests/tools/tracing`: All of the tools API conformance tests related to tracing.
@@ -218,3 +218,26 @@ cmake flag to `yes`. Building zesysman requires the following additional depende
   - `swig`
   - `python3`
   - `python3-devel` <-- On SLES only
+
+## Running the Tests
+
+Each test is a standalone executable in the install directory and is executed
+individually. Conformance, negative and stress test executables are named
+`test_<name>`; performance benchmarks are named after the benchmark itself, for
+example `ze_peak`.
+
+```bash
+./test_<name>
+```
+
+If the Level Zero loader is not installed to a system path, point the loader at it
+first:
+
+```bash
+export LD_LIBRARY_PATH=<directory containing libze_loader.so.*>
+```
+
+The conformance, negative and stress tests are Google Test binaries, so they accept
+the standard gtest flags — `--gtest_list_tests` to enumerate cases and
+`--gtest_filter=<pattern>` to run a subset. Performance benchmarks take their own
+options; see the `README.md` next to each one.

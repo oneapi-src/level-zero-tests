@@ -1,4 +1,3 @@
 # test_p2p
 
-## Description
-test_p2p is a conformance test which validates Peer To Peer support in a oneAPI Level Zero driver as described in https://spec.oneapi.com/versions/latest/oneL0/core/PROG.html#peer-to-peer-access-and-queries.
+Peer-To-Peer related test content - Level Zero Specification reference: [Peer-To-Peer Access and Queries](https://oneapi-src.github.io/level-zero-spec/level-zero/latest/core/PROG.html#peer-to-peer-access-and-queries)

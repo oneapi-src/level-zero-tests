@@ -8,8 +8,6 @@ ze_nano is a performance benchmark suite for individual function calls. Some of 
     sudo sh -c 'echo -1 >/proc/sys/kernel/perf_event_paranoid'
 ```
 
-# How to Build it
-See Build instructions in [BUILD](../BUILD.md) file.
 
 # How to Run it
 To run all tests, use the following command. Options for filtering tests are below.

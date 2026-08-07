@@ -1,4 +1,4 @@
-# testSysmanFrequencyOverclocking
+# test_sysman_overclocking
 
 Test Suite for validating sysman frequency overclocking.
 

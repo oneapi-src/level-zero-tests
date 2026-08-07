@@ -51,8 +51,6 @@ Currently, there are five scenarios implemented for each API: simpleadd, mandelb
 # Prerequisite
 Requires L0 and OpenCL UMD 
   
-# How to Build it
-Built as performance test for level_zero_test library
 
 # How to Run it
 To run all benchmarks, use the following command. 

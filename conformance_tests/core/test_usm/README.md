@@ -1,5 +1,3 @@
 # test_usm
 
-## Description
-Shared Memory test intended to verify access to data from host <-> device using 
-the same pointer.
+Unified Shared Memory related test content - Level Zero Specification reference: [Memory](https://oneapi-src.github.io/level-zero-spec/level-zero/latest/core/api.html#memory)

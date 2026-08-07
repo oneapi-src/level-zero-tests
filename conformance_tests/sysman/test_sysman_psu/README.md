@@ -1,4 +1,4 @@
-# testSysmanPsu
+# test_sysman_psu
 
 Test Suite for validating information about the Psu modules. There are specific CTS for different Psu APIs.
 
