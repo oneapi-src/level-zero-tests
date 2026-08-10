@@ -87,6 +87,7 @@ LZT_TEST_F(
   ze_command_list_handle_t command_list;
 
   command_list = lzt::create_command_list();
+  lzt::close_command_list(command_list);
 
   EXPECT_EQ(
       ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
@@ -114,6 +115,7 @@ LZT_TEST_F(
   ze_command_queue_handle_t command_queue = nullptr;
   command_queue = lzt::create_command_queue();
   command_list = lzt::create_command_list();
+  lzt::close_command_list(command_list);
 
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_SIZE,
             zeCommandQueueExecuteCommandLists(command_queue, 0, &command_list,
@@ -141,7 +143,7 @@ LZT_TEST_F(
   command_list2 = lzt::create_command_list();
   lzt::close_command_list(command_list2);
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT,
-            zeCommandQueueExecuteCommandLists(command_queue, 0, &command_list2,
+            zeCommandQueueExecuteCommandLists(command_queue, 1, &command_list2,
                                               hFence));
   lzt::destroy_command_list(command_list1);
   lzt::destroy_command_list(command_list2);
@@ -163,6 +165,22 @@ LZT_TEST_F(
 
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeCommandQueueSynchronize(nullptr, UINT64_MAX));
+
+  lzt::destroy_command_list(command_list);
+  lzt::destroy_command_queue(command_queue);
+}
+
+LZT_TEST_F(
+    CommandQueueExecuteCommandListNegativeTests,
+    GivenNotClosedCommandListWhenExecutingCommandListsThenInvalidArgumentErrorIsReturned) {
+  ze_command_queue_handle_t command_queue = lzt::create_command_queue();
+  ze_command_list_handle_t command_list = lzt::create_command_list();
+
+  lzt::append_barrier(command_list);
+
+  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT,
+            zeCommandQueueExecuteCommandLists(command_queue, 1, &command_list,
+                                              nullptr));
 
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
