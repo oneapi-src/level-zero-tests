@@ -1021,7 +1021,7 @@ LZT_TEST_P(
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
   lzt::append_memory_copy(bundle.list, virtual_memory_0, aux_buffer, alloc_size,
                           nullptr, 0, nullptr);
-  lzt::close_command_list(bundle.list);
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(bundle.list));
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::destroy_command_bundle(bundle);
 
@@ -1059,13 +1059,164 @@ LZT_TEST_P(
 #endif
 }
 
+LZT_TEST_P(
+    zeVirtualMemoryMultiMappingTests,
+    givenSinglePhysicalDeviceMemoryMappedToMultipleVirtualMemoryRangeThenReadAndWriteResultsAreCorrect) {
+  const ze_memory_type_t aux_buffer_type = std::get<0>(GetParam());
+  const lzt::command_list_mode_t mode = std::get<1>(GetParam());
+
+  size_t page_size = 0;
+  size_t alloc_size = 1ul << 26;
+  lzt::query_page_size(context, device, alloc_size, &page_size);
+  alloc_size = lzt::create_page_aligned_size(alloc_size, page_size);
+
+  // Auxiliary buffer is used as the source for the GPU fills/copies. Device
+  // physical memory is not CPU-accessible, so all reads and writes to the
+  // mapped virtual ranges must go through the GPU.
+  void *aux_buffer = nullptr;
+  switch (aux_buffer_type) {
+  case ZE_MEMORY_TYPE_HOST:
+    aux_buffer = lzt::allocate_host_memory(alloc_size, sizeof(int64_t));
+    break;
+  case ZE_MEMORY_TYPE_DEVICE:
+    aux_buffer = lzt::allocate_device_memory(alloc_size, sizeof(int64_t));
+    break;
+  default:
+    aux_buffer = lzt::allocate_shared_memory(alloc_size, sizeof(int64_t));
+    break;
+  }
+  EXPECT_NE(nullptr, aux_buffer);
+
+  // CPU-accessible buffers to read back and verify what the GPU observed
+  // through each virtual range.
+  void *verify_buffer_0 =
+      lzt::allocate_shared_memory(alloc_size, sizeof(int64_t));
+  void *verify_buffer_1 =
+      lzt::allocate_shared_memory(alloc_size, sizeof(int64_t));
+  EXPECT_NE(nullptr, verify_buffer_0);
+  EXPECT_NE(nullptr, verify_buffer_1);
+
+  ze_physical_mem_handle_t physical_device_memory = nullptr;
+  lzt::physical_device_memory_allocation(context, device, alloc_size,
+                                         &physical_device_memory);
+  EXPECT_NE(nullptr, physical_device_memory);
+
+  void *virtual_memory_0 = nullptr;
+  void *virtual_memory_1 = nullptr;
+  void *virtual_memory_2 = nullptr;
+  lzt::virtual_memory_reservation(context, nullptr, alloc_size,
+                                  &virtual_memory_0);
+  lzt::virtual_memory_reservation(context, nullptr, alloc_size,
+                                  &virtual_memory_1);
+  lzt::virtual_memory_reservation(context, nullptr, alloc_size,
+                                  &virtual_memory_2);
+  EXPECT_NE(nullptr, virtual_memory_0);
+  EXPECT_NE(nullptr, virtual_memory_1);
+  EXPECT_NE(nullptr, virtual_memory_2);
+  EXPECT_NE(virtual_memory_0, virtual_memory_1);
+  EXPECT_NE(virtual_memory_0, virtual_memory_2);
+  EXPECT_NE(virtual_memory_1, virtual_memory_2);
+
+  // Map the same physical device memory into two distinct virtual ranges.
+  lzt::virtual_memory_map(context, virtual_memory_0, alloc_size,
+                          physical_device_memory, 0,
+                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+  lzt::virtual_memory_map(context, virtual_memory_1, alloc_size,
+                          physical_device_memory, 0,
+                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+
+  const int8_t pattern_0 = 7;
+  const int8_t pattern_1 = 0x5a;
+
+  auto bundle = lzt::create_command_bundle(device, mode);
+  // Write pattern_0 through virtual_memory_0, then read it back through
+  // virtual_memory_1 to confirm both ranges alias the same physical memory.
+  lzt::append_memory_fill(bundle.list, aux_buffer, &pattern_0,
+                          sizeof(pattern_0), alloc_size, nullptr);
+  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+  lzt::append_memory_copy(bundle.list, virtual_memory_0, aux_buffer, alloc_size,
+                          nullptr);
+  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+  lzt::append_memory_copy(bundle.list, verify_buffer_0, virtual_memory_1,
+                          alloc_size, nullptr);
+  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+  // Now write pattern_1 through virtual_memory_1 and read it back through
+  // virtual_memory_0 to confirm aliasing in the other direction.
+  lzt::append_memory_fill(bundle.list, aux_buffer, &pattern_1,
+                          sizeof(pattern_1), alloc_size, nullptr);
+  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+  lzt::append_memory_copy(bundle.list, virtual_memory_1, aux_buffer, alloc_size,
+                          nullptr);
+  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+  lzt::append_memory_copy(bundle.list, verify_buffer_1, virtual_memory_0,
+                          alloc_size, nullptr);
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(bundle.list));
+  lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
+  lzt::destroy_command_bundle(bundle);
+
+  for (size_t i = 0; i < alloc_size; i++) {
+    if (static_cast<int8_t *>(verify_buffer_0)[i] != pattern_0) {
+      FAIL() << "Verification failed reading virtual_memory_1 at index " << i;
+      break;
+    }
+  }
+  for (size_t i = 0; i < alloc_size; i++) {
+    if (static_cast<int8_t *>(verify_buffer_1)[i] != pattern_1) {
+      FAIL() << "Verification failed reading virtual_memory_0 at index " << i;
+      break;
+    }
+  }
+
+  lzt::virtual_memory_unmap(context, virtual_memory_0, alloc_size);
+  lzt::virtual_memory_free(context, virtual_memory_0, alloc_size);
+
+  lzt::virtual_memory_unmap(context, virtual_memory_1, alloc_size);
+  lzt::virtual_memory_free(context, virtual_memory_1, alloc_size);
+
+  // Make sure the data in the physical device memory is persistent after
+  // unmapping the ranges it was written through.
+  lzt::virtual_memory_map(context, virtual_memory_2, alloc_size,
+                          physical_device_memory, 0,
+                          ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY);
+  auto verify_bundle = lzt::create_command_bundle(device, mode);
+  lzt::append_memory_copy(verify_bundle.list, verify_buffer_0, virtual_memory_2,
+                          alloc_size, nullptr);
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(verify_bundle.list));
+  lzt::execute_and_sync_command_bundle(verify_bundle, UINT64_MAX);
+  lzt::destroy_command_bundle(verify_bundle);
+  for (size_t i = 0; i < alloc_size; i++) {
+    if (static_cast<int8_t *>(verify_buffer_0)[i] != pattern_1) {
+      FAIL() << "Verification failed reading persistent physical memory at "
+                "index "
+             << i;
+      break;
+    }
+  }
+  lzt::virtual_memory_unmap(context, virtual_memory_2, alloc_size);
+  lzt::virtual_memory_free(context, virtual_memory_2, alloc_size);
+
+  lzt::physical_memory_destroy(context, physical_device_memory);
+
+  lzt::free_memory(verify_buffer_0);
+  lzt::free_memory(verify_buffer_1);
+  lzt::free_memory(aux_buffer);
+}
+
 INSTANTIATE_TEST_SUITE_P(
-    VirtualHostMemoryMultiMappingParams, zeVirtualMemoryMultiMappingTests,
+    VirtualDeviceMemoryMultiMappingParamsRegular,
+    zeVirtualMemoryMultiMappingTests,
     ::testing::Combine(::testing::Values(ZE_MEMORY_TYPE_HOST,
                                          ZE_MEMORY_TYPE_DEVICE,
                                          ZE_MEMORY_TYPE_SHARED),
-                       ::testing::Values(lzt::command_list_mode_t::regular,
-                                         lzt::command_list_mode_t::immediate)));
+                       ::testing::Values(lzt::command_list_mode_t::regular)));
+
+INSTANTIATE_TEST_SUITE_P(
+    VirtualDeviceMemoryMultiMappingParamsImmediate,
+    zeVirtualMemoryMultiMappingTests,
+    ::testing::Combine(::testing::Values(ZE_MEMORY_TYPE_HOST,
+                                         ZE_MEMORY_TYPE_DEVICE,
+                                         ZE_MEMORY_TYPE_SHARED),
+                       ::testing::Values(lzt::command_list_mode_t::immediate)));
 
 LZT_TEST_F(
     zeVirtualMemoryTests,
