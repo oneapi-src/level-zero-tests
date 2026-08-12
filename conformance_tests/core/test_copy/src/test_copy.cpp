@@ -3056,4 +3056,258 @@ INSTANTIATE_TEST_SUITE_P(
         ::testing::Values(1, 8, 1024, 4096, 65536, 1u << 21),
         ::testing::Values(1, 2, 4, 8, 16, 32, 64, 4096, 65536, 1u << 21)));
 
+class zeSharedSystemMemoryUnalignedCopyTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_memory_type_t, size_t, size_t, size_t, size_t,
+                     lzt::command_list_mode_t, bool>> {
+protected:
+  void SetUp() override {
+    if (!lzt::supports_shared_system_alloc()) {
+      GTEST_SKIP() << "Device does not support accessing shared system memory";
+    }
+  }
+
+  void TearDown() override {}
+
+  void RunAppendMemoryCopyFillUnalignedTest() {
+    const ze_memory_type_t memory_type = std::get<0>(GetParam());
+    const size_t buf_sz = std::get<1>(GetParam()) * std::get<2>(GetParam()) *
+                          std::get<3>(GetParam());
+    const size_t offset = std::get<4>(GetParam());
+    lzt::command_list_mode_t mode = std::get<5>(GetParam());
+    bool copy_only = std::get<6>(GetParam());
+
+    void *buf = nullptr;
+    switch (memory_type) {
+    case ZE_MEMORY_TYPE_HOST: {
+      buf = lzt::allocate_host_memory(buf_sz, 1);
+      break;
+    }
+    case ZE_MEMORY_TYPE_DEVICE: {
+      buf = lzt::allocate_device_memory(buf_sz, 1);
+      break;
+    }
+    case ZE_MEMORY_TYPE_SHARED: {
+      buf = lzt::allocate_shared_memory(buf_sz, 1);
+      break;
+    }
+    default: {
+      FAIL() << "Unhandled memory type " << memory_type;
+      break;
+    }
+    }
+    EXPECT_NE(nullptr, buf);
+
+    void *buf_sys = lzt::allocate_shared_memory_with_allocator_selector(
+        buf_sz + offset, true);
+    EXPECT_NE(nullptr, buf_sys);
+    uint8_t *ptr = static_cast<uint8_t *>(buf_sys);
+    uint8_t value_before = 0x22;
+    uint8_t value_after = 0x55;
+
+    void *buf_src = buf_sys;
+    void *buf_dst = buf;
+    uint8_t *ref = static_cast<uint8_t *>(
+        lzt::allocate_shared_memory_with_allocator_selector(buf_sz + offset,
+                                                            true));
+
+    memset(ptr, 0, buf_sz + offset);
+    memset(ref, 0, buf_sz + offset);
+
+    uint32_t ordinal = 0;
+    if (copy_only) {
+      ordinal = 1;
+    }
+    auto device = zeDevice::get_instance()->get_device();
+    auto cmd_bundle = lzt::create_command_bundle(
+        lzt::get_default_context(), device, 0u,
+        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+        0u, ordinal, 0u, mode);
+
+    lzt::append_memory_set(
+        cmd_bundle.list,
+        static_cast<void *>(static_cast<uint8_t *>(buf_src) + offset),
+        &value_after, buf_sz);
+    if (offset > 0) {
+      lzt::append_memory_set(cmd_bundle.list, buf_src, &value_before, offset);
+    }
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_memory_copy(
+        cmd_bundle.list, buf_dst,
+        static_cast<void *>(static_cast<uint8_t *>(buf_src) + offset), buf_sz);
+    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(ref + offset),
+                            buf_dst, buf_sz);
+    lzt::close_command_list(cmd_bundle.list);
+    lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+    lzt::reset_command_list(cmd_bundle.list);
+    for (size_t i = 0; i < offset; i++) {
+      ASSERT_EQ(ref[i], 0);
+    }
+    for (size_t i = offset; i < buf_sz + offset; i++) {
+      ASSERT_EQ(ref[i], value_after)
+          << "Memory Copied from Device did not match.";
+    }
+
+    lzt::destroy_command_bundle(cmd_bundle);
+    lzt::free_memory(buf);
+    lzt::free_memory_with_allocator_selector(buf_sys, true);
+    lzt::free_memory_with_allocator_selector(ref, true);
+  }
+
+  void RunAppendMemoryCopyRegionUnalignedTest() {
+    const ze_memory_type_t memory_type = std::get<0>(GetParam());
+    size_t rows = std::get<1>(GetParam());
+    size_t columns = std::get<2>(GetParam());
+    size_t slices = std::get<3>(GetParam());
+    size_t buf_sz = rows * columns * slices;
+    const size_t offset = std::get<4>(GetParam());
+    lzt::command_list_mode_t mode = std::get<5>(GetParam());
+    bool copy_only = std::get<6>(GetParam());
+
+    void *destination_memory = nullptr;
+    switch (memory_type) {
+    case ZE_MEMORY_TYPE_HOST: {
+      destination_memory = lzt::allocate_host_memory(buf_sz, 1);
+      break;
+    }
+    case ZE_MEMORY_TYPE_DEVICE: {
+      destination_memory = lzt::allocate_device_memory(buf_sz, 1);
+      break;
+    }
+    case ZE_MEMORY_TYPE_SHARED: {
+      destination_memory = lzt::allocate_shared_memory(buf_sz, 1);
+      break;
+    }
+    default: {
+      FAIL() << "Unhandled memory type " << memory_type;
+      break;
+    }
+    }
+    EXPECT_NE(nullptr, destination_memory);
+
+    void *buf_sys = lzt::allocate_shared_memory_with_allocator_selector(
+        buf_sz + offset, true);
+    void *source_memory = reinterpret_cast<uint8_t *>(buf_sys) + offset;
+
+    uint32_t ordinal = 0;
+    if (copy_only) {
+      ordinal = 1;
+    }
+
+    auto device = zeDevice::get_instance()->get_device();
+    auto cmd_bundle = lzt::create_command_bundle(
+        lzt::get_default_context(), device, 0u,
+        ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+        0u, ordinal, 0u, mode);
+
+    // Set up memory buffers for test
+    // Device memory has to be copied in so
+    // use temporary buffers
+    void *temp_src = allocate_host_memory(buf_sz);
+    void *temp_dest = allocate_host_memory(buf_sz);
+
+    memset(temp_dest, 0, buf_sz);
+    lzt::write_data_pattern(temp_src, buf_sz, 1);
+
+    lzt::append_memory_copy(cmd_bundle.list, destination_memory, temp_dest,
+                            buf_sz);
+    lzt::append_memory_copy(cmd_bundle.list, source_memory, temp_src, buf_sz);
+    lzt::append_barrier(cmd_bundle.list);
+
+    void *verification_memory = lzt::allocate_host_memory(buf_sz);
+
+    uint32_t wdth = to_u32(columns);
+    uint32_t hght = to_u32(rows);
+    uint32_t dpth = to_u32(slices);
+    std::array<uint32_t, 3> widths = {1, wdth / 2, wdth};
+    std::array<uint32_t, 3> heights = {1, hght / 2, hght};
+    std::array<uint32_t, 3> depths = {1, dpth / 2, dpth};
+
+    for (uint32_t region = 0; region < 3; region++) {
+
+      // Define region to be copied from/to
+      uint32_t width = widths[region];
+      uint32_t height = heights[region];
+      uint32_t depth = depths[region];
+
+      ze_copy_region_t src_region;
+      src_region.originX = 0;
+      src_region.originY = 0;
+      src_region.originZ = 0;
+      src_region.width = width;
+      src_region.height = height;
+      src_region.depth = depth;
+
+      ze_copy_region_t dest_region;
+      dest_region.originX = 0;
+      dest_region.originY = 0;
+      dest_region.originZ = 0;
+      dest_region.width = width;
+      dest_region.height = height;
+      dest_region.depth = depth;
+
+      lzt::append_memory_copy_region(
+          cmd_bundle.list, destination_memory, &dest_region, wdth, wdth * hght,
+          source_memory, &src_region, wdth, wdth * hght, nullptr);
+      lzt::append_barrier(cmd_bundle.list);
+      lzt::append_memory_copy(cmd_bundle.list, verification_memory,
+                              destination_memory, buf_sz);
+      lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
+      lzt::reset_command_list(cmd_bundle.list);
+
+      for (size_t z = 0U; z < depth; z++) {
+        for (size_t y = 0U; y < height; y++) {
+          for (size_t x = 0U; x < width; x++) {
+            // index calculated based on memory sized by rows * columns * slices
+            size_t index = z * columns * rows + y * columns + x;
+            uint8_t dest_val =
+                static_cast<uint8_t *>(verification_memory)[index];
+            uint8_t src_val = static_cast<uint8_t *>(temp_src)[index];
+
+            ASSERT_EQ(dest_val, src_val)
+                << "Copy failed with region(w,h,d)=(" << width << ", " << height
+                << ", " << depth << ")";
+          }
+        }
+      }
+    }
+
+    lzt::destroy_command_bundle(cmd_bundle);
+    lzt::free_memory(destination_memory);
+    lzt::free_memory(temp_src);
+    lzt::free_memory(temp_dest);
+    lzt::free_memory_with_allocator_selector(buf_sys, true);
+    lzt::free_memory(verification_memory);
+  }
+};
+
+LZT_TEST_P(
+    zeSharedSystemMemoryUnalignedCopyTests,
+    GivenSizeAndUnalignedOffsetWhenAppendMemoryCopyToSharedSystemMemoryThenSuccessIsReturned) {
+  RunAppendMemoryCopyFillUnalignedTest();
+}
+
+LZT_TEST_P(
+    zeSharedSystemMemoryUnalignedCopyTests,
+    GivenSizeAndUnaligendOffsetWhenAppendMemoryCopyRegionToSharedSystemMemoryThenSuccessIsReturned) {
+  RunAppendMemoryCopyRegionUnalignedTest();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ParamSharedSystemMemCopy, zeSharedSystemMemoryUnalignedCopyTests,
+    ::testing::Combine(::testing::Values(ZE_MEMORY_TYPE_HOST,
+                                         ZE_MEMORY_TYPE_DEVICE,
+                                         ZE_MEMORY_TYPE_SHARED),
+                       ::testing::Values(8, 64),    // Rows
+                       ::testing::Values(8, 64),    // Cols
+                       ::testing::Values(1, 8, 64), // Slices
+                       ::testing::Values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+                                         13, 14, 15, 16, 255, 257, 1023, 1025,
+                                         4094),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate),
+                       ::testing::Bool()));
+
 } // namespace
