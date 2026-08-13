@@ -568,11 +568,14 @@ def assign_test_feature(test_binary: str, test_name: str):
             test_feature = "Host Memory"
         if test_binary == "test_copy" and test_name.find("HostMem") != -1:
             test_feature = "Host Memory"
+
         if test_binary == "test_copy" and test_name.find("DeviceMem") != -1:
             test_feature = "Device Memory"
         if test_binary == "test_memory" and test_name.find("SharedMem")!= -1:
             test_feature = "Shared Memory"
         if test_binary == "test_copy" and test_name.find("SharedMem")!= -1:
+            test_feature = "Shared Memory"
+        if test_binary == "test_copy" and test_name.find("SharedSystemMem") != -1:
             test_feature = "Shared Memory"
         if test_binary == "test_copy" and test_name.find("MemoryFill") != -1 \
             and test_name.find("SharedMem")== -1 \
