@@ -313,7 +313,7 @@ install(FILES "${MANIFEST_BUILD_PATH}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
 
 function(add_lzt_test)
     set(oneValueArgs NAME GROUP EXTENDED)
-    set(multiValueArgs SOURCES INCLUDE_DIRECTORIES LINK_LIBRARIES KERNELS MEDIA)
+    set(multiValueArgs SOURCES INCLUDE_DIRECTORIES LINK_LIBRARIES KERNELS KERNELSCUSTOM MEDIA)
     cmake_parse_arguments(ADD_LZT_TEST
       "${options}" "${oneValueArgs}" "${multiValueArgs}"
       ${ARGN}
