@@ -69,14 +69,25 @@ protected:
                                         &instance.dst_region);
         EXPECT_NE(nullptr, instance.dst_region);
 
-        ASSERT_ZE_RESULT_SUCCESS(
+        ze_result_t map_result =
             zeVirtualMemMap(context, instance.src_region, mem_size_,
                             instance.src_physical_region, 0,
-                            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
-        ASSERT_ZE_RESULT_SUCCESS(
-            zeVirtualMemMap(context, instance.dst_region, mem_size_,
-                            instance.dst_physical_region, 0,
-                            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+                            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+        if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          LOG_WARNING << "Virtual memory access attributes not supported";
+          cleanup_virtual_instance(instance);
+          GTEST_SKIP();
+        }
+        ASSERT_ZE_RESULT_SUCCESS(map_result);
+        map_result = zeVirtualMemMap(context, instance.dst_region, mem_size_,
+                                     instance.dst_physical_region, 0,
+                                     ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+        if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          LOG_WARNING << "Virtual memory access attributes not supported";
+          cleanup_virtual_instance(instance);
+          GTEST_SKIP();
+        }
+        ASSERT_ZE_RESULT_SUCCESS(map_result);
       } else {
         FAIL() << "Unexpected memory type";
       }
@@ -118,14 +129,26 @@ protected:
                                           &sub_device_instance.dst_region);
           EXPECT_NE(nullptr, sub_device_instance.dst_region);
 
-          ASSERT_ZE_RESULT_SUCCESS(zeVirtualMemMap(
+          ze_result_t map_result = zeVirtualMemMap(
               context, sub_device_instance.src_region, mem_size_,
               sub_device_instance.src_physical_region, 0,
-              ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
-          ASSERT_ZE_RESULT_SUCCESS(zeVirtualMemMap(
-              context, sub_device_instance.dst_region, mem_size_,
-              sub_device_instance.dst_physical_region, 0,
-              ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+              ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+          if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+            LOG_WARNING << "Virtual memory access attributes not supported";
+            cleanup_virtual_instance(sub_device_instance);
+            GTEST_SKIP();
+          }
+          ASSERT_ZE_RESULT_SUCCESS(map_result);
+          map_result = zeVirtualMemMap(context, sub_device_instance.dst_region,
+                                       mem_size_,
+                                       sub_device_instance.dst_physical_region,
+                                       0, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+          if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+            LOG_WARNING << "Virtual memory access attributes not supported";
+            cleanup_virtual_instance(sub_device_instance);
+            GTEST_SKIP();
+          }
+          ASSERT_ZE_RESULT_SUCCESS(map_result);
         } else {
           FAIL() << "Unexpected memory type";
         }
@@ -140,38 +163,22 @@ protected:
 
   void TearDown() override {
 
-    for (auto instance : dev_instance_) {
+    for (auto &instance : dev_instance_) {
       auto context = lzt::get_default_context();
       lzt::destroy_command_bundle(instance.cmd_bundle);
 
       if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
-        lzt::virtual_memory_unmap(context, instance.src_region, mem_size_);
-        lzt::virtual_memory_unmap(context, instance.dst_region, mem_size_);
-        lzt::physical_memory_destroy(context, instance.src_physical_region);
-        lzt::physical_memory_destroy(context, instance.dst_physical_region);
-        lzt::virtual_memory_free(context, instance.src_region, mem_size_);
-        lzt::virtual_memory_free(context, instance.dst_region, mem_size_);
+        cleanup_virtual_instance(instance);
       } else {
         lzt::free_memory(instance.src_region);
         lzt::free_memory(instance.dst_region);
       }
 
-      for (auto sub_device_instance : instance.sub_devices) {
+      for (auto &sub_device_instance : instance.sub_devices) {
         lzt::destroy_command_bundle(sub_device_instance.cmd_bundle);
 
         if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
-          lzt::virtual_memory_unmap(context, sub_device_instance.src_region,
-                                    mem_size_);
-          lzt::virtual_memory_unmap(context, sub_device_instance.dst_region,
-                                    mem_size_);
-          lzt::physical_memory_destroy(context,
-                                       sub_device_instance.src_physical_region);
-          lzt::physical_memory_destroy(context,
-                                       sub_device_instance.dst_physical_region);
-          lzt::virtual_memory_free(context, sub_device_instance.src_region,
-                                   mem_size_);
-          lzt::virtual_memory_free(context, sub_device_instance.dst_region,
-                                   mem_size_);
+          cleanup_virtual_instance(sub_device_instance);
         } else {
           lzt::free_memory(sub_device_instance.src_region);
           lzt::free_memory(sub_device_instance.dst_region);
@@ -190,6 +197,28 @@ protected:
     lzt::command_bundle cmd_bundle;
     std::vector<DevInstance> sub_devices;
   };
+
+  void cleanup_virtual_instance(DevInstance &instance) {
+    auto context = lzt::get_default_context();
+
+    if (instance.src_region != nullptr) {
+      lzt::virtual_memory_free(context, instance.src_region, mem_size_);
+      instance.src_region = nullptr;
+    }
+    if (instance.dst_region != nullptr) {
+      lzt::virtual_memory_free(context, instance.dst_region, mem_size_);
+      instance.dst_region = nullptr;
+    }
+    if (instance.src_physical_region != nullptr) {
+      lzt::physical_memory_destroy(context, instance.src_physical_region);
+      instance.src_physical_region = nullptr;
+    }
+    if (instance.dst_physical_region != nullptr) {
+      lzt::physical_memory_destroy(context, instance.dst_physical_region);
+      instance.dst_physical_region = nullptr;
+    }
+  }
+
   const uint32_t columns = 8;
   const uint32_t rows = 8;
   const uint32_t slices = 8;

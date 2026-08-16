@@ -23,6 +23,35 @@ namespace {
 
 using lzt::to_int;
 
+void cleanup_mapped_virtual_memory(ze_context_handle_t context,
+                                   void *&reservedVirtualMemory,
+                                   size_t virtualReservationSize,
+                                   ze_physical_mem_handle_t *physicalMemories,
+                                   size_t physicalMemoryCount, void *&memory,
+                                   lzt::command_bundle &bundle) {
+  if (reservedVirtualMemory != nullptr) {
+    // Releases the reservation and any mappings associated with it.
+    lzt::virtual_memory_free(context, reservedVirtualMemory,
+                             virtualReservationSize);
+    reservedVirtualMemory = nullptr;
+  }
+
+  for (size_t i = 0; i < physicalMemoryCount; i++) {
+    auto &physicalMemory = physicalMemories[i];
+    if (physicalMemory != nullptr) {
+      lzt::physical_memory_destroy(context, physicalMemory);
+      physicalMemory = nullptr;
+    }
+  }
+
+  if (memory != nullptr) {
+    lzt::free_memory(memory);
+    memory = nullptr;
+  }
+
+  lzt::destroy_command_bundle(bundle);
+}
+
 class zeVirtualMemoryTests : public ::testing::Test {
 protected:
   void SetUp() override {
@@ -32,21 +61,28 @@ protected:
   void TearDown() override {}
 
 public:
-  void
+  bool
   set_virtual_mem_access_and_verify(ze_memory_access_attribute_t new_access) {
     ze_memory_access_attribute_t access =
         ZE_MEMORY_ACCESS_ATTRIBUTE_FORCE_UINT32;
     size_t memory_size = 0;
-    lzt::virtual_memory_reservation_get_access(
+    ze_result_t result = zeVirtualMemGetAccessAttribute(
         context, reservedVirtualMemory, allocationSize, &access, &memory_size);
+    EXPECT_ZE_RESULT_SUCCESS(result);
     LOG_INFO << "Changing virtual memory access from " << lzt::to_string(access)
              << " to " << lzt::to_string(new_access) << '\n';
-    lzt::virtual_memory_reservation_set_access(context, reservedVirtualMemory,
-                                               allocationSize, new_access);
-    lzt::virtual_memory_reservation_get_access(
+    result = zeVirtualMemSetAccessAttribute(context, reservedVirtualMemory,
+                                            allocationSize, new_access);
+    if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      return false;
+    }
+    EXPECT_ZE_RESULT_SUCCESS(result);
+    result = zeVirtualMemGetAccessAttribute(
         context, reservedVirtualMemory, allocationSize, &access, &memory_size);
+    EXPECT_ZE_RESULT_SUCCESS(result);
     EXPECT_EQ(access, new_access);
     EXPECT_GE(memory_size, allocationSize);
+    return true;
   }
 
   ze_context_handle_t context;
@@ -172,12 +208,23 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
       lzt::virtual_memory_map(test.context, test.reservedVirtualMemory,
                               test.allocationSize, reservedPhysicalMemory, 0,
                               ZE_MEMORY_ACCESS_ATTRIBUTE_NONE, map_result);
+      if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_NONE not supported, "
+                       "skipping this permutation";
+        break;
+      }
       if (map_result != ZE_RESULT_SUCCESS) {
         map_failed = true;
         break;
       }
-      test.set_virtual_mem_access_and_verify(
-          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+      if (!test.set_virtual_mem_access_and_verify(
+              ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE)) {
+        LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE not supported, "
+                       "skipping this permutation";
+        lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
+                                  test.allocationSize);
+        break;
+      }
 
       lzt::append_memory_fill(bundle.record_list(), memory_out, &output_pattern,
                               sizeof(output_pattern), test.allocationSize,
@@ -212,12 +259,23 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
         lzt::virtual_memory_map(test.context, test.reservedVirtualMemory,
                                 test.allocationSize, reservedPhysicalMemory, 0,
                                 ZE_MEMORY_ACCESS_ATTRIBUTE_NONE, map_result);
+        if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY not supported "
+                         "(enforced mode), skipping this permutation";
+          break;
+        }
         if (map_result != ZE_RESULT_SUCCESS) {
           map_failed = true;
           break;
         }
-        test.set_virtual_mem_access_and_verify(
-            ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+        if (!test.set_virtual_mem_access_and_verify(
+                ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE)) {
+          LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY not supported "
+                         "(enforced mode setup), skipping this permutation";
+          lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
+                                    test.allocationSize);
+          break;
+        }
         lzt::append_memory_fill(
             bundle.record_list(), test.reservedVirtualMemory, &input_pattern,
             sizeof(input_pattern), test.allocationSize, nullptr);
@@ -229,12 +287,23 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
         lzt::virtual_memory_map(test.context, test.reservedVirtualMemory,
                                 test.allocationSize, reservedPhysicalMemory, 0,
                                 ZE_MEMORY_ACCESS_ATTRIBUTE_NONE, map_result);
+        if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY not supported "
+                         "(enforced mode verify), skipping this permutation";
+          break;
+        }
         if (map_result != ZE_RESULT_SUCCESS) {
           map_failed = true;
           break;
         }
-        test.set_virtual_mem_access_and_verify(
-            ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY);
+        if (!test.set_virtual_mem_access_and_verify(
+                ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY)) {
+          LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY not supported "
+                         "(enforced mode verify), skipping this permutation";
+          lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
+                                    test.allocationSize);
+          break;
+        }
 
         // Reads are permitted on a read-only range, so the seeded value must
         // read back.
@@ -253,12 +322,23 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
         lzt::virtual_memory_map(test.context, test.reservedVirtualMemory,
                                 test.allocationSize, reservedPhysicalMemory, 0,
                                 ZE_MEMORY_ACCESS_ATTRIBUTE_NONE, map_result);
+        if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+          LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY not supported "
+                         "(non-enforced mode), skipping this permutation";
+          break;
+        }
         if (map_result != ZE_RESULT_SUCCESS) {
           map_failed = true;
           break;
         }
-        test.set_virtual_mem_access_and_verify(
-            ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY);
+        if (!test.set_virtual_mem_access_and_verify(
+                ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY)) {
+          LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY not supported "
+                         "(non-enforced mode), skipping this permutation";
+          lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
+                                    test.allocationSize);
+          break;
+        }
 
         lzt::append_memory_fill(bundle.record_list(), memory_out,
                                 &output_pattern, sizeof(output_pattern),
@@ -294,11 +374,23 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
       lzt::virtual_memory_map(test.context, test.reservedVirtualMemory,
                               test.allocationSize, reservedPhysicalMemory, 0,
                               ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE, map_result);
+      if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_NONE not supported, "
+                       "skipping this permutation";
+        break;
+      }
       if (map_result != ZE_RESULT_SUCCESS) {
         map_failed = true;
         break;
       }
-      test.set_virtual_mem_access_and_verify(ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
+      if (!test.set_virtual_mem_access_and_verify(
+              ZE_MEMORY_ACCESS_ATTRIBUTE_NONE)) {
+        LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_NONE not supported, "
+                       "skipping this permutation";
+        lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
+                                  test.allocationSize);
+        break;
+      }
       lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
                                 test.allocationSize);
       break;
@@ -308,8 +400,7 @@ void RunGivenVirtualMemoryReservationThenSettingTheMemoryAccessAttribute(
 
     if (map_failed) {
       ADD_FAILURE() << "zeVirtualMemMap failed with result " << map_result;
-      LOG_WARNING << "Skipping remaining access-attribute permutations after "
-                     "zeVirtualMemMap failure.";
+      LOG_WARNING << "Stopping test after zeVirtualMemMap failure.";
       break;
     }
   }
@@ -397,14 +488,31 @@ LZT_TEST_F(
       ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY};
 
   for (auto accessFlags : memoryAccessFlags) {
+    ze_result_t map_result = ZE_RESULT_SUCCESS;
     lzt::virtual_memory_map(context, reservedVirtualMemory, allocationSize,
-                            reservedPhysicalDeviceMemory, 0, accessFlags);
+                            reservedPhysicalDeviceMemory, 0, accessFlags,
+                            map_result);
+    if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      LOG_WARNING
+          << "Access attribute " << lzt::to_string(accessFlags)
+          << " not supported on device memory, skipping this permutation";
+      continue;
+    }
+    EXPECT_ZE_RESULT_SUCCESS(map_result);
     lzt::virtual_memory_unmap(context, reservedVirtualMemory, allocationSize);
   }
 #ifdef __linux__
   for (auto accessFlags : memoryAccessFlags) {
+    ze_result_t map_result = ZE_RESULT_SUCCESS;
     lzt::virtual_memory_map(context, reservedVirtualMemory, allocationSize,
-                            reservedPhysicalHostMemory, 0, accessFlags);
+                            reservedPhysicalHostMemory, 0, accessFlags,
+                            map_result);
+    if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      LOG_WARNING << "Access attribute " << lzt::to_string(accessFlags)
+                  << " not supported on host memory, skipping this permutation";
+      continue;
+    }
+    EXPECT_ZE_RESULT_SUCCESS(map_result);
     lzt::virtual_memory_unmap(context, reservedVirtualMemory, allocationSize);
   }
 
@@ -418,6 +526,8 @@ void RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
     zeVirtualMemoryTests &test, bool is_host_memory,
     lzt::command_list_mode_t mode) {
   auto bundle = lzt::create_command_bundle(test.device, mode);
+  ze_physical_mem_handle_t physicalMemory = nullptr;
+  void *memory = nullptr;
 
   if (is_host_memory) {
 #ifdef __linux__
@@ -439,26 +549,27 @@ void RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
   EXPECT_NE(nullptr, test.reservedVirtualMemory);
   if (is_host_memory) {
     lzt::physical_host_memory_allocation(test.context, test.allocationSize,
-                                         &test.reservedPhysicalHostMemory);
-    EXPECT_NE(nullptr, test.reservedPhysicalHostMemory);
-    ASSERT_ZE_RESULT_SUCCESS(
-        zeVirtualMemMap(test.context, test.reservedVirtualMemory,
-                        test.allocationSize, test.reservedPhysicalHostMemory, 0,
-                        ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+                                         &physicalMemory);
   } else {
-    lzt::physical_device_memory_allocation(test.context, test.device,
-                                           test.allocationSize,
-                                           &test.reservedPhysicalDeviceMemory);
-    EXPECT_NE(nullptr, test.reservedPhysicalDeviceMemory);
-    ASSERT_ZE_RESULT_SUCCESS(
-        zeVirtualMemMap(test.context, test.reservedVirtualMemory,
-                        test.allocationSize, test.reservedPhysicalDeviceMemory,
-                        0, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+    lzt::physical_device_memory_allocation(
+        test.context, test.device, test.allocationSize, &physicalMemory);
   }
+  EXPECT_NE(nullptr, physicalMemory);
+
+  const ze_result_t map_result = zeVirtualMemMap(
+      test.context, test.reservedVirtualMemory, test.allocationSize,
+      physicalMemory, 0, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+  if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "Virtual memory access attributes not supported";
+    cleanup_mapped_virtual_memory(test.context, test.reservedVirtualMemory,
+                                  test.allocationSize, &physicalMemory, 1,
+                                  memory, bundle);
+    GTEST_SKIP();
+  }
+  ASSERT_ZE_RESULT_SUCCESS(map_result);
 
   int8_t pattern = 9;
-  void *memory =
-      lzt::allocate_shared_memory(test.allocationSize, test.pageSize);
+  memory = lzt::allocate_shared_memory(test.allocationSize, test.pageSize);
   lzt::append_memory_fill(bundle.list, test.reservedVirtualMemory, &pattern,
                           sizeof(pattern), test.allocationSize, nullptr);
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
@@ -470,19 +581,9 @@ void RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
   for (size_t i = 0U; i < test.allocationSize; i++) {
     ASSERT_EQ(data[i], pattern);
   }
-
-  lzt::virtual_memory_unmap(test.context, test.reservedVirtualMemory,
-                            test.allocationSize);
-  if (is_host_memory) {
-    lzt::physical_memory_destroy(test.context, test.reservedPhysicalHostMemory);
-  } else {
-    lzt::physical_memory_destroy(test.context,
-                                 test.reservedPhysicalDeviceMemory);
-  }
-  lzt::virtual_memory_free(test.context, test.reservedVirtualMemory,
-                           test.allocationSize);
-  lzt::free_memory(memory);
-  lzt::destroy_command_bundle(bundle);
+  cleanup_mapped_virtual_memory(test.context, test.reservedVirtualMemory,
+                                test.allocationSize, &physicalMemory, 1, memory,
+                                bundle);
 }
 
 LZT_TEST_F(
@@ -564,20 +665,30 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
                                   &test.reservedVirtualMemory);
   EXPECT_NE(nullptr, test.reservedVirtualMemory);
 
+  void *memory = nullptr;
+
   size_t offset = 0;
   for (size_t i = 0U; i < devices.size(); i++) {
     void *reservedVirtualMemoryOffset = reinterpret_cast<void *>(
         reinterpret_cast<uint64_t>(test.reservedVirtualMemory) + offset);
-    ASSERT_ZE_RESULT_SUCCESS(
+    ze_result_t map_result =
         zeVirtualMemMap(test.context, reservedVirtualMemoryOffset,
                         test.allocationSize, reservedPhysicalMemoryArray[i], 0,
-                        ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+                        ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+    if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      LOG_WARNING << "Virtual memory access attributes not supported";
+      cleanup_mapped_virtual_memory(
+          test.context, test.reservedVirtualMemory, virtualReservationSize,
+          reservedPhysicalMemoryArray.data(),
+          reservedPhysicalMemoryArray.size(), memory, bundle);
+      GTEST_SKIP();
+    }
+    ASSERT_ZE_RESULT_SUCCESS(map_result);
     offset += test.allocationSize;
   }
 
   int8_t pattern = 9;
-  void *memory =
-      lzt::allocate_shared_memory(totalAllocationSize, test.pageSize);
+  memory = lzt::allocate_shared_memory(totalAllocationSize, test.pageSize);
   lzt::append_memory_fill(bundle.list, test.reservedVirtualMemory, &pattern,
                           sizeof(pattern), totalAllocationSize, nullptr);
   lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
@@ -589,19 +700,10 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
   for (size_t i = 0U; i < totalAllocationSize; i++) {
     ASSERT_EQ(data[i], pattern);
   }
-  offset = 0;
-  for (size_t i = 0U; i < devices.size(); i++) {
-    void *reservedVirtualMemoryOffset = reinterpret_cast<void *>(
-        reinterpret_cast<uint64_t>(test.reservedVirtualMemory) + offset);
-    lzt::virtual_memory_unmap(test.context, reservedVirtualMemoryOffset,
-                              test.allocationSize);
-    lzt::physical_memory_destroy(test.context, reservedPhysicalMemoryArray[i]);
-    offset += test.allocationSize;
-  }
-  lzt::virtual_memory_free(test.context, test.reservedVirtualMemory,
-                           virtualReservationSize);
-  lzt::free_memory(memory);
-  lzt::destroy_command_bundle(bundle);
+  cleanup_mapped_virtual_memory(
+      test.context, test.reservedVirtualMemory, virtualReservationSize,
+      reservedPhysicalMemoryArray.data(), reservedPhysicalMemoryArray.size(),
+      memory, bundle);
 }
 
 LZT_TEST_F(
@@ -660,18 +762,28 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
                                   &test.reservedVirtualMemory);
   EXPECT_NE(nullptr, test.reservedVirtualMemory);
 
+  void *memory = nullptr;
+
   size_t offset = 0;
   for (size_t i = 0U; i < devices.size(); i++) {
     void *reservedVirtualMemoryOffset = reinterpret_cast<void *>(
         reinterpret_cast<uint64_t>(test.reservedVirtualMemory) + offset);
-    ASSERT_ZE_RESULT_SUCCESS(
+    ze_result_t map_result =
         zeVirtualMemMap(test.context, reservedVirtualMemoryOffset,
                         test.allocationSize, reservedPhysicalMemoryArray[i], 0,
-                        ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+                        ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+    if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      LOG_WARNING << "Virtual memory access attributes not supported";
+      cleanup_mapped_virtual_memory(
+          test.context, test.reservedVirtualMemory, virtualReservationSize,
+          reservedPhysicalMemoryArray.data(),
+          reservedPhysicalMemoryArray.size(), memory, bundle);
+      GTEST_SKIP();
+    }
+    ASSERT_ZE_RESULT_SUCCESS(map_result);
     offset += test.allocationSize;
   }
-  void *memory =
-      lzt::allocate_shared_memory(totalAllocationSize, test.pageSize);
+  memory = lzt::allocate_shared_memory(totalAllocationSize, test.pageSize);
   lzt::write_data_pattern(memory, totalAllocationSize, 1);
   std::string module_name = "write_memory_pattern.spv";
   ze_module_handle_t module = lzt::create_module(
@@ -730,19 +842,10 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
 
   lzt::destroy_function(function);
   lzt::destroy_module(module);
-  offset = 0;
-  for (size_t i = 0U; i < devices.size(); i++) {
-    void *reservedVirtualMemoryOffset = reinterpret_cast<void *>(
-        reinterpret_cast<uint64_t>(test.reservedVirtualMemory) + offset);
-    lzt::virtual_memory_unmap(test.context, reservedVirtualMemoryOffset,
-                              test.allocationSize);
-    lzt::physical_memory_destroy(test.context, reservedPhysicalMemoryArray[i]);
-    offset += test.allocationSize;
-  }
-  lzt::virtual_memory_free(test.context, test.reservedVirtualMemory,
-                           virtualReservationSize);
-  lzt::free_memory(memory);
-  lzt::destroy_command_bundle(bundle);
+  cleanup_mapped_virtual_memory(
+      test.context, test.reservedVirtualMemory, virtualReservationSize,
+      reservedPhysicalMemoryArray.data(), reservedPhysicalMemoryArray.size(),
+      memory, bundle);
 }
 
 LZT_TEST_F(
@@ -808,6 +911,8 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
 
   auto bundle = lzt::create_command_bundle(rootDevice, mode);
 
+  void *memory = nullptr;
+
   lzt::query_page_size(context, rootDevice, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
   for (size_t i = 0U; i < devices.size(); i++) {
@@ -824,15 +929,23 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
   for (size_t i = 0U; i < devices.size(); i++) {
     uint64_t offsetAddr =
         reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset;
-    ASSERT_ZE_RESULT_SUCCESS(zeVirtualMemMap(
+    ze_result_t map_result = zeVirtualMemMap(
         context, reinterpret_cast<void *>(offsetAddr), allocationSize,
-        reservedPhysicalMemory[i], 0, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+        reservedPhysicalMemory[i], 0, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+    if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      LOG_WARNING << "Virtual memory access attributes not supported";
+      cleanup_mapped_virtual_memory(
+          context, reservedVirtualMemory, virtualReservationSize,
+          reservedPhysicalMemory.data(), reservedPhysicalMemory.size(), memory,
+          bundle);
+      GTEST_SKIP();
+    }
+    ASSERT_ZE_RESULT_SUCCESS(map_result);
     offset += allocationSize;
   }
 
   int8_t pattern = 9;
-  void *memory =
-      lzt::allocate_host_memory(allocationSize * devices.size(), pageSize);
+  memory = lzt::allocate_host_memory(allocationSize * devices.size(), pageSize);
 
   offset = 0;
   for (size_t i = 0U; i < devices.size(); i++) {
@@ -862,23 +975,10 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
   for (size_t i = 0U; i < allocationSize * devices.size(); i++) {
     ASSERT_EQ(data[i], pattern);
   }
-
-  lzt::virtual_memory_unmap(context, reservedVirtualMemory, allocationSize);
-
-  offset = 0;
-  for (size_t i = 0U; i < devices.size(); i++) {
-    uint64_t offsetAddr =
-        reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset;
-    lzt::virtual_memory_unmap(context, reinterpret_cast<void *>(offsetAddr),
-                              allocationSize);
-    lzt::physical_memory_destroy(context, reservedPhysicalMemory[i]);
-    offset += allocationSize;
-  }
-
-  lzt::virtual_memory_free(context, reservedVirtualMemory,
-                           virtualReservationSize);
-  lzt::free_memory(memory);
-  lzt::destroy_command_bundle(bundle);
+  cleanup_mapped_virtual_memory(context, reservedVirtualMemory,
+                                virtualReservationSize,
+                                reservedPhysicalMemory.data(),
+                                reservedPhysicalMemory.size(), memory, bundle);
 }
 
 LZT_TEST_F(
@@ -990,12 +1090,34 @@ LZT_TEST_P(
   EXPECT_NE(virtual_memory_0, virtual_memory_2);
   EXPECT_NE(virtual_memory_1, virtual_memory_2);
 
+  ze_result_t map_result = ZE_RESULT_SUCCESS;
   lzt::virtual_memory_map(context, virtual_memory_0, alloc_size,
                           physical_host_memory, 0,
-                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE, map_result);
+  if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "Virtual memory access attributes not supported";
+    lzt::virtual_memory_free(context, virtual_memory_0, alloc_size);
+    lzt::virtual_memory_free(context, virtual_memory_1, alloc_size);
+    lzt::virtual_memory_free(context, virtual_memory_2, alloc_size);
+    lzt::physical_memory_destroy(context, physical_host_memory);
+    lzt::free_memory(context, aux_buffer);
+    GTEST_SKIP();
+  }
+  EXPECT_ZE_RESULT_SUCCESS(map_result);
   lzt::virtual_memory_map(context, virtual_memory_1, alloc_size,
                           physical_host_memory, 0,
-                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE, map_result);
+  if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "Virtual memory access attributes not supported";
+    lzt::virtual_memory_unmap(context, virtual_memory_0, alloc_size);
+    lzt::virtual_memory_free(context, virtual_memory_0, alloc_size);
+    lzt::virtual_memory_free(context, virtual_memory_1, alloc_size);
+    lzt::virtual_memory_free(context, virtual_memory_2, alloc_size);
+    lzt::physical_memory_destroy(context, physical_host_memory);
+    lzt::free_memory(context, aux_buffer);
+    GTEST_SKIP();
+  }
+  EXPECT_ZE_RESULT_SUCCESS(map_result);
 
   std::fill_n(static_cast<uint8_t *>(virtual_memory_0), alloc_size, 0);
   std::fill_n(static_cast<uint8_t *>(virtual_memory_1), alloc_size, 0);
@@ -1041,14 +1163,20 @@ LZT_TEST_P(
   // Make sure data in physical host memory is persistent
   lzt::virtual_memory_map(context, virtual_memory_2, alloc_size,
                           physical_host_memory, 0,
-                          ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY);
-  for (size_t i = 0; i < alloc_size; i++) {
-    if (static_cast<int8_t *>(virtual_memory_2)[i] != seven) {
-      FAIL() << "Verification failed";
-      break;
+                          ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY, map_result);
+  if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY not supported, "
+                   "skipping persistence verification";
+  } else {
+    EXPECT_ZE_RESULT_SUCCESS(map_result);
+    for (size_t i = 0; i < alloc_size; i++) {
+      if (static_cast<int8_t *>(virtual_memory_2)[i] != seven) {
+        FAIL() << "Verification failed";
+        break;
+      }
     }
+    lzt::virtual_memory_unmap(context, virtual_memory_2, alloc_size);
   }
-  lzt::virtual_memory_unmap(context, virtual_memory_2, alloc_size);
   lzt::virtual_memory_free(context, virtual_memory_2, alloc_size);
 
   lzt::physical_memory_destroy(context, physical_host_memory);

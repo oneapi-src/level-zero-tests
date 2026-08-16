@@ -1455,9 +1455,17 @@ static void run_ipc_physical_mem_getipchwithprops_opaque(
   void *reservedVA = nullptr;
   lzt::virtual_memory_reservation(context, nullptr, allocSize, &reservedVA);
   ASSERT_NE(nullptr, reservedVA);
-  ASSERT_ZE_RESULT_SUCCESS(
+  ze_result_t map_result =
       zeVirtualMemMap(context, reservedVA, allocSize, physMem, 0,
-                      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+                      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+  if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "Virtual memory access attributes not supported";
+    lzt::virtual_memory_free(context, reservedVA, allocSize);
+    lzt::physical_memory_destroy(context, physMem);
+    lzt::destroy_context(context);
+    GTEST_SKIP();
+  }
+  ASSERT_ZE_RESULT_SUCCESS(map_result);
 
   void *verify_buf = lzt::allocate_host_memory(allocSize, 1, context);
   memset(verify_buf, 0, allocSize);

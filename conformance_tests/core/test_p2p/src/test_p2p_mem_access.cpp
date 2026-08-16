@@ -246,10 +246,19 @@ protected:
                                       &dev_access_[0].device_mem_remote);
       EXPECT_NE(nullptr, dev_access_[0].device_mem_remote);
 
-      ASSERT_ZE_RESULT_SUCCESS(zeVirtualMemMap(
+      ze_result_t map_result = zeVirtualMemMap(
           lzt::get_default_context(), dev_access_[0].device_mem_remote,
           mem_size_, dev_access_[0].device_mem_remote_physical, 0,
-          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
+          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+      if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        LOG_WARNING << "Virtual memory access attributes not supported";
+        lzt::virtual_memory_free(lzt::get_default_context(),
+                                 dev_access_[0].device_mem_remote, mem_size_);
+        lzt::physical_memory_destroy(lzt::get_default_context(),
+                                     dev_access_[0].device_mem_remote_physical);
+        GTEST_SKIP();
+      }
+      ASSERT_ZE_RESULT_SUCCESS(map_result);
     } else {
       FAIL() << "Unexpected memory type";
     }

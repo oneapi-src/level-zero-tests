@@ -3293,14 +3293,23 @@ LZT_TEST_F(
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
 
-  lzt::virtual_memory_reservation(context, nullptr, allocationSize,
-                                  &reservedVirtualMemory);
+  ze_result_t result = zeVirtualMemReserve(context, nullptr, allocationSize,
+                                           &reservedVirtualMemory);
+  if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "test not executed because "
+                   "virtual memory is not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    GTEST_SKIP();
+  }
+  EXPECT_ZE_RESULT_SUCCESS(result);
   EXPECT_NE(nullptr, reservedVirtualMemory);
 
   lzt::enable_ltracer(tracer_handle);
 
-  lzt::virtual_memory_reservation_get_access(
-      context, reservedVirtualMemory, allocationSize, &access, &memorySize);
+  result = zeVirtualMemGetAccessAttribute(context, reservedVirtualMemory,
+                                          allocationSize, &access, &memorySize);
+  EXPECT_ZE_RESULT_SUCCESS(result);
   EXPECT_EQ(access, ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
   EXPECT_EQ(memorySize, allocationSize);
 
@@ -3343,15 +3352,32 @@ LZT_TEST_F(
 
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
-  lzt::virtual_memory_reservation(context, nullptr, allocationSize,
-                                  &reservedVirtualMemory);
+  ze_result_t result = zeVirtualMemReserve(context, nullptr, allocationSize,
+                                           &reservedVirtualMemory);
+  if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "test not executed because "
+                   "virtual memory is not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    GTEST_SKIP();
+  }
+  EXPECT_ZE_RESULT_SUCCESS(result);
   EXPECT_NE(nullptr, reservedVirtualMemory);
 
   lzt::enable_ltracer(tracer_handle);
 
-  lzt::virtual_memory_reservation_set_access(
-      context, reservedVirtualMemory, allocationSize,
-      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+  result = zeVirtualMemSetAccessAttribute(context, reservedVirtualMemory,
+                                          allocationSize,
+                                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+  if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "test not executed because "
+                   "virtual memory access attributes are not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
+    GTEST_SKIP();
+  }
+  EXPECT_ZE_RESULT_SUCCESS(result);
 
   lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
 }
@@ -3374,8 +3400,17 @@ LZT_TEST_F(
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
   lzt::physical_device_memory_allocation(context, device, allocationSize,
                                          &reservedPhysicalMemory);
-  lzt::virtual_memory_reservation(context, nullptr, allocationSize,
-                                  &reservedVirtualMemory);
+  ze_result_t result = zeVirtualMemReserve(context, nullptr, allocationSize,
+                                           &reservedVirtualMemory);
+  if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "test not executed because "
+                   "virtual memory is not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    lzt::physical_memory_destroy(context, reservedPhysicalMemory);
+    GTEST_SKIP();
+  }
+  EXPECT_ZE_RESULT_SUCCESS(result);
   EXPECT_NE(nullptr, reservedVirtualMemory);
 
   std::vector<ze_memory_access_attribute_t> memoryAccessFlags = {
@@ -3384,9 +3419,19 @@ LZT_TEST_F(
 
   lzt::enable_ltracer(tracer_handle);
 
-  lzt::virtual_memory_map(context, reservedVirtualMemory, allocationSize,
-                          reservedPhysicalMemory, 0,
-                          ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
+  result = zeVirtualMemMap(context, reservedVirtualMemory, allocationSize,
+                           reservedPhysicalMemory, 0,
+                           ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
+  if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "test not executed because "
+                   "virtual memory access attributes are not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
+    lzt::physical_memory_destroy(context, reservedPhysicalMemory);
+    GTEST_SKIP();
+  }
+  EXPECT_ZE_RESULT_SUCCESS(result);
   lzt::virtual_memory_unmap(context, reservedVirtualMemory, allocationSize);
 
   lzt::physical_memory_destroy(context, reservedPhysicalMemory);
@@ -3411,17 +3456,36 @@ LZT_TEST_F(
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
   lzt::physical_device_memory_allocation(context, device, allocationSize,
                                          &reservedPhysicalMemory);
-  lzt::virtual_memory_reservation(context, nullptr, allocationSize,
-                                  &reservedVirtualMemory);
+  ze_result_t result = zeVirtualMemReserve(context, nullptr, allocationSize,
+                                           &reservedVirtualMemory);
+  if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "test not executed because "
+                   "virtual memory is not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    lzt::physical_memory_destroy(context, reservedPhysicalMemory);
+    GTEST_SKIP();
+  }
+  EXPECT_ZE_RESULT_SUCCESS(result);
   EXPECT_NE(nullptr, reservedVirtualMemory);
 
   std::vector<ze_memory_access_attribute_t> memoryAccessFlags = {
       ZE_MEMORY_ACCESS_ATTRIBUTE_NONE, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE,
       ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY};
 
-  lzt::virtual_memory_map(context, reservedVirtualMemory, allocationSize,
-                          reservedPhysicalMemory, 0,
-                          ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
+  result = zeVirtualMemMap(context, reservedVirtualMemory, allocationSize,
+                           reservedPhysicalMemory, 0,
+                           ZE_MEMORY_ACCESS_ATTRIBUTE_NONE);
+  if (result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "test not executed because "
+                   "virtual memory access attributes are not supported";
+    user_data.prologue_called = true;
+    user_data.epilogue_called = true;
+    lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
+    lzt::physical_memory_destroy(context, reservedPhysicalMemory);
+    GTEST_SKIP();
+  }
+  EXPECT_ZE_RESULT_SUCCESS(result);
   lzt::enable_ltracer(tracer_handle);
   lzt::virtual_memory_unmap(context, reservedVirtualMemory, allocationSize);
 
