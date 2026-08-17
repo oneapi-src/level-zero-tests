@@ -538,7 +538,7 @@ LZT_TEST_P(
   event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
   event_desc.pNext = nullptr;
   event_desc.index = 0;
-  event_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
+  event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
   event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
 
   for (uint32_t i = 0; i < num_cmdq; i++) {
