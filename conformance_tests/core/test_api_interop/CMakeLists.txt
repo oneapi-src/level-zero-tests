@@ -26,4 +26,6 @@ add_lzt_test(
     $<$<BOOL:${WIN32}>:dxgi.lib>
     $<$<BOOL:${WIN32}>:d3d11.lib>
     $<$<BOOL:${WIN32}>:d3d12.lib>
+  KERNELS
+    interop_double
 )

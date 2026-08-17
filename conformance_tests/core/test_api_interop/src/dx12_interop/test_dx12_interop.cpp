@@ -494,6 +494,264 @@ LZT_TEST_F(
 #endif
 }
 
+#ifndef __linux__
+
+enum class L0WorkOp { memory_copy, kernel_launch };
+
+constexpr uint32_t pingpong_frame_count = 16;
+
+void test_pingpong_with_semaphore(const ComPtr<ID3D12Device> &dx12_device,
+                                  ze_device_handle_t l0_device,
+                                  size_t memory_size,
+                                  const ComPtr<ID3D12Resource> &dx12_resource,
+                                  void *l0_imported_memory, L0WorkOp work_op) {
+  const uint32_t element_count =
+      static_cast<uint32_t>(memory_size / sizeof(uint32_t));
+
+  auto fence = dx12::create_fence(dx12_device, true);
+  auto fence_shared_handle =
+      dx12::create_shared_handle(dx12_device, fence.Get());
+  auto external_semaphore_handle =
+      dx::import_fence(l0_device, fence_shared_handle,
+                       ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D12_FENCE);
+
+  auto l0_event_pool = lzt::create_event_pool(lzt::get_default_context(), 1,
+                                              ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+  ze_event_desc_t l0_event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC};
+  auto l0_after_wait_event = lzt::create_event(l0_event_pool, l0_event_desc);
+
+  auto upload_buffer = dx12::create_committed_resource(
+      dx12_device, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ,
+      memory_size);
+  auto readback_buffer = dx12::create_committed_resource(
+      dx12_device, D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST,
+      memory_size);
+
+  auto dx12_cmd_bundle = dx12::create_command_bundle(dx12_device);
+
+  ASSERT_EQ(dx12_cmd_bundle.cmd_list->Close(), S_OK);
+
+  auto l0_cmd_bundle =
+      lzt::create_command_bundle<lzt::command_list_mode_t::immediate>(
+          l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+          0u, 0u);
+
+  void *l0_host_memory = lzt::allocate_host_memory(memory_size);
+
+  ze_module_handle_t l0_module = nullptr;
+  ze_kernel_handle_t l0_kernel = nullptr;
+  ze_group_count_t l0_group_count = {1, 1, 1};
+  if (work_op == L0WorkOp::kernel_launch) {
+    l0_module = lzt::create_module(l0_device, "interop_double.spv");
+    l0_kernel = lzt::create_function(l0_module, "double_values");
+
+    uint32_t group_size_x = 0, group_size_y = 0, group_size_z = 0;
+    lzt::suggest_group_size(l0_kernel, element_count, 1, 1, group_size_x,
+                            group_size_y, group_size_z);
+    ASSERT_GT(group_size_x, 0u);
+    ASSERT_EQ(element_count % group_size_x, 0u)
+        << "element count " << element_count
+        << " is not a multiple of the suggested group size " << group_size_x;
+    lzt::set_group_size(l0_kernel, group_size_x, 1, 1);
+    lzt::set_argument_value(l0_kernel, 0, sizeof(l0_imported_memory),
+                            &l0_imported_memory);
+    l0_group_count = {element_count / group_size_x, 1, 1};
+  }
+
+  D3D12_RESOURCE_STATES resource_state = D3D12_RESOURCE_STATE_COPY_DEST;
+  const auto transition = [&](D3D12_RESOURCE_STATES to) {
+    if (resource_state == to) {
+      return;
+    }
+    const D3D12_RESOURCE_BARRIER barrier = {
+        .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+        .Transition = {.pResource = dx12_resource.Get(),
+                       .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+                       .StateBefore = resource_state,
+                       .StateAfter = to}};
+    dx12_cmd_bundle.cmd_list->ResourceBarrier(1, &barrier);
+    resource_state = to;
+  };
+
+  for (uint32_t frame = 0; frame < pingpong_frame_count; ++frame) {
+    const uint64_t dx_produced_value = 2ull * frame + 1;
+    const uint64_t l0_consumed_value = 2ull * frame + 2;
+
+    // DX produces frame `frame` into the shared resource.
+    void *mapped_ptr = nullptr;
+    ASSERT_EQ(upload_buffer->Map(0, nullptr, &mapped_ptr), S_OK);
+    std::span<uint32_t> upload_values(reinterpret_cast<uint32_t *>(mapped_ptr),
+                                      element_count);
+    for (uint32_t i = 0; i < element_count; ++i) {
+      upload_values[i] = frame;
+    }
+    upload_buffer->Unmap(0, nullptr);
+
+    ASSERT_EQ(dx12_cmd_bundle.cmd_allocator->Reset(), S_OK);
+    ASSERT_EQ(dx12_cmd_bundle.cmd_list->Reset(
+                  dx12_cmd_bundle.cmd_allocator.Get(), nullptr),
+              S_OK);
+    transition(D3D12_RESOURCE_STATE_COPY_DEST);
+    dx12_cmd_bundle.cmd_list->CopyBufferRegion(
+        dx12_resource.Get(), 0, upload_buffer.Get(), 0, memory_size);
+    transition(D3D12_RESOURCE_STATE_COMMON);
+    ASSERT_EQ(dx12_cmd_bundle.cmd_list->Close(), S_OK);
+
+    ID3D12CommandList *produce_lists[] = {dx12_cmd_bundle.cmd_list.Get()};
+    dx12_cmd_bundle.cmd_queue->ExecuteCommandLists(1, produce_lists);
+    dx12_cmd_bundle.cmd_queue->Signal(fence.Get(), dx_produced_value);
+
+    // Drain the producer on the host before the consumer syncs on its signal.
+    dx12::wait_for_fence(fence, dx_produced_value);
+
+    // L0 consumes behind the shared fence, then signals back.
+    lzt::event_host_reset(l0_after_wait_event);
+
+    ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {
+        .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
+        .value = dx_produced_value};
+    lzt::append_wait_external_semaphore(
+        l0_cmd_bundle.list, 1, &external_semaphore_handle,
+        &semaphore_wait_params, l0_after_wait_event, 0, nullptr);
+
+    if (work_op == L0WorkOp::kernel_launch) {
+      lzt::append_launch_function(l0_cmd_bundle.list, l0_kernel,
+                                  &l0_group_count, nullptr, 1,
+                                  &l0_after_wait_event);
+    } else {
+      lzt::append_memory_copy(l0_cmd_bundle.list, l0_host_memory,
+                              l0_imported_memory, memory_size, nullptr, 1,
+                              &l0_after_wait_event);
+    }
+
+    ze_external_semaphore_signal_params_ext_t semaphore_signal_params = {
+        .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT,
+        .value = l0_consumed_value};
+    lzt::append_signal_external_semaphore(
+        l0_cmd_bundle.list, 1, &external_semaphore_handle,
+        &semaphore_signal_params, nullptr, 0, nullptr);
+
+    lzt::execute_and_sync_command_bundle(l0_cmd_bundle,
+                                         std::numeric_limits<uint64_t>::max());
+
+    if (work_op == L0WorkOp::memory_copy) {
+      std::span<const uint32_t> copied_values(
+          reinterpret_cast<const uint32_t *>(l0_host_memory), element_count);
+      for (uint32_t i = 0; i < element_count; ++i) {
+        ASSERT_EQ(copied_values[i], frame)
+            << " frame = " << frame << ", index = " << i;
+      }
+    }
+
+    dx12::wait_for_fence(fence, l0_consumed_value);
+
+    // DX reads the shared resource back and verifies this frame.
+    ASSERT_EQ(dx12_cmd_bundle.cmd_allocator->Reset(), S_OK);
+    ASSERT_EQ(dx12_cmd_bundle.cmd_list->Reset(
+                  dx12_cmd_bundle.cmd_allocator.Get(), nullptr),
+              S_OK);
+    transition(D3D12_RESOURCE_STATE_COPY_SOURCE);
+    dx12_cmd_bundle.cmd_list->CopyBufferRegion(
+        readback_buffer.Get(), 0, dx12_resource.Get(), 0, memory_size);
+    transition(D3D12_RESOURCE_STATE_COMMON);
+    ASSERT_EQ(dx12_cmd_bundle.cmd_list->Close(), S_OK);
+    dx12::execute_and_sync_command_bundle(dx12_device, dx12_cmd_bundle);
+
+    // A kernel launch doubles what DX wrote; a copy leaves the shared resource
+    // as produced, so the expected readback differs per work op.
+    const uint32_t expected_value =
+        work_op == L0WorkOp::kernel_launch ? frame * 2 : frame;
+
+    void *readback_ptr = nullptr;
+    ASSERT_EQ(readback_buffer->Map(0, nullptr, &readback_ptr), S_OK);
+    std::span<const uint32_t> readback_values(
+        reinterpret_cast<const uint32_t *>(readback_ptr), element_count);
+    for (uint32_t i = 0; i < element_count; ++i) {
+      ASSERT_EQ(readback_values[i], expected_value)
+          << " frame = " << frame << ", index = " << i;
+    }
+    readback_buffer->Unmap(0, nullptr);
+  }
+
+  EXPECT_EQ(fence->GetCompletedValue(), 2ull * pingpong_frame_count);
+
+  if (work_op == L0WorkOp::kernel_launch) {
+    lzt::destroy_function(l0_kernel);
+    lzt::destroy_module(l0_module);
+  }
+  lzt::destroy_command_bundle(l0_cmd_bundle);
+  lzt::free_memory(l0_host_memory);
+  lzt::destroy_event(l0_after_wait_event);
+  lzt::destroy_event_pool(l0_event_pool);
+  lzt::release_external_semaphore(external_semaphore_handle);
+  CloseHandle(fence_shared_handle);
+}
+
+#endif
+
+LZT_TEST_F(
+    DX12InteroperabilityTests,
+    GivenDX12SharedFenceAndImportedBufferWhenPingPongingKernelResultsAcrossFramesThenValuesAreCorrect) {
+#ifndef __linux__
+  auto external_memory_props = lzt::get_external_memory_properties(l0_device);
+  if (!(external_memory_props.memoryAllocationImportTypes &
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE)) {
+    GTEST_SKIP() << "Device doesn't support D3D12 committed resource import.";
+  }
+
+  constexpr size_t memory_size = 1024;
+
+  auto committed_resource = dx12::create_committed_resource(
+      dx12_device, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST,
+      memory_size, true);
+  auto committed_resource_shared_handle =
+      dx12::create_shared_handle(dx12_device, committed_resource.Get());
+
+  void *imported_memory =
+      import_memory(committed_resource_shared_handle,
+                    ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE, memory_size);
+
+  test_pingpong_with_semaphore(dx12_device, l0_device, memory_size,
+                               committed_resource, imported_memory,
+                               L0WorkOp::kernel_launch);
+
+  lzt::free_memory(imported_memory);
+  CloseHandle(committed_resource_shared_handle);
+#endif
+}
+
+LZT_TEST_F(
+    DX12InteroperabilityTests,
+    GivenDX12SharedFenceAndImportedBufferWhenPingPongingCopyResultsAcrossFramesThenValuesAreCorrect) {
+#ifndef __linux__
+  auto external_memory_props = lzt::get_external_memory_properties(l0_device);
+  if (!(external_memory_props.memoryAllocationImportTypes &
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE)) {
+    GTEST_SKIP() << "Device doesn't support D3D12 committed resource import.";
+  }
+
+  constexpr size_t memory_size = 1024;
+
+  auto committed_resource = dx12::create_committed_resource(
+      dx12_device, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST,
+      memory_size, true);
+  auto committed_resource_shared_handle =
+      dx12::create_shared_handle(dx12_device, committed_resource.Get());
+
+  void *imported_memory =
+      import_memory(committed_resource_shared_handle,
+                    ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D12_RESOURCE, memory_size);
+
+  test_pingpong_with_semaphore(dx12_device, l0_device, memory_size,
+                               committed_resource, imported_memory,
+                               L0WorkOp::memory_copy);
+
+  lzt::free_memory(imported_memory);
+  CloseHandle(committed_resource_shared_handle);
+#endif
+}
+
 struct DX12IteroperabilityMultiPlanarImageTests
     : public DX12InteroperabilityTests {
   void SetUp() override {
