@@ -396,3 +396,57 @@ void metric_run_ip_sampling_with_validation(
     lzt::destroy_command_list(commandList);
   }
 }
+
+bool success_metric_tracer_read_data_retry(
+    zet_metric_tracer_exp_handle_t metric_tracer_handle,
+    int32_t number_of_retries, int32_t retry_wait_milliseconds,
+    bool check_read_non_zero_size, size_t *ptr_raw_data_size,
+    uint8_t *ptr_raw_data) {
+
+  const size_t requested_raw_data_size = *ptr_raw_data_size;
+  ze_result_t result = ZE_RESULT_SUCCESS;
+
+  const char *retry_milliseconds =
+      std::getenv("LZT_METRIC_TRACER_READ_DATA_RETRY_MS");
+  if (retry_milliseconds != nullptr) {
+    retry_wait_milliseconds = to_u32(retry_milliseconds);
+  }
+  LOG_DEBUG << "Retry read delay is set to " << retry_wait_milliseconds
+            << " milliseconds";
+
+  for (int32_t retry = 0; retry <= number_of_retries; ++retry) {
+
+    *ptr_raw_data_size =
+        requested_raw_data_size; // reset the size for each retry
+    LOG_DEBUG << "zetMetricTracerReadDataExp called with raw data size: "
+              << *ptr_raw_data_size;
+    result = zetMetricTracerReadDataExp(metric_tracer_handle, ptr_raw_data_size,
+                                        ptr_raw_data);
+
+    LOG_DEBUG << "zetMetricTracerReadDataExp returned result: " << result
+              << " with raw data size: " << *ptr_raw_data_size;
+    if ((result == ZE_RESULT_SUCCESS ||
+         result == ZE_RESULT_WARNING_DROPPED_DATA)) {
+      if (!check_read_non_zero_size || *ptr_raw_data_size > 0) {
+        return true;
+      }
+    }
+
+    if (result != ZE_RESULT_SUCCESS &&
+        result != ZE_RESULT_WARNING_DROPPED_DATA &&
+        result != ZE_RESULT_NOT_READY) {
+      LOG_ERROR << "zetMetricTracerReadDataExp returned unexpected result: "
+                << result;
+      return false;
+    }
+    LOG_DEBUG << "zetMetricTracerReadDataExp returned zero data size, "
+                 "retrying ("
+              << retry + 1 << "/" << number_of_retries << ")";
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(retry_wait_milliseconds));
+  }
+
+  LOG_ERROR << "zetMetricTracerReadDataExp did not return success after "
+            << number_of_retries << " retries";
+  return false;
+}

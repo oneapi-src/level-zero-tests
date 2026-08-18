@@ -10,10 +10,12 @@
 
 #include <level_zero/ze_api.h>
 #include "utils/utils.hpp"
+#include <chrono>
 #include <cstring>
 #include <cstdlib>
 #include <cmath>
 #include <map>
+#include <thread>
 
 namespace lzt = level_zero_tests;
 
@@ -269,6 +271,8 @@ bool optimize_metric_group_info_list(
 
   if (metricGroupNameEnvironmentVariable != nullptr) {
     specificMetricGroupName = metricGroupNameEnvironmentVariable;
+    LOG_INFO << "Specific group name set by LZT_METRIC_GROUPS_TEST_SPECIFIC = "
+             << specificMetricGroupName;
   } else if (metricGroupName != nullptr) {
     specificMetricGroupName = metricGroupName;
   }
@@ -277,7 +281,7 @@ bool optimize_metric_group_info_list(
     for (auto const &metricGroupInfo : metricGroupInfoList) {
       if (metricGroupInfo.metricGroupName.compare(specificMetricGroupName) ==
           0) {
-        LOG_INFO << "specific name push_back "
+        LOG_INFO << "Specific name push_back "
                  << metricGroupInfo.metricGroupName;
         optimizedList.push_back(metricGroupInfo);
         return optimizedList.size() >= minCount;
@@ -294,8 +298,14 @@ bool optimize_metric_group_info_list(
     percentOfMetricGroupForTest =
         value != 0 ? value : percentOfMetricGroupForTest;
     percentOfMetricGroupForTest = std::min(percentOfMetricGroupForTest, 100u);
+    LOG_INFO << "Overriding the percentage of metric groups to test as "
+             << percentOfMetricGroupForTest
+             << "% because LZT_METRIC_GROUPS_TEST_PERCENTAGE is used with "
+                "value of "
+             << value;
   }
-  LOG_INFO << "percentage of metric groups " << percentOfMetricGroupForTest;
+  LOG_INFO << "Reducing list of metric groups to "
+           << percentOfMetricGroupForTest << "%";
 
   double metricGrpTestPerc = to_f64(percentOfMetricGroupForTest) * 0.01;
   minCount = std::max(minCount, 1u);
@@ -339,7 +349,7 @@ bool optimize_metric_group_info_list(
     }
   }
 
-  LOG_INFO << "size of optimizedList based on percentage "
+  LOG_INFO << "Size of optimized metric groups list based on percentage: "
            << optimizedList.size();
   return optimizedList.size() >= minCount * to_u32(metricGroupsBySource.size());
 }
@@ -702,6 +712,21 @@ void activate_metric_groups(
     ze_device_handle_t device, uint32_t count,
     zet_metric_group_handle_t *ptr_matched_group_handle) {
   ASSERT_NE(nullptr, *ptr_matched_group_handle);
+  std::string metric_group_names;
+  for (uint32_t i = 0; i < count; i++) {
+    ASSERT_NE(nullptr, ptr_matched_group_handle[i]);
+    zet_metric_group_properties_t metric_group_properties = {};
+    metric_group_properties.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+    metric_group_properties.pNext = nullptr;
+    EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetProperties(
+        ptr_matched_group_handle[i], &metric_group_properties));
+    if (i > 0) {
+      metric_group_names += ", ";
+    }
+    metric_group_names += metric_group_properties.name;
+  }
+  LOG_INFO << "activating " << count
+           << " metric group(s): " << metric_group_names;
   EXPECT_ZE_RESULT_SUCCESS(zetContextActivateMetricGroups(
       lzt::get_default_context(), device, count, ptr_matched_group_handle));
 }
@@ -1166,8 +1191,8 @@ void generate_activatable_metric_group_list_for_device(
     auto it = domain_map.find(group_info.domain);
     if (it == domain_map.end()) {
       domain_map.insert({group_info.domain, group_info.metricGroupHandle});
-      LOG_DEBUG << "adding metric group handle for "
-                << group_info.metricGroupName
+      LOG_DEBUG << "Adding metric group " << group_info.metricGroupName
+                << " in domain " << group_info.domain
                 << " to activatable metric group list";
     }
   }
@@ -1959,7 +1984,7 @@ ze_kernel_handle_t get_matrix_multiplication_kernel(
   if (dimensions_test_environment_variable != nullptr) {
     dimensions = to_u32(dimensions_test_environment_variable);
     LOG_INFO
-        << "overriding the matrix multiplication dimension as "
+        << "Overriding the matrix multiplication dimension as "
            "LZT_METRICS_MATRIX_MULTIPLICATION_DIMENSIONS is used with value of "
         << dimensions;
   }

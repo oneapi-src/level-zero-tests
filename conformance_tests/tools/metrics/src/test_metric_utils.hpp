@@ -26,4 +26,10 @@ void metric_run_ip_sampling_with_validation(
     uint32_t notifyEveryNReports, uint32_t samplingPeriod,
     uint32_t timeForNReportsComplete, uint32_t dimensions = 8192);
 
+bool success_metric_tracer_read_data_retry(
+    zet_metric_tracer_exp_handle_t metric_tracer_handle,
+    int32_t number_of_retries, int32_t retry_wait_milliseconds,
+    bool check_read_non_zero_size, size_t *ptr_raw_data_size,
+    uint8_t *ptr_raw_data);
+
 #endif // TEST_METRIC_UTILS_HPP
