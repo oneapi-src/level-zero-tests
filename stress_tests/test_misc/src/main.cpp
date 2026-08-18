@@ -16,8 +16,8 @@
 namespace lzt = level_zero_tests;
 
 void reserve_memory(bool release) {
-  size_t page_size = lzt::get_page_size();
-  size_t single_alloc_size = 1024UL * 1024UL * lzt::get_page_size();
+  auto page_size = lzt::get_page_size<size_t>();
+  size_t single_alloc_size = 1024UL * 1024UL * page_size;
   size_t initial_alloc_size = single_alloc_size;
   size_t total_alloc_size = 0;
   uint64_t *ptr;

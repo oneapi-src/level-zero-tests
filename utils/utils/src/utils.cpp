@@ -24,8 +24,10 @@ uint64_t total_available_host_memory() {
   const uint64_t page_size = to_u64(sysconf(_SC_PAGE_SIZE));
   return page_count * page_size;
 }
-
+namespace detail {
 uint64_t get_page_size() { return to_u64(sysconf(_SC_PAGE_SIZE)); }
+} // namespace detail
+
 #endif
 
 #if defined(_WIN64) || defined(_WIN32)
@@ -44,12 +46,14 @@ uint64_t total_available_host_memory() {
   return stat.ullAvailPhys;
 }
 
+namespace detail {
 uint64_t get_page_size() {
   SYSTEM_INFO si;
   GetSystemInfo(&si);
   const long page_size = si.dwPageSize;
   return page_size;
 }
+} // namespace detail
 
 #endif
 

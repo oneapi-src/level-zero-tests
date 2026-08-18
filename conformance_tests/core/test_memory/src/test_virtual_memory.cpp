@@ -11,10 +11,6 @@
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 
-#ifdef __linux__
-#include <unistd.h>
-#endif
-
 namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
@@ -454,18 +450,11 @@ LZT_TEST_F(
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenPageAlignedSizeThenVirtualAndPhysicalHostMemoryReservedSuccessfully) {
-#ifdef __linux__
-  const long os_page_size = sysconf(_SC_PAGE_SIZE);
-  if (os_page_size > 0) {
-    pageSize = static_cast<size_t>(os_page_size);
-  }
+  auto pageSize = lzt::get_page_size<size_t>();
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
   lzt::physical_host_memory_allocation(context, allocationSize,
                                        &reservedPhysicalHostMemory);
   lzt::physical_memory_destroy(context, reservedPhysicalHostMemory);
-#else
-  GTEST_SKIP() << "Physical host memory is unsupported on Windows";
-#endif
 }
 
 LZT_TEST_F(
@@ -475,10 +464,8 @@ LZT_TEST_F(
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
   lzt::physical_device_memory_allocation(context, device, allocationSize,
                                          &reservedPhysicalDeviceMemory);
-#ifdef __linux__
   lzt::physical_host_memory_allocation(context, allocationSize,
                                        &reservedPhysicalHostMemory);
-#endif
   lzt::virtual_memory_reservation(context, nullptr, allocationSize,
                                   &reservedVirtualMemory);
   EXPECT_NE(nullptr, reservedVirtualMemory);
@@ -501,7 +488,6 @@ LZT_TEST_F(
     EXPECT_ZE_RESULT_SUCCESS(map_result);
     lzt::virtual_memory_unmap(context, reservedVirtualMemory, allocationSize);
   }
-#ifdef __linux__
   for (auto accessFlags : memoryAccessFlags) {
     ze_result_t map_result = ZE_RESULT_SUCCESS;
     lzt::virtual_memory_map(context, reservedVirtualMemory, allocationSize,
@@ -517,7 +503,6 @@ LZT_TEST_F(
   }
 
   lzt::physical_memory_destroy(context, reservedPhysicalHostMemory);
-#endif
   lzt::physical_memory_destroy(context, reservedPhysicalDeviceMemory);
   lzt::virtual_memory_free(context, reservedVirtualMemory, allocationSize);
 }
@@ -530,12 +515,7 @@ void RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
   void *memory = nullptr;
 
   if (is_host_memory) {
-#ifdef __linux__
-    const long os_page_size = sysconf(_SC_PAGE_SIZE);
-    if (os_page_size > 0) {
-      test.pageSize = static_cast<size_t>(os_page_size);
-    }
-#endif
+    test.pageSize = lzt::get_page_size<size_t>();
   } else {
     lzt::query_page_size(test.context, test.device, test.allocationSize,
                          &test.pageSize);
@@ -603,23 +583,15 @@ LZT_TEST_F(
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualHostMemorySucceeds) {
-#ifdef __linux__
   RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
       *this, true, lzt::command_list_mode_t::regular);
-#else
-  GTEST_SKIP() << "Physical host memory is unsupported on Windows";
-#endif
 }
 
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualHostMemoryOnImmediateCommandListSucceeds) {
-#ifdef __linux__
   RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
       *this, true, lzt::command_list_mode_t::immediate);
-#else
-  GTEST_SKIP() << "Physical host memory is unsupported on Windows";
-#endif
 }
 
 void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWithSingleMappedVirtualMemory(
@@ -1049,7 +1021,6 @@ public:
 LZT_TEST_P(
     zeVirtualMemoryMultiMappingTests,
     givenSinglePhysicalHostMemoryMappedToMultipleVirtualMemoryRangeThenReadAndWriteResultsAreCorrect) {
-#ifdef __linux__
   const ze_memory_type_t aux_buffer_type = std::get<0>(GetParam());
   const lzt::command_list_mode_t mode = std::get<1>(GetParam());
 
@@ -1182,9 +1153,6 @@ LZT_TEST_P(
   lzt::physical_memory_destroy(context, physical_host_memory);
 
   lzt::free_memory(context, aux_buffer);
-#else
-  GTEST_SKIP() << "Physical host memory is unsupported on Windows";
-#endif
 }
 
 LZT_TEST_P(
@@ -1529,7 +1497,6 @@ LZT_TEST_F(
 
 void RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
     zeVirtualMemoryTests &test, bool is_immediate) {
-#ifdef __linux__
   // Query page granularity using the actual allocation size.
   lzt::query_page_size(test.context, test.device, test.allocationSize,
                        &test.pageSize);
@@ -1645,9 +1612,6 @@ void RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffset
   lzt::free_memory(readbackBuffer);
   lzt::physical_memory_destroy(test.context, physicalMemory);
   lzt::destroy_command_bundle(bundle);
-#else
-  GTEST_SKIP() << "Physical host memory is unsupported on Windows";
-#endif
 }
 
 LZT_TEST_F(

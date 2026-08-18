@@ -23,8 +23,19 @@
 
 namespace level_zero_tests {
 
-uint64_t total_available_host_memory();
+namespace detail {
 uint64_t get_page_size();
+}
+
+template <typename T = uint64_t> [[nodiscard]] inline T get_page_size() {
+  static_assert(std::is_integral_v<T> && !std::is_same_v<T, bool>,
+                "get_page_size<T>() requires an integral T");
+  const uint64_t page_size = detail::get_page_size();
+  assert(page_size <= to_u64(std::numeric_limits<T>::max()));
+  return static_cast<T>(page_size);
+}
+
+uint64_t total_available_host_memory();
 
 template <typename T> inline constexpr uint8_t to_u8(T val) {
   return static_cast<uint8_t>(val);
