@@ -13,6 +13,7 @@
 #include <memory>
 #include <map>
 #include <optional>
+#include <string>
 
 #include <level_zero/zet_api.h>
 #include <level_zero/zes_api.h>
@@ -22,6 +23,9 @@
 #include "utils/utils_command_bundle.hpp"
 
 namespace level_zero_tests {
+
+uint64_t total_available_host_memory();
+uint32_t get_process_id();
 
 namespace detail {
 uint64_t get_page_size();
@@ -34,8 +38,6 @@ template <typename T = uint64_t> [[nodiscard]] inline T get_page_size() {
   assert(page_size <= to_u64(std::numeric_limits<T>::max()));
   return static_cast<T>(page_size);
 }
-
-uint64_t total_available_host_memory();
 
 template <typename T> inline constexpr uint8_t to_u8(T val) {
   return static_cast<uint8_t>(val);
@@ -123,8 +125,22 @@ void print_platform_overview(const std::string context);
 void print_platform_overview();
 
 std::vector<uint8_t> load_binary_file(const std::string &file_path);
-void save_binary_file(const std::vector<uint8_t> &data,
-                      const std::string &file_path);
+[[nodiscard]] bool save_binary_file(const std::vector<uint8_t> &data,
+                                    const std::string &file_path);
+
+class scoped_temp_file {
+public:
+  scoped_temp_file(const std::string &stem, const std::string &extension);
+  ~scoped_temp_file();
+
+  scoped_temp_file(const scoped_temp_file &) = delete;
+  scoped_temp_file &operator=(const scoped_temp_file &) = delete;
+
+  const std::string &path() const { return path_; }
+
+private:
+  std::string path_;
+};
 uint32_t nextPowerOfTwo(uint32_t value);
 inline uint32_t nextPowerOfTwo(uint64_t value) {
   return nextPowerOfTwo(to_u32(value));

@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <stdexcept>
 #include <string>
 #include <chrono>
 #include <ctime>
@@ -25,10 +26,7 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
-using lzt::to_nanoseconds;
-
 using lzt::to_u32;
-using lzt::to_u64;
 using lzt::to_u8;
 
 enum TestType { FUNCTION, FUNCTION_INDIRECT, MULTIPLE_INDIRECT };
@@ -44,14 +42,14 @@ std::vector<ze_module_handle_t> create_module_vector_and_log(
     std::vector<ze_module_build_log_handle_t> *build_log) {
   std::vector<ze_module_handle_t> module;
 
-  auto start = std::chrono::system_clock::now();
-  auto end = std::chrono::system_clock::now();
-  // Create pseudo-random integer to add to native binary filename
-  srand(to_u32(to_u64(time(NULL)) + to_nanoseconds(end - start)));
-  std::string filename_native =
-      filename_prefix + std::to_string(lzt::generate_value<uint16_t>()) +
-      ".native";
-  std::string filename_spirv = filename_prefix + ".spv";
+  const std::string filename_spirv = filename_prefix + ".spv";
+
+  const auto save_native_binary = [](const ze_module_handle_t module_handle,
+                                     const std::string &path) {
+    if (!lzt::save_native_binary_file(module_handle, path)) {
+      throw std::runtime_error("Failed to write native binary to " + path);
+    }
+  };
 
   if (build_log) {
     build_log->resize(2 * build_flag.size());
@@ -64,26 +62,23 @@ std::vector<ze_module_handle_t> create_module_vector_and_log(
                                           &build_log->at(count)));
       count++;
 
-      lzt::save_native_binary_file(module.back(), filename_native);
-      module.push_back(lzt::create_module(device, filename_native,
+      const lzt::scoped_temp_file native_file(filename_prefix, ".native");
+      save_native_binary(module.back(), native_file.path());
+      module.push_back(lzt::create_module(device, native_file.path(),
                                           ZE_MODULE_FORMAT_NATIVE, nullptr,
                                           &build_log->at(count)));
       count++;
-      if (std::remove(filename_native.c_str())) {
-        LOG_WARNING << "FAILED to remove file " << filename_native;
-      }
     }
   } else {
     for (auto flag : build_flag) {
       module.push_back(lzt::create_module(
           device, filename_spirv, ZE_MODULE_FORMAT_IL_SPIRV, flag, nullptr));
 
-      lzt::save_native_binary_file(module.back(), filename_native);
-      module.push_back(lzt::create_module(
-          device, filename_native, ZE_MODULE_FORMAT_NATIVE, nullptr, nullptr));
-      if (std::remove(filename_native.c_str())) {
-        LOG_WARNING << "FAILED to remove file " << filename_native;
-      }
+      const lzt::scoped_temp_file native_file(filename_prefix, ".native");
+      save_native_binary(module.back(), native_file.path());
+      module.push_back(lzt::create_module(device, native_file.path(),
+                                          ZE_MODULE_FORMAT_NATIVE, nullptr,
+                                          nullptr));
     }
   }
   return (module);
@@ -683,30 +678,26 @@ LZT_TEST_F(
   // Note: Only one example shown here, as subset of functionality of
   // "create_module_vector"
 
-  auto start = std::chrono::system_clock::now();
-  auto end = std::chrono::system_clock::now();
-  // Create pseudo-random integer to add to native binary filename
-  srand(to_u32(to_u64(time(NULL)) + to_nanoseconds(end - start)));
-  std::string filename_native =
-      "module_add" + std::to_string(lzt::generate_value<uint16_t>()) +
-      ".native";
-  std::string filename_spirv = "module_add.spv";
+  const lzt::scoped_temp_file native_file("module_add", ".native");
+  const std::string filename_spirv = "module_add.spv";
 
   ze_module_handle_t module =
       lzt::create_module(device, filename_spirv, ZE_MODULE_FORMAT_IL_SPIRV,
                          "-ze-opt-disable", nullptr);
   size = lzt::get_native_binary_size(module);
   LOG_INFO << "Native binary size: " << size;
-  lzt::save_native_binary_file(module, filename_native);
 
-  std::ifstream stream(filename_native, std::ios::in | std::ios::binary);
-  stream.seekg(0, stream.end);
-  EXPECT_EQ(static_cast<size_t>(stream.tellg()), size);
-  if (std::remove(filename_native.c_str())) {
-    LOG_WARNING << "FAILED to remove file " << filename_native;
+  if (lzt::save_native_binary_file(module, native_file.path())) {
+    std::ifstream stream(native_file.path(), std::ios::in | std::ios::binary);
+    EXPECT_TRUE(stream.good());
+    stream.seekg(0, stream.end);
+    EXPECT_EQ(static_cast<size_t>(stream.tellg()), size);
+    stream.close();
+  } else {
+    ADD_FAILURE() << "Failed to write native binary to " << native_file.path();
   }
+
   lzt::destroy_module(module);
-  stream.close();
 }
 
 template <lzt::command_list_mode_t Mode>

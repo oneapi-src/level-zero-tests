@@ -235,7 +235,7 @@ size_t get_native_binary_size(ze_module_handle_t module) {
   return native_binary_size;
 }
 
-void save_native_binary_file(ze_module_handle_t module,
+bool save_native_binary_file(ze_module_handle_t module,
                              const std::string filename) {
   size_t native_binary_size = 0;
   EXPECT_ZE_RESULT_SUCCESS(
@@ -245,7 +245,7 @@ void save_native_binary_file(ze_module_handle_t module,
   std::vector<uint8_t> native_binary(native_binary_size);
   EXPECT_ZE_RESULT_SUCCESS(zeModuleGetNativeBinary(module, &native_binary_size,
                                                    native_binary.data()));
-  level_zero_tests::save_binary_file(native_binary, filename);
+  return level_zero_tests::save_binary_file(native_binary, filename);
 }
 
 void destroy_build_log(ze_module_build_log_handle_t build_log) {

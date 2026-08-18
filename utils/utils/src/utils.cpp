@@ -10,8 +10,12 @@
 #include "logging/logging.hpp"
 #include "test_harness/test_harness.hpp"
 
-#include <iostream>
+#include <atomic>
+#include <cerrno>
+#include <cstring>
+#include <filesystem>
 #include <fstream>
+#include <iostream>
 
 namespace level_zero_tests {
 
@@ -24,6 +28,9 @@ uint64_t total_available_host_memory() {
   const uint64_t page_size = to_u64(sysconf(_SC_PAGE_SIZE));
   return page_count * page_size;
 }
+
+uint32_t get_process_id() { return to_u32(getpid()); }
+
 namespace detail {
 uint64_t get_page_size() { return to_u64(sysconf(_SC_PAGE_SIZE)); }
 } // namespace detail
@@ -54,6 +61,8 @@ uint64_t get_page_size() {
   return page_size;
 }
 } // namespace detail
+
+uint32_t get_process_id() { return to_u32(GetCurrentProcessId()); }
 
 #endif
 
@@ -484,8 +493,8 @@ std::vector<uint8_t> load_binary_file(const std::string &file_path) {
 
   std::vector<uint8_t> binary_file;
   if (!stream.good()) {
-    LOG_ERROR << "Failed to load binary file: " << file_path << "error "
-              << strerror(errno);
+    LOG_ERROR << "Failed to load binary file: " << file_path
+              << " error: " << strerror(errno);
 
     LOG_EXIT_FUNCTION
     return binary_file;
@@ -507,21 +516,70 @@ std::vector<uint8_t> load_binary_file(const std::string &file_path) {
   LOG_EXIT_FUNCTION
   binary_map->insert(
       std::pair<std::string, std::vector<uint8_t>>(file_path, binary_file));
+  if (binary_file.empty()) {
+    LOG_WARNING << "Binary file is empty: " << file_path;
+  }
   return binary_file;
 }
 
-void save_binary_file(const std::vector<uint8_t> &data,
+bool save_binary_file(const std::vector<uint8_t> &data,
                       const std::string &file_path) {
   LOG_ENTER_FUNCTION
   LOG_DEBUG << "File path: " << file_path;
 
   std::ofstream stream(file_path, std::ios::out | std::ios::binary);
+  if (!stream.good()) {
+    LOG_ERROR << "Failed to open binary file for writing: " << file_path
+              << " error " << strerror(errno);
+    LOG_EXIT_FUNCTION
+    return false;
+  }
+
   stream.write(reinterpret_cast<const char *>(data.data()),
                static_cast<std::streamsize>(size_in_bytes(data)));
 
   stream.close();
 
+  if (!stream.good()) {
+    LOG_ERROR << "Failed to write binary file: " << file_path << " error "
+              << strerror(errno);
+    LOG_EXIT_FUNCTION
+    return false;
+  }
+
   LOG_EXIT_FUNCTION
+  return true;
+}
+
+namespace {
+std::atomic<uint32_t> temp_file_sequence{0};
+} // namespace
+
+scoped_temp_file::scoped_temp_file(const std::string &stem,
+                                   const std::string &extension) {
+  std::error_code ec;
+  const std::filesystem::path dir = std::filesystem::temp_directory_path(ec);
+  if (ec) {
+    LOG_WARNING << "Could not determine a temporary directory (" << ec.message()
+                << "), falling back to the current directory";
+  }
+
+  const std::string name = stem + "_" + std::to_string(get_process_id()) + "_" +
+                           std::to_string(temp_file_sequence.fetch_add(
+                               1, std::memory_order_relaxed)) +
+                           extension;
+
+  path_ = (ec ? std::filesystem::path(name) : dir / name).string();
+  LOG_DEBUG << "Temporary file path: " << path_;
+}
+
+scoped_temp_file::~scoped_temp_file() {
+  std::error_code ec;
+  std::filesystem::remove(path_, ec);
+  if (ec) {
+    LOG_WARNING << "FAILED to remove temporary file " << path_ << ": "
+                << ec.message();
+  }
 }
 
 uint32_t nextPowerOfTwo(uint32_t value) {

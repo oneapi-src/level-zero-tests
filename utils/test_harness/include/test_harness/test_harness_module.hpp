@@ -68,8 +68,8 @@ void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules,
 void dynamic_link(uint32_t num_modules, ze_module_handle_t *modules,
                   ze_module_build_log_handle_t *link_log, ze_result_t *result);
 size_t get_native_binary_size(const ze_module_handle_t module);
-void save_native_binary_file(const ze_module_handle_t module,
-                             const std::string filename);
+[[nodiscard]] bool save_native_binary_file(const ze_module_handle_t module,
+                                           const std::string filename);
 void destroy_build_log(const ze_module_build_log_handle_t build_log);
 void set_argument_value(ze_kernel_handle_t hFunction, uint32_t argIndex,
                         size_t argSize, const void *pArgValue);
