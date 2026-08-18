@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2021 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -119,6 +119,52 @@ void ZeApp::memoryAllocHost(size_t size, void **ptr) {
   host_desc.flags = 0;
 
   SUCCESS_OR_TERMINATE(zeMemAllocHost(context, &host_desc, size, 1, ptr));
+}
+
+/* Imports an externally created dma_buf into device memory. A size of 0 makes
+ * the driver take the extent from the imported fd; use memoryGetAddressRange()
+ * to retrieve it. */
+void ZeApp::memoryAllocImportFd(const uint32_t device_index, size_t size,
+                                int fd, ze_device_mem_alloc_flags_t flags,
+                                void **ptr) {
+  assert(device_index < _devices.size());
+
+  ze_external_memory_import_fd_t import_desc = {};
+  import_desc.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_FD;
+  import_desc.flags = ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF;
+  import_desc.fd = fd;
+
+  ze_device_mem_alloc_desc_t device_desc = {};
+  device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+  device_desc.pNext = &import_desc;
+  device_desc.ordinal = 0;
+  device_desc.flags = flags;
+
+  SUCCESS_OR_TERMINATE(zeMemAllocDevice(context, &device_desc, size, 0,
+                                        _devices[device_index], ptr));
+}
+
+/* Imports an externally created dma_buf into host memory. See
+ * memoryAllocImportFd() for the size semantics. */
+void ZeApp::memoryAllocHostImportFd(size_t size, int fd,
+                                    ze_host_mem_alloc_flags_t flags,
+                                    void **ptr) {
+
+  ze_external_memory_import_fd_t import_desc = {};
+  import_desc.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_FD;
+  import_desc.flags = ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF;
+  import_desc.fd = fd;
+
+  ze_host_mem_alloc_desc_t host_desc = {};
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+  host_desc.pNext = &import_desc;
+  host_desc.flags = flags;
+
+  SUCCESS_OR_TERMINATE(zeMemAllocHost(context, &host_desc, size, 1, ptr));
+}
+
+void ZeApp::memoryGetAddressRange(void *ptr, void **base, size_t *size) {
+  SUCCESS_OR_TERMINATE(zeMemGetAddressRange(context, ptr, base, size));
 }
 
 void ZeApp::memoryFree(const void *ptr) {

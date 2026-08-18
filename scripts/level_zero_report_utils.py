@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2021-2025 Intel Corporation
+# Copyright (C) 2021-2026 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 import re
@@ -85,6 +85,8 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenExportingMemoryAsDMABufOnImmediateCmdListThenHostCanMMAPBufferContainingValidData', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenImportingMemoryThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenImportingMemoryOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenImportingMemoryAsUncachedThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('L0_CTS_zeDeviceGetExternalMemoryProperties_GivenValidDeviceWhenImportingMemoryAsUncachedOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_DeviceCommandQueueGroupsTest_GivenValidDeviceHandlesWhenRequestingQueueGroupPropertiesMultipleTimesThenPropertiesAreInSameOrder', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_DeviceCommandQueueGroupsTest_GivenValidSubDeviceHandlesWhenRequestingQueueGroupPropertiesMultipleTimesThenPropertiesAreInSameOrder', test_name, re.IGNORECASE)) or \
                     (re.search('L0_CTS_DeviceStatusTest_GivenValidDeviceHandlesWhenRequestingStatusThenSuccessReturned', test_name, re.IGNORECASE)) or \
@@ -369,6 +371,7 @@ def assign_test_feature_tag(test_feature: str, test_name: str, test_section: str
                     (re.search('GivenValidHostWhenExportingMemoryWithD3DTextureThenResourceSuccessfullyExported', test_name, re.IGNORECASE)) or \
                     (re.search('GivenValidHostWhenImportingMemoryOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
                     (re.search('GivenValidHostWhenImportingMemoryThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
+                    (re.search('GivenValidHostWhenImportingMemoryAsUncachedThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
                     (re.search('GivenValidHostWhenImportingMemoryWithKMTHandleOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
                     (re.search('GivenValidHostWhenImportingMemoryWithKMTHandleThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \
                     (re.search('GivenValidHostWhenImportingMemoryWithNTHandleOnImmediateCmdListThenImportedBufferHasCorrectData', test_name, re.IGNORECASE)) or \

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2021 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -27,6 +27,11 @@ public:
   void memoryAlloc(size_t size, void **ptr);
   void memoryAlloc(const uint32_t device_index, size_t size, void **ptr);
   void memoryAllocHost(size_t size, void **ptr);
+  void memoryAllocImportFd(const uint32_t device_index, size_t size, int fd,
+                           ze_device_mem_alloc_flags_t flags, void **ptr);
+  void memoryAllocHostImportFd(size_t size, int fd,
+                               ze_host_mem_alloc_flags_t flags, void **ptr);
+  void memoryGetAddressRange(void *ptr, void **base, size_t *size);
   void memoryFree(const void *ptr);
   void memoryOpenIpcHandle(const uint32_t device_index,
                            ze_ipc_mem_handle_t pIpcHandle, void **zeIpcBuffer);
