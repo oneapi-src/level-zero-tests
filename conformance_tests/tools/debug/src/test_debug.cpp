@@ -602,7 +602,7 @@ void zetDebugEventReadTest::run_test(std::vector<ze_device_handle_t> &devices,
       } else if (ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT == debug_event.type) {
         EXPECT_GT(eventNum, 1);
         gotProcExit = true;
-        break;
+        // break;
       }
 
     } while (ZET_DEBUG_EVENT_TYPE_INVALID != debug_event.type);

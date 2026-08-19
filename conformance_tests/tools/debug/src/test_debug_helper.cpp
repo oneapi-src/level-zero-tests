@@ -91,6 +91,10 @@ void basic(ze_context_handle_t context, ze_device_handle_t device,
   lzt::append_memory_copy(command_list, buffer_a, buffer_b, size);
   lzt::close_command_list(command_list);
   lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
+  printf("[Application][Jemale] Waiting to allow terminate Helper "
+         "intentionally\n");
+  std::this_thread::sleep_for(std::chrono::seconds(20));
+  exit(0);
   lzt::synchronize(command_queue, UINT64_MAX);
 
   // validation
