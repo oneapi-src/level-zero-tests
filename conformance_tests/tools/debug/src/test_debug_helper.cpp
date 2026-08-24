@@ -485,7 +485,7 @@ void run_long_kernel(ze_context_handle_t context, ze_device_handle_t device,
   std::memset(src_buffer_s, 0, size);
   std::memset(loop_counter_s, 0, loop_counter_alloc_size);
   for (size_t i = 0; i < size; i++) {
-    static_cast<uint8_t *>(src_buffer_s)[i] = (i + 1 & 0xFF);
+    static_cast<uint8_t *>(src_buffer_s)[i] = (i + 1) & 0xFF;
   }
 
   lzt::set_argument_value(kernel, 0, sizeof(dest_buffer_d), &dest_buffer_d);
@@ -789,7 +789,7 @@ void Job::set_up_work(debug_options &options) {
   std::memset(src_buffer_s, 0, size);
   std::memset(loop_counter_s, 0, loop_counter_alloc_size);
   for (size_t i = 0; i < size; i++) {
-    static_cast<uint8_t *>(src_buffer_s)[i] = (i + 1 & 0xFF);
+    static_cast<uint8_t *>(src_buffer_s)[i] = (i + 1) & 0xFF;
   }
 
   lzt::set_argument_value(kernel, 0, sizeof(dest_buffer_d), &dest_buffer_d);

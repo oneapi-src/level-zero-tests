@@ -186,7 +186,7 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
   lzt::debug_read_memory(debug_session, thread, desc, bufferSize, original);
   for (i = 0; i < bufferSize; i++) {
     // see test_debug_helper.cpp run_long_kernel() src_buffer[] init
-    EXPECT_EQ(original[i], (i + 1 & 0xFF));
+    EXPECT_EQ(original[i], (i + 1) & 0xFF);
   }
   if (::testing::Test::HasFailure()) {
     return ZE_RESULT_ERROR_UNKNOWN;
@@ -206,7 +206,7 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
   }
   // Veriy the rest of the buffer was not altered
   for (i = accessSize; i < bufferSize; i++) {
-    EXPECT_EQ(buffer1[i], to_u8(i + 1 & 0xFF) + accessOffset);
+    EXPECT_EQ(buffer1[i], to_u8((i + 1) & 0xFF) + accessOffset);
   }
   memset(buffer1, 0, bufferSize);
   if (::testing::Test::HasFailure()) {
@@ -226,7 +226,7 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
   // Veriy the rest of the buffer was not altered
   for (i = accessOffset + accessSize;
        i < bufferSize - accessOffset - accessSize; i++) {
-    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+    EXPECT_EQ(buffer1[i], (i + 1) & 0xFF);
   }
   memset(buffer1, 0, bufferSize);
   if (::testing::Test::HasFailure()) {
@@ -245,7 +245,7 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
                          buffer1);
   // Veriy the rest of the buffer was not altered
   for (i = 0; i < accessOffset; i++) {
-    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+    EXPECT_EQ(buffer1[i], (i + 1) & 0xFF);
   }
   // verify the content written
   for (i = accessOffset; i < accessSize + accessOffset; i++) {
@@ -254,7 +254,7 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
   // Veriy the rest of the buffer was not altered
   for (i = accessOffset + accessSize;
        i < bufferSize - accessOffset - accessSize; i++) {
-    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+    EXPECT_EQ(buffer1[i], (i + 1) & 0xFF);
   }
   memset(buffer1, 0, bufferSize);
   if (::testing::Test::HasFailure()) {
@@ -269,7 +269,7 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
                          buffer1);
   // Veriy the rest of the buffer was not altered
   for (i = 0; i < accessOffset; i++) {
-    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+    EXPECT_EQ(buffer1[i], (i + 1) & 0xFF);
   }
   // verify the content written
   for (i = accessOffset; i < accessSize + accessOffset; i++) {
@@ -278,7 +278,7 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
   // Veriy the rest of the buffer was not altered
   for (i = accessOffset + accessSize;
        i < bufferSize - accessOffset - accessSize; i++) {
-    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+    EXPECT_EQ(buffer1[i], (i + 1) & 0xFF);
   }
   memset(buffer1, 0, bufferSize);
   if (::testing::Test::HasFailure()) {
@@ -293,7 +293,7 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
                          buffer1);
   // Veriy the rest of the buffer was not altered
   for (i = 0; i < accessOffset; i++) {
-    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+    EXPECT_EQ(buffer1[i], (i + 1) & 0xFF);
   }
   // verify the content written
   for (i = accessOffset; i < accessSize + accessOffset; i++) {
@@ -302,7 +302,7 @@ ze_result_t readWriteSLMMemory(const zet_debug_session_handle_t &debug_session,
   // Veriy the rest of the buffer was not altered
   for (i = accessOffset + accessSize;
        i < bufferSize - accessOffset - accessSize; i++) {
-    EXPECT_EQ(buffer1[i], (i + 1 & 0xFF));
+    EXPECT_EQ(buffer1[i], (i + 1) & 0xFF);
   }
   memset(buffer1, 0, bufferSize);
   if (::testing::Test::HasFailure()) {
@@ -829,7 +829,7 @@ void zetDebugMemAccessTest::run_read_write_module_and_memory_test(
         size_t i = 1;
         for (i = 1; i < sizeToRead; i++) {
           // see test_debug_helper.cpp run_long_kernel() src_buffer[] init
-          EXPECT_EQ(buffer[i], to_u8(i + 1 & 0xFF));
+          EXPECT_EQ(buffer[i], to_u8((i + 1) & 0xFF));
         }
       }
 
