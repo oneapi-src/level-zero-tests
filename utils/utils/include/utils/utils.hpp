@@ -9,6 +9,9 @@
 #ifndef level_zero_tests_UTILS_HPP
 #define level_zero_tests_UTILS_HPP
 
+#include <cassert>
+#include <limits>
+#include <type_traits>
 #include <vector>
 #include <memory>
 #include <map>
@@ -29,14 +32,6 @@ uint32_t get_process_id();
 
 namespace detail {
 uint64_t get_page_size();
-}
-
-template <typename T = uint64_t> [[nodiscard]] inline T get_page_size() {
-  static_assert(std::is_integral_v<T> && !std::is_same_v<T, bool>,
-                "get_page_size<T>() requires an integral T");
-  const uint64_t page_size = detail::get_page_size();
-  assert(page_size <= to_u64(std::numeric_limits<T>::max()));
-  return static_cast<T>(page_size);
 }
 
 template <typename T> inline constexpr uint8_t to_u8(T val) {
@@ -75,6 +70,14 @@ template <typename T> inline constexpr float to_f32(T val) {
 }
 template <typename T> inline constexpr double to_f64(T val) {
   return static_cast<double>(val);
+}
+
+template <typename T = uint64_t> [[nodiscard]] inline T get_page_size() {
+  static_assert(std::is_integral_v<T> && !std::is_same_v<T, bool>,
+                "get_page_size<T>() requires an integral T");
+  const uint64_t page_size = detail::get_page_size();
+  assert(page_size <= to_u64(std::numeric_limits<T>::max()));
+  return static_cast<T>(page_size);
 }
 
 constexpr uint64_t nanosPerSecond = 1000000000;
