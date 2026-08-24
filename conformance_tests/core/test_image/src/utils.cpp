@@ -301,9 +301,6 @@ int compare_data_pattern(const lzt::ImagePNG32Bit &imagepng1,
        (y1 < (origin1Y + height1)) && (y2 < (origin2Y + height2)); y1++, y2++) {
     for (uint32_t x1 = origin1X, x2 = origin2X;
          (x1 < (origin1X + width1)) && (x2 < (origin2X + width2)); x1++, x2++) {
-      if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0)
-        continue;
-
       uint32_t pixel1 = get_pixel(image1, x1, y1, width1);
       uint32_t pixel2 = get_pixel(image2, x2, y2, width2);
       bool correct;

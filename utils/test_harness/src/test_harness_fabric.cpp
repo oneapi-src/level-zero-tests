@@ -44,8 +44,9 @@ get_ze_fabric_vertices(uint32_t count, ze_driver_handle_t driver) {
   EXPECT_ZE_RESULT_SUCCESS(
       zeFabricVertexGetExp(driver, &count_out, vertices.data()));
   EXPECT_EQ(driver, driver_initial);
-  if (count == get_ze_fabric_vertex_count())
+  if (count == get_ze_fabric_vertex_count()) {
     EXPECT_EQ(count_out, count);
+  }
 
   return vertices;
 }

@@ -805,7 +805,7 @@ protected:
     uint32_t num_events = std::min(group_size_x, to_u32(6));
     ze_event_handle_t event_kernel_to_host = nullptr;
     ze_kernel_handle_t function;
-    ze_kernel_handle_t mult_function;
+    ze_kernel_handle_t mult_function = nullptr;
     std::vector<ze_event_handle_t> events_host_to_kernel(num_events, nullptr);
     std::vector<int> inpa = {0, 1, 2,  3,  4,  5,  6,  7,
                              8, 9, 10, 11, 12, 13, 14, 15};

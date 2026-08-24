@@ -68,8 +68,9 @@ std::vector<zes_device_handle_t> get_zes_devices(uint32_t count,
   auto driver_initial = driver;
   EXPECT_ZE_RESULT_SUCCESS(zesDeviceGet(driver, &count_out, devices.data()));
   EXPECT_EQ(driver, driver_initial);
-  if (count == get_zes_device_count())
+  if (count == get_zes_device_count()) {
     EXPECT_EQ(count_out, count);
+  }
 
   return devices;
 }
@@ -115,8 +116,9 @@ std::vector<ze_device_handle_t> get_ze_devices(uint32_t count,
   auto driver_initial = driver;
   EXPECT_ZE_RESULT_SUCCESS(zeDeviceGet(driver, &count_out, devices.data()));
   EXPECT_EQ(driver, driver_initial);
-  if (count == get_ze_device_count())
+  if (count == get_ze_device_count()) {
     EXPECT_EQ(count_out, count);
+  }
 
   return devices;
 }

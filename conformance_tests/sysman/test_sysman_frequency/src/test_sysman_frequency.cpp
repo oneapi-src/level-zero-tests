@@ -237,11 +237,11 @@ LZT_TEST_F(
             EXPECT_GE(pFrequency[i], freq_property.min);
             EXPECT_LE(pFrequency[i], freq_property.max);
           }
-          if (i > 0)
-            EXPECT_GE(
-                pFrequency[i],
-                pFrequency[i - 1]); // Each entry in array of pFrequency, should
-                                    // be less than or equal to next entry
+          if (i > 0) {
+            // Each entry in array of pFrequency, should be less than or equal
+            // to next entry
+            EXPECT_GE(pFrequency[i], pFrequency[i - 1]);
+          }
         }
       }
     } else {
@@ -363,8 +363,9 @@ LZT_TEST_F(
       for (uint32_t i = 1; i < properties.size(); i++) {
         EXPECT_EQ(properties[0].type, properties[i].type);
         EXPECT_EQ(properties[0].onSubdevice, properties[i].onSubdevice);
-        if (properties[0].onSubdevice && properties[i].onSubdevice)
+        if (properties[0].onSubdevice && properties[i].onSubdevice) {
           EXPECT_EQ(properties[0].subdeviceId, properties[i].subdeviceId);
+        }
         EXPECT_EQ(properties[0].canControl, properties[i].canControl);
         EXPECT_EQ(properties[0].isThrottleEventSupported,
                   properties[i].isThrottleEventSupported);

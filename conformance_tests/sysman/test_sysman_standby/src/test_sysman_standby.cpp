@@ -147,8 +147,9 @@ LZT_TEST_F(
       ASSERT_EQ(properties_initial.type, ZES_STANDBY_TYPE_GLOBAL);
       EXPECT_EQ(properties_initial.type, properties_later.type);
       EXPECT_EQ(properties_initial.onSubdevice, properties_later.onSubdevice);
-      if (properties_initial.onSubdevice && properties_later.onSubdevice)
+      if (properties_initial.onSubdevice && properties_later.onSubdevice) {
         EXPECT_EQ(properties_initial.subdeviceId, properties_later.subdeviceId);
+      }
     }
   }
 }

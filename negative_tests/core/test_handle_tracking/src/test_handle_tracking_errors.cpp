@@ -103,8 +103,8 @@ LZT_TEST_F(
     HandleTests,
     GivenUninitializedDriverHandleWhenCreatingContextThenHandleTrackingReturnsInvalidNullHandle) {
 
-  ze_driver_handle_t driver;
-  ze_context_handle_t context;
+  ze_driver_handle_t driver = nullptr;
+  ze_context_handle_t context = nullptr;
   ze_context_desc_t desc = {};
   desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
   ASSERT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,

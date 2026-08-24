@@ -296,11 +296,11 @@ LZT_TEST_P(EventProfilingCacheCoherencyTests,
 
   EXPECT_ZE_RESULT_SUCCESS(
       zeEventHostSynchronize(event5, std::numeric_limits<uint64_t>::max()));
-  std::unique_ptr<uint8_t> output(new uint8_t[size]);
+  std::unique_ptr<uint8_t[]> output(new uint8_t[size]);
   memcpy(output.get(), buffer5, size);
 
   for (uint32_t i = 0U; i < size; i++) {
-    ASSERT_EQ(output.get()[i], value);
+    ASSERT_EQ(output[i], value);
   }
 
   lzt::destroy_event(event1);

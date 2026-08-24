@@ -56,7 +56,7 @@ ImagePNG<T>::ImagePNG(const uint32_t width, const uint32_t height)
 template <typename T>
 ImagePNG<T>::ImagePNG(const uint32_t width, const uint32_t height,
                       const std::vector<T> &data)
-    : width_(width), height_(height), pixels_(data) {}
+    : pixels_(data), width_(width), height_(height) {}
 
 template <> bool ImagePNG<uint32_t>::read(const std::string &image_path) {
   gil::rgba8_image_t image;
@@ -182,10 +182,10 @@ ImageBMP<T>::ImageBMP(const uint32_t width, const uint32_t height)
 template <typename T>
 ImageBMP<T>::ImageBMP(const uint32_t width, const uint32_t height,
                       const std::vector<T> &data)
-    : width_(width), height_(height), pixels_(data) {}
+    : pixels_(data), width_(width), height_(height) {}
 
 template <typename T> bool ImageBMP<T>::read(const std::string &image_path) {
-  std::unique_ptr<uint8_t> data = nullptr;
+  std::unique_ptr<uint8_t[]> data = nullptr;
   uint8_t *tmp = nullptr;
   uint32_t pitch = 0U;
   uint16_t bits_per_pixel = 0U;
@@ -200,7 +200,7 @@ template <typename T> bool ImageBMP<T>::read(const std::string &image_path) {
 }
 
 template <> bool ImageBMP<uint8_t>::read(const std::string &image_path) {
-  std::unique_ptr<uint8_t> data = nullptr;
+  std::unique_ptr<uint8_t[]> data = nullptr;
   uint8_t *tmp = nullptr;
   bool error =
       !BmpUtils::load_bmp_image_8u(tmp, width_, height_, image_path.c_str());
