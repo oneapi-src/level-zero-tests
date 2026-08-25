@@ -33,6 +33,22 @@ public:
 #define FREQUENCY_TEST FrequencyModuleTest
 #endif // USE_ZESINIT
 
+std::string get_freq_domain(zes_freq_domain_t domain) {
+  switch (domain) {
+  case zes_freq_domain_t::ZES_FREQ_DOMAIN_GPU:
+    return "ZES_FREQ_DOMAIN_GPU";
+    break;
+  case zes_freq_domain_t::ZES_FREQ_DOMAIN_MEMORY:
+    return "ZES_FREQ_DOMAIN_MEMORY";
+    break;
+  case zes_freq_domain_t::ZES_FREQ_DOMAIN_MEDIA:
+    return "ZES_FREQ_DOMAIN_MEDIA";
+    break;
+  default:
+    return "ZES_FREQ_DOMAIN_FORCE_UINT32";
+  }
+}
+
 LZT_TEST_F(
     FREQUENCY_TEST,
     GivenComponentCountZeroWhenRetrievingSysmanHandlesThenNonZeroCountIsReturned) {
@@ -161,6 +177,13 @@ LZT_TEST_F(
         zes_freq_range_t limits = {};
         zes_freq_properties_t properties = {};
         properties = lzt::get_freq_properties(pfreq_handle);
+        if (!properties.canControl) {
+          LOG_WARNING << "User cannot control min/max frequency setting for "
+                         "frequency domain "
+                      << get_freq_domain(properties.type)
+                      << ", skipping frequency domain";
+          continue;
+        }
         limits.min = properties.min;
         limits.max = properties.max;
         lzt::set_freq_range(pfreq_handle, limits);
@@ -327,6 +350,14 @@ LZT_TEST_F(
         EXPECT_NE(nullptr, pfreq_handle);
         zes_freq_properties_t properties = {};
         properties = lzt::get_freq_properties(pfreq_handle);
+        if (properties.min == 0 && properties.max == 0) {
+          LOG_WARNING
+              << "Hardware frequency range is unavailable for frequency "
+                 "domain "
+              << get_freq_domain(properties.type)
+              << ", skipping frequency domain";
+          continue;
+        }
         if (properties.max != -1) {
           EXPECT_GT(properties.max, 0);
         }
@@ -470,6 +501,15 @@ LZT_TEST_F(
       auto pfreq_handles = lzt::get_freq_handles(device, p_count);
       for (auto pfreq_handle : pfreq_handles) {
         EXPECT_NE(nullptr, pfreq_handle);
+        zes_freq_properties_t properties =
+            lzt::get_freq_properties(pfreq_handle);
+        if (!properties.canControl) {
+          LOG_WARNING << "User cannot control min/max frequency setting for "
+                         "frequency domain "
+                      << get_freq_domain(properties.type)
+                      << ", skipping frequency domain";
+          continue;
+        }
         zes_freq_range_t freqRange = {};
         zes_freq_range_t freqRangeReset = {};
         uint32_t count = 0;
@@ -499,22 +539,6 @@ LZT_TEST_F(
   }
   if (!is_freq_supported) {
     FAIL() << "No frequency handles found on any of the devices! ";
-  }
-}
-
-std::string get_freq_domain(zes_freq_domain_t domain) {
-  switch (domain) {
-  case zes_freq_domain_t::ZES_FREQ_DOMAIN_GPU:
-    return "ZES_FREQ_DOMAIN_GPU";
-    break;
-  case zes_freq_domain_t::ZES_FREQ_DOMAIN_MEMORY:
-    return "ZES_FREQ_DOMAIN_MEMORY";
-    break;
-  case zes_freq_domain_t::ZES_FREQ_DOMAIN_MEDIA:
-    return "ZES_FREQ_DOMAIN_MEDIA";
-    break;
-  default:
-    return "ZES_FREQ_DOMAIN_FORCE_UINT32";
   }
 }
 
