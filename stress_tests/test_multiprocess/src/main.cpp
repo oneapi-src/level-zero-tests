@@ -20,7 +20,7 @@
 #include <boost/interprocess/shared_memory_object.hpp>
 
 // Forward declaration - definition lives in test_multiprocess.cpp.
-int child_work(int child_index, ChildResults *shm,
+int child_work(size_t child_index, ChildResults *shm,
                const std::string &worker_name);
 
 // Returns the child exit code when running as a Windows child worker,
@@ -46,7 +46,10 @@ static int maybe_run_as_child_worker(int argc, char **argv) {
                                        bipc::read_write);
     bipc::mapped_region region(shm_obj, bipc::read_write);
     ChildResults *shm = static_cast<ChildResults *>(region.get_address());
-    return child_work(child_index, shm, std::string(worker_fn));
+    // child_index is validated non-negative above; child_work() bounds-checks
+    // it against the shared-memory capacity.
+    return child_work(static_cast<size_t>(child_index), shm,
+                      std::string(worker_fn));
   } catch (...) {
     return 1;
   }

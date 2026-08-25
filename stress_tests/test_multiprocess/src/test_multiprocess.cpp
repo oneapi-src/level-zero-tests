@@ -37,9 +37,9 @@ namespace lzt = level_zero_tests;
 
 namespace bipc = boost::interprocess;
 
-static constexpr int default_child_count = 48;
+static constexpr size_t default_child_count = 48;
 
-using ChildWorkerFn = std::function<void(int)>;
+using ChildWorkerFn = std::function<void(size_t)>;
 
 static std::map<std::string, ChildWorkerFn> &worker_registry() {
   static std::map<std::string, ChildWorkerFn> registry;
@@ -59,7 +59,7 @@ struct WorkerRegistrar {
 };
 
 static WorkerRegistrar
-    s_device_properties_worker("device_properties", [](int /*child_index*/) {
+    s_device_properties_worker("device_properties", [](size_t /*child_index*/) {
       lzt::ze_init(ZE_INIT_FLAG_GPU_ONLY);
       ze_driver_handle_t driver = lzt::get_default_driver();
       ze_device_handle_t device = lzt::get_default_device(driver);
@@ -78,7 +78,7 @@ template <lzt::command_list_mode_t Mode>
 static void run_simple_test_kernel_with_dst(ze_context_handle_t context,
                                             ze_device_handle_t device,
                                             uint32_t *dst, int pid,
-                                            int child_index) {
+                                            size_t child_index) {
   uint32_t *src = static_cast<uint32_t *>(
       lzt::allocate_shared_memory(kernel_buf_size, 1, 0, 0, device, context));
   uint32_t *result_buf = static_cast<uint32_t *>(
@@ -169,7 +169,7 @@ static void run_simple_test_kernel_with_dst(ze_context_handle_t context,
 }
 
 template <lzt::command_list_mode_t Mode>
-static void run_kernel_worker(int child_index) {
+static void run_kernel_worker(size_t child_index) {
   lzt::ze_init(ZE_INIT_FLAG_GPU_ONLY);
   int pid = getpid();
 
@@ -186,17 +186,23 @@ static void run_kernel_worker(int child_index) {
 }
 
 static WorkerRegistrar
-    s_kernel_immediate_worker("kernel_immediate", [](int child_index) {
+    s_kernel_immediate_worker("kernel_immediate", [](size_t child_index) {
       run_kernel_worker<lzt::command_list_mode_t::immediate>(child_index);
     });
 
 static WorkerRegistrar
-    s_kernel_registered_worker("kernel_registered", [](int child_index) {
+    s_kernel_registered_worker("kernel_registered", [](size_t child_index) {
       run_kernel_worker<lzt::command_list_mode_t::regular>(child_index);
     });
 
-int child_work(int child_index, ChildResults *shm,
+int child_work(size_t child_index, ChildResults *shm,
                const std::string &worker_name) {
+  if (child_index >= std::tuple_size_v<ChildResults>) {
+    LOG_ERROR << "[child " << child_index
+              << "] index exceeds shared-memory capacity ("
+              << std::tuple_size_v<ChildResults> << ")";
+    return 1;
+  }
   try {
     auto it = worker_registry().find(worker_name);
     if (it == worker_registry().end()) {
@@ -217,7 +223,7 @@ int child_work(int child_index, ChildResults *shm,
   return 0;
 }
 
-static void run_children_and_verify(int num_children,
+static void run_children_and_verify(size_t num_children,
                                     const std::string &worker_name) {
   int pid = getpid();
   LOG_INFO << "Parent process started (pid: " << pid << ")";
@@ -236,7 +242,7 @@ static void run_children_and_verify(int num_children,
   GetModuleFileNameA(nullptr, exe_path, MAX_PATH);
 
   std::vector<HANDLE> proc_handles(num_children);
-  for (int i = 0; i < num_children; ++i) {
+  for (size_t i = 0; i < num_children; ++i) {
     std::string cmd =
         std::string(exe_path) + " --lzt-child-worker=" + std::to_string(i) +
         " --lzt-shm-name=" + shm_name + " --lzt-child-worker-fn=" + worker_name;
@@ -251,7 +257,7 @@ static void run_children_and_verify(int num_children,
     if (!ok) {
       ADD_FAILURE() << "CreateProcess failed for child " << i << ": "
                     << GetLastError();
-      for (int j = 0; j < i; ++j)
+      for (size_t j = 0; j < i; ++j)
         CloseHandle(proc_handles[j]);
       bipc::shared_memory_object::remove(shm_name);
       return;
@@ -267,7 +273,7 @@ static void run_children_and_verify(int num_children,
   EXPECT_NE(WAIT_FAILED, wait_res)
       << "WaitForMultipleObjects failed: " << GetLastError();
 
-  for (int i = 0; i < num_children; ++i) {
+  for (size_t i = 0; i < num_children; ++i) {
     DWORD exit_code = 0;
     if (GetExitCodeProcess(proc_handles[i], &exit_code)) {
       LOG_INFO << "[child=" << i << "] completed with exit code " << exit_code;
@@ -280,13 +286,13 @@ static void run_children_and_verify(int num_children,
   }
 
 #else  // POSIX
-  std::vector<pid_t> pids(static_cast<size_t>(num_children));
-  for (int i = 0; i < num_children; ++i) {
+  std::vector<pid_t> pids(num_children);
+  for (size_t i = 0; i < num_children; ++i) {
     pid_t pid = fork();
     if (pid == -1) {
       ADD_FAILURE() << "fork() failed for child " << i << ": "
                     << strerror(errno);
-      for (int j = 0; j < i; ++j)
+      for (size_t j = 0; j < i; ++j)
         waitpid(pids[j], nullptr, 0);
       bipc::shared_memory_object::remove(shm_name);
       return;
@@ -299,7 +305,7 @@ static void run_children_and_verify(int num_children,
     pids[i] = pid;
   }
 
-  for (int i = 0; i < num_children; ++i) {
+  for (size_t i = 0; i < num_children; ++i) {
     int status = 0;
     pid_t waited = waitpid(pids[i], &status, 0);
     EXPECT_NE(-1, waited) << "waitpid failed for child " << i << ": "
@@ -315,7 +321,7 @@ static void run_children_and_verify(int num_children,
   }
 #endif // _WIN32
 
-  for (int i = 0; i < num_children; ++i) {
+  for (size_t i = 0; i < num_children; ++i) {
     EXPECT_EQ(1, shm->at(i))
         << "Child " << i << " did not set its success flag in shared memory";
   }
@@ -330,27 +336,24 @@ class RunMultiProcessTest : public ::testing::Test {};
 LZT_TEST_F(
     RunMultiProcessTest,
     GivenNChildProcessesWhenEachRunsZeInitAndDevicePropertiesThenAllSucceed) {
-  ASSERT_LE(default_child_count,
-            static_cast<int>(std::tuple_size_v<ChildResults>))
-      << "kDefaultChildCount exceeds shared-memory capacity";
+  ASSERT_LE(default_child_count, std::tuple_size_v<ChildResults>)
+      << "default_child_count exceeds shared-memory capacity";
   run_children_and_verify(default_child_count, "device_properties");
 }
 
 LZT_TEST_F(
     RunMultiProcessTest,
     GivenNChildProcessesWhenKernelExecutionAndHostEventSynchornizedSetThenNotTimeoutsAndErrorsOnImmediateCommandList) {
-  ASSERT_LE(default_child_count,
-            static_cast<int>(std::tuple_size_v<ChildResults>))
-      << "kDefaultChildCount exceeds shared-memory capacity";
+  ASSERT_LE(default_child_count, std::tuple_size_v<ChildResults>)
+      << "default_child_count exceeds shared-memory capacity";
   run_children_and_verify(default_child_count, "kernel_immediate");
 }
 
 LZT_TEST_F(
     RunMultiProcessTest,
     GivenNChildProcessesWhenKernelExecutionAndHostEventSynchornizedSetThenNotTimeoutsAndErrorsOnRegisteredCommandList) {
-  ASSERT_LE(default_child_count,
-            static_cast<int>(std::tuple_size_v<ChildResults>))
-      << "kDefaultChildCount exceeds shared-memory capacity";
+  ASSERT_LE(default_child_count, std::tuple_size_v<ChildResults>)
+      << "default_child_count exceeds shared-memory capacity";
   run_children_and_verify(default_child_count, "kernel_registered");
 }
 

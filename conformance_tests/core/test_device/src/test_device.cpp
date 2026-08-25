@@ -885,7 +885,7 @@ void RunGivenExecutedKernelWhenGettingGlobalTimestampsTest() {
   auto context = lzt::create_context(driver);
 
   auto cmd_bundle = lzt::create_command_bundle<Mode>(
-      context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+      context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
 
   auto module = lzt::create_module(context, device, "module_add.spv");

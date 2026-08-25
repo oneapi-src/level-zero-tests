@@ -9,6 +9,7 @@
 #ifndef level_zero_tests_UTILS_HPP
 #define level_zero_tests_UTILS_HPP
 
+#include <cstdlib>
 #include <cassert>
 #include <limits>
 #include <type_traits>
@@ -50,6 +51,12 @@ template <typename T> inline constexpr int to_int(T val) {
 }
 template <typename T> inline constexpr int32_t to_s32(T val) {
   return static_cast<int32_t>(val);
+}
+template <> inline int32_t to_s32<const char *>(const char *str) {
+  return static_cast<int32_t>(atoi(str));
+}
+template <> inline int32_t to_s32<char *>(char *str) {
+  return static_cast<int32_t>(atoi(str));
 }
 template <typename T> inline constexpr uint32_t to_u32(T val) {
   return static_cast<uint32_t>(val);

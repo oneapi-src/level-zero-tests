@@ -226,7 +226,7 @@ public:
     const uint8_t pattern2 = 0x55;
 
     auto bundle = lzt::create_command_bundle<Mode>(
-        context, device, 0, ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
+        context, device, 0u, ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
         ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
 
     lzt::append_memory_fill(bundle.record_list(), memory, &pattern2, 1, size,

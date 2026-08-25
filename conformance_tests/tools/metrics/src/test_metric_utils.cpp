@@ -17,6 +17,7 @@ namespace lzt = level_zero_tests;
 
 using lzt::to_nanoseconds;
 
+using lzt::to_s32;
 using lzt::to_u32;
 
 ze_kernel_handle_t get_matrix_multiplication_kernel(
@@ -409,7 +410,7 @@ bool success_metric_tracer_read_data_retry(
   const char *retry_milliseconds =
       std::getenv("LZT_METRIC_TRACER_READ_DATA_RETRY_MS");
   if (retry_milliseconds != nullptr) {
-    retry_wait_milliseconds = to_u32(retry_milliseconds);
+    retry_wait_milliseconds = to_s32(retry_milliseconds);
   }
   LOG_DEBUG << "Retry read delay is set to " << retry_wait_milliseconds
             << " milliseconds";
