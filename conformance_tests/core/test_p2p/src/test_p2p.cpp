@@ -79,6 +79,7 @@ protected:
           GTEST_SKIP();
         }
         ASSERT_ZE_RESULT_SUCCESS(map_result);
+        instance.src_mapped = true;
         map_result = zeVirtualMemMap(context, instance.dst_region, mem_size_,
                                      instance.dst_physical_region, 0,
                                      ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
@@ -88,6 +89,7 @@ protected:
           GTEST_SKIP();
         }
         ASSERT_ZE_RESULT_SUCCESS(map_result);
+        instance.dst_mapped = true;
       } else {
         FAIL() << "Unexpected memory type";
       }
@@ -139,6 +141,7 @@ protected:
             GTEST_SKIP();
           }
           ASSERT_ZE_RESULT_SUCCESS(map_result);
+          sub_device_instance.src_mapped = true;
           map_result = zeVirtualMemMap(context, sub_device_instance.dst_region,
                                        mem_size_,
                                        sub_device_instance.dst_physical_region,
@@ -149,6 +152,7 @@ protected:
             GTEST_SKIP();
           }
           ASSERT_ZE_RESULT_SUCCESS(map_result);
+          sub_device_instance.dst_mapped = true;
         } else {
           FAIL() << "Unexpected memory type";
         }
@@ -194,6 +198,8 @@ protected:
     void *dst_region;
     ze_physical_mem_handle_t src_physical_region;
     ze_physical_mem_handle_t dst_physical_region;
+    bool src_mapped = false;
+    bool dst_mapped = false;
     lzt::command_bundle cmd_bundle;
     std::vector<DevInstance> sub_devices;
   };
@@ -202,10 +208,20 @@ protected:
     auto context = lzt::get_default_context();
 
     if (instance.src_region != nullptr) {
+      // Any physical memory mapped into the reservation must be unmapped before
+      // the reservation is freed; zeVirtualMemFree does not release mappings.
+      if (instance.src_mapped) {
+        lzt::virtual_memory_unmap(context, instance.src_region, mem_size_);
+        instance.src_mapped = false;
+      }
       lzt::virtual_memory_free(context, instance.src_region, mem_size_);
       instance.src_region = nullptr;
     }
     if (instance.dst_region != nullptr) {
+      if (instance.dst_mapped) {
+        lzt::virtual_memory_unmap(context, instance.dst_region, mem_size_);
+        instance.dst_mapped = false;
+      }
       lzt::virtual_memory_free(context, instance.dst_region, mem_size_);
       instance.dst_region = nullptr;
     }
