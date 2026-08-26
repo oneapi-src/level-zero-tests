@@ -22,6 +22,7 @@
 #include <level_zero/zet_api.h>
 #include <level_zero/zes_api.h>
 
+#include "utils/utils_type_convert.hpp"
 #include "utils/utils_string.hpp"
 #include "utils/utils_gtest_helper.hpp"
 #include "utils/utils_command_bundle.hpp"
@@ -33,50 +34,6 @@ uint32_t get_process_id();
 
 namespace detail {
 uint64_t get_page_size();
-}
-
-template <typename T> inline constexpr uint8_t to_u8(T val) {
-  return static_cast<uint8_t>(val);
-}
-
-template <typename T> inline constexpr int16_t to_s16(T val) {
-  return static_cast<int16_t>(val);
-}
-template <typename T> inline constexpr uint16_t to_u16(T val) {
-  return static_cast<uint16_t>(val);
-}
-
-template <typename T> inline constexpr int to_int(T val) {
-  return static_cast<int>(val);
-}
-template <typename T> inline constexpr int32_t to_s32(T val) {
-  return static_cast<int32_t>(val);
-}
-template <> inline int32_t to_s32<const char *>(const char *str) {
-  return static_cast<int32_t>(atoi(str));
-}
-template <> inline int32_t to_s32<char *>(char *str) {
-  return static_cast<int32_t>(atoi(str));
-}
-template <typename T> inline constexpr uint32_t to_u32(T val) {
-  return static_cast<uint32_t>(val);
-}
-template <> inline uint32_t to_u32<const char *>(const char *str) {
-  return static_cast<uint32_t>(atoi(str));
-}
-template <> inline uint32_t to_u32<char *>(char *str) {
-  return static_cast<uint32_t>(atoi(str));
-}
-
-template <typename T> inline constexpr uint64_t to_u64(T val) {
-  return static_cast<uint64_t>(val);
-}
-
-template <typename T> inline constexpr float to_f32(T val) {
-  return static_cast<float>(val);
-}
-template <typename T> inline constexpr double to_f64(T val) {
-  return static_cast<double>(val);
 }
 
 template <typename T = uint64_t> [[nodiscard]] inline T get_page_size() {
