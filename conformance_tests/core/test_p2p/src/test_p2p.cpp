@@ -52,6 +52,16 @@ protected:
             lzt::allocate_shared_memory(mem_size_ + offset_, 1, 0, 0, device);
         instance.dst_region =
             lzt::allocate_shared_memory(mem_size_ + offset_, 1, 0, 0, device);
+      } else if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_SHARED_SYSTEM) {
+        if (!lzt::supports_shared_system_alloc(device)) {
+          GTEST_SKIP();
+        }
+        instance.src_region =
+            lzt::allocate_shared_memory_with_allocator_selector(
+                mem_size_ + offset_, 1, 0, 0, device, true);
+        instance.dst_region =
+            lzt::allocate_shared_memory_with_allocator_selector(
+                mem_size_ + offset_, 1, 0, 0, device, true);
       } else if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
         size_t pageSize = 0;
         lzt::query_page_size(context, device, mem_size_ + offset_, &pageSize);
@@ -173,6 +183,11 @@ protected:
 
       if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
         cleanup_virtual_instance(instance);
+      } else if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_SHARED_SYSTEM) {
+        lzt::free_memory_with_allocator_selector(context, instance.src_region,
+                                                 true);
+        lzt::free_memory_with_allocator_selector(context, instance.dst_region,
+                                                 true);
       } else {
         lzt::free_memory(instance.src_region);
         lzt::free_memory(instance.dst_region);
@@ -183,6 +198,11 @@ protected:
 
         if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION) {
           cleanup_virtual_instance(sub_device_instance);
+        } else if (p2p_memory_ == LZT_P2P_MEMORY_TYPE_SHARED_SYSTEM) {
+          lzt::free_memory_with_allocator_selector(
+              context, sub_device_instance.src_region, true);
+          lzt::free_memory_with_allocator_selector(
+              context, sub_device_instance.dst_region, true);
         } else {
           lzt::free_memory(sub_device_instance.src_region);
           lzt::free_memory(sub_device_instance.dst_region);
@@ -1314,7 +1334,8 @@ INSTANTIATE_TEST_SUITE_P(
     zeP2PTests,
     testing::Combine(::testing::Values(LZT_P2P_MEMORY_TYPE_DEVICE,
                                        LZT_P2P_MEMORY_TYPE_SHARED,
-                                       LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION),
+                                       LZT_P2P_MEMORY_TYPE_MEMORY_RESERVATION,
+                                       LZT_P2P_MEMORY_TYPE_SHARED_SYSTEM),
                      ::testing::Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
                                        13, 14, 15, 16, 32, 64, 128, 255, 510,
                                        1021, 2043),
