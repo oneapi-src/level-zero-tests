@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2023 Intel Corporation
+# Copyright (C) 2019-2026 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
@@ -235,11 +235,15 @@ function(add_lzt_test_executable)
     set(destination "${CMAKE_INSTALL_PREFIX}/${ADD_LZT_TEST_EXECUTABLE_PREFIX}")
     set(sys_destination "${CMAKE_INSTALL_PREFIX}/${ADD_LZT_TEST_EXECUTABLE_PREFIX}")
 
+    set(runtime_files "")
+
+    # Copy kernels and media files to be available to the installed executable.
     foreach(kernel ${ADD_LZT_TEST_EXECUTABLE_KERNELS})
         install(
           FILES "${CMAKE_CURRENT_SOURCE_DIR}/kernels/${kernel}.spv"
           DESTINATION ${destination}
         )
+        list(APPEND runtime_files "${CMAKE_CURRENT_SOURCE_DIR}/kernels/${kernel}.spv")
     endforeach()
 
     foreach(kernel ${ADD_LZT_TEST_EXECUTABLE_KERNELSCUSTOM})
@@ -247,6 +251,7 @@ function(add_lzt_test_executable)
           FILES "${kernel}"
           DESTINATION ${destination}
         )
+        list(APPEND runtime_files "${kernel}")
     endforeach()
 
     foreach(media ${ADD_LZT_TEST_EXECUTABLE_MEDIA})
@@ -254,7 +259,36 @@ function(add_lzt_test_executable)
           FILES "${MEDIA_DIRECTORY}/${media}"
           DESTINATION ${destination}
         )
+        list(APPEND runtime_files "${MEDIA_DIRECTORY}/${media}")
     endforeach()
+
+    # Also copy kernels and media files to be next to the build tree executable
+    # (to assist with debugging or local testing).
+    if(runtime_files)
+        # A POST_BUILD step is insufficient as the copy doesn't trigger if
+        # only an .spv file changes but none of the executable's sources are
+        # changed.
+        get_target_property(runtime_dir
+          ${ADD_LZT_TEST_EXECUTABLE_NAME} RUNTIME_OUTPUT_DIRECTORY
+        )
+        if(NOT runtime_dir)
+            set(runtime_dir "${CMAKE_CURRENT_BINARY_DIR}")
+        endif()
+        if(CMAKE_CONFIGURATION_TYPES)
+            set(runtime_dir "${runtime_dir}/$<CONFIG>")
+        endif()
+
+        set(copy_target "${ADD_LZT_TEST_EXECUTABLE_NAME}_runtime_files")
+        add_custom_target(${copy_target}
+          COMMAND ${CMAKE_COMMAND} -E make_directory "${runtime_dir}"
+          COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${runtime_files} "${runtime_dir}"
+          COMMENT "Copying runtime files next to ${ADD_LZT_TEST_EXECUTABLE_NAME}"
+          VERBATIM
+        )
+        set_target_properties(${copy_target} PROPERTIES FOLDER "runtime-files")
+        add_dependencies(${ADD_LZT_TEST_EXECUTABLE_NAME} ${copy_target})
+    endif()
 
     install(
       TARGETS ${ADD_LZT_TEST_EXECUTABLE_NAME}
