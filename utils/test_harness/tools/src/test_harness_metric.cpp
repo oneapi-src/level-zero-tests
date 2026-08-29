@@ -254,15 +254,26 @@ get_device_metric_groups_by_source_id(
         zetMetricGroupGetProperties(metricGroupHandle, &props));
     metric_groups_by_source[sourceIdExt.sourceId].push_back(metricGroupHandle);
   }
+
+  for (const auto &entry : metric_groups_by_source) {
+    LOG_DEBUG << "Source ID " << entry.first << " has " << entry.second.size()
+              << " metric groups";
+  }
+
   return metric_groups_by_source;
 }
 
 bool optimize_metric_group_info_list(
     std::vector<metricGroupInfo_t> &metricGroupInfoList,
     uint32_t percentOfMetricGroupForTest, const char *metricGroupName,
-    uint32_t minCount, std::vector<metricGroupInfo_t> &optimizedList) {
+    uint32_t minCountPerSource, std::vector<metricGroupInfo_t> &optimizedList) {
 
   optimizedList.clear();
+
+  if (metricGroupInfoList.empty()) {
+    LOG_ERROR << "metric group info list is empty";
+    return false;
+  }
 
   const char *specificMetricGroupName = nullptr;
 
@@ -284,9 +295,12 @@ bool optimize_metric_group_info_list(
         LOG_INFO << "Specific name push_back "
                  << metricGroupInfo.metricGroupName;
         optimizedList.push_back(metricGroupInfo);
-        return optimizedList.size() >= minCount;
+        return true;
       }
     }
+    LOG_ERROR << __FUNCTION__ << " specific group " << specificMetricGroupName
+              << " not found in the list for the given test";
+    return false;
   }
 
   optimizedList.reserve(metricGroupInfoList.size());
@@ -308,7 +322,7 @@ bool optimize_metric_group_info_list(
            << percentOfMetricGroupForTest << "%";
 
   double metricGrpTestPerc = to_f64(percentOfMetricGroupForTest) * 0.01;
-  minCount = std::max(minCount, 1u);
+  minCountPerSource = std::max(minCountPerSource, 1u);
 
   // Collect all handles and build a handle -> metricGroupInfo lookup
   std::vector<zet_metric_group_handle_t> MetricGroupHandles;
@@ -327,13 +341,14 @@ bool optimize_metric_group_info_list(
           get_device_metric_groups_by_source_id(MetricGroupHandles);
 
   // For each source: take x% of metric groups from that source
+  bool meetsMinimumCount = false;
   for (auto const &sourceEntry : metricGroupsBySource) {
     const std::vector<zet_metric_group_handle_t> &MetricGroupHandlePerSource =
         sourceEntry.second;
 
-    uint32_t sourceCnt =
-        std::max(minCount, to_u32(to_f64(MetricGroupHandlePerSource.size()) *
-                                  metricGrpTestPerc));
+    uint32_t sourceCnt = std::max(
+        minCountPerSource,
+        to_u32(to_f64(MetricGroupHandlePerSource.size()) * metricGrpTestPerc));
     sourceCnt = std::min(sourceCnt, to_u32(MetricGroupHandlePerSource.size()));
 
     std::transform(MetricGroupHandlePerSource.begin(),
@@ -343,15 +358,25 @@ bool optimize_metric_group_info_list(
                      return *MetricGroupHandleToInfo.at(handle);
                    });
 
-    if (sourceCnt < minCount) {
+    if (sourceCnt < minCountPerSource) {
       LOG_WARNING << "source " << sourceEntry.first << " has " << sourceCnt
-                  << " metric groups, less than minCount " << minCount;
+                  << " metric groups, less than minCountPerSource "
+                  << minCountPerSource;
+    } else {
+      LOG_DEBUG << "source " << sourceEntry.first
+                << " meets the requested minimum count " << minCountPerSource;
+      meetsMinimumCount = true;
     }
   }
 
-  LOG_INFO << "Size of optimized metric groups list based on percentage: "
-           << optimizedList.size();
-  return optimizedList.size() >= minCount * to_u32(metricGroupsBySource.size());
+  LOG_INFO << "Size of optimized metric groups list : " << optimizedList.size();
+
+  for (auto const &metricGroupInfo : optimizedList) {
+    LOG_DEBUG << "optimizedList metric group name "
+              << metricGroupInfo.metricGroupName;
+  }
+
+  return meetsMinimumCount;
 }
 
 std::vector<metricGroupInfo_t> get_device_metric_groups_for_sampling_type(
@@ -398,6 +423,8 @@ std::vector<metricGroupInfo_t> get_device_metric_groups_for_sampling_type(
 
     return concurrentMatchedGroupsInfo;
   } else {
+    LOG_DEBUG << __FUNCTION__ << " sampling type " << metricSamplingType
+              << " matched groups " << matchedGroupsInfo.size();
     return matchedGroupsInfo;
   }
 }

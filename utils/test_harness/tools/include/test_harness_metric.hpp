@@ -136,7 +136,7 @@ void validate_metrics_std(zet_metric_group_handle_t matchedGroupHandle,
 bool optimize_metric_group_info_list(
     std::vector<metricGroupInfo_t> &metricGroupInfoList,
     uint32_t percentOfMetricGroupForTest, const char *MetricGroupName,
-    uint32_t minCount, std::vector<metricGroupInfo_t> &optimizedList);
+    uint32_t minCountPerSource, std::vector<metricGroupInfo_t> &optimizedList);
 
 bool validateMetricsStructures(zet_metric_group_handle_t hMetricGroup);
 
