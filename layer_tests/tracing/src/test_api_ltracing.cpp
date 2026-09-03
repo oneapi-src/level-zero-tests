@@ -872,6 +872,7 @@ LZT_TEST_F(
 
   ze_result_t initial_result = zeCommandQueueCreate(
       context, device, &command_queue_desc, &command_queue);
+  ASSERT_ZE_RESULT_SUCCESS(initial_result);
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
@@ -940,6 +941,7 @@ LZT_TEST_F(
 
   ze_result_t initial_result =
       zeCommandListCreate(context, device, &command_list_desc, &command_list);
+  ASSERT_ZE_RESULT_SUCCESS(initial_result);
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
@@ -1037,6 +1039,7 @@ LZT_TEST_F(
 
   ze_result_t initial_result = zeCommandListCreateImmediate(
       context, device, &command_queue_desc, &command_list);
+  ASSERT_ZE_RESULT_SUCCESS(initial_result);
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
@@ -1499,6 +1502,7 @@ LZT_TEST_F(
 
   ze_result_t initial_result =
       zeFenceCreate(command_queue, &fence_desc, &fence);
+  ASSERT_ZE_RESULT_SUCCESS(initial_result);
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
@@ -1572,6 +1576,7 @@ LZT_TEST_F(
 
   ze_result_t initial_result =
       zeEventPoolCreate(context, &event_pool_desc, 1, &device, &event_pool);
+  ASSERT_ZE_RESULT_SUCCESS(initial_result);
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
@@ -1605,6 +1610,7 @@ LZT_TEST_F(
   init_event_pool();
 
   ze_result_t initial_result = zeEventCreate(event_pool, &event_desc, &event);
+  ASSERT_ZE_RESULT_SUCCESS(initial_result);
   ready_ltracer(tracer_handle, prologues, epilogues);
 
   ASSERT_ZE_RESULT_SUCCESS(zeEventDestroy(event));
@@ -1766,6 +1772,7 @@ LZT_TEST_F(
 
   ze_result_t initial_result =
       zeModuleCreate(context, device, &module_desc, &module, nullptr);
+  ASSERT_ZE_RESULT_SUCCESS(initial_result);
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
@@ -1892,6 +1899,7 @@ LZT_TEST_F(
   kernel_desc = {ZE_STRUCTURE_TYPE_KERNEL_DESC, nullptr, 0,
                  "module_add_constant"};
   ze_result_t initial_result = zeKernelCreate(module, &kernel_desc, &kernel);
+  ASSERT_ZE_RESULT_SUCCESS(initial_result);
 
   ready_ltracer(tracer_handle, prologues, epilogues);
 
