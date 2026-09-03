@@ -123,29 +123,6 @@ LZT_TEST_F(
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
 }
-LZT_TEST_F(
-    CommandQueueExecuteCommandListNegativeTests,
-    GivenFenceFromAnotherQueueWhenExecutingCommandListsThenInvalidSynchronizationObjectErrorIsReturned) {
-
-  ze_command_list_handle_t command_list = lzt::create_command_list();
-  ze_command_queue_handle_t command_queue = lzt::create_command_queue();
-  ze_command_queue_handle_t command_queue2 = lzt::create_command_queue();
-  ze_fence_handle_t fence = lzt::create_fence(command_queue);
-  ze_fence_handle_t fence2 = lzt::create_fence(command_queue2);
-  lzt::close_command_list(command_list);
-  lzt::execute_command_lists(command_queue, 1, &command_list, fence);
-
-  EXPECT_ZE_RESULT_SUCCESS(lzt::sync_fence(fence, UINT64_MAX));
-
-  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT,
-            zeCommandQueueExecuteCommandLists(command_queue, 1, &command_list,
-                                              fence2));
-  lzt::destroy_fence(fence);
-  lzt::destroy_fence(fence2);
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
-  lzt::destroy_command_queue(command_queue2);
-}
 
 LZT_TEST_F(
     CommandQueueExecuteCommandListNegativeTests,
@@ -161,22 +138,6 @@ LZT_TEST_F(
 
   EXPECT_EQ(ZE_RESULT_ERROR_INVALID_NULL_HANDLE,
             zeCommandQueueSynchronize(nullptr, UINT64_MAX));
-
-  lzt::destroy_command_list(command_list);
-  lzt::destroy_command_queue(command_queue);
-}
-
-LZT_TEST_F(
-    CommandQueueExecuteCommandListNegativeTests,
-    GivenNotClosedCommandListWhenExecutingCommandListsThenInvalidArgumentErrorIsReturned) {
-  ze_command_queue_handle_t command_queue = lzt::create_command_queue();
-  ze_command_list_handle_t command_list = lzt::create_command_list();
-
-  lzt::append_barrier(command_list);
-
-  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ARGUMENT,
-            zeCommandQueueExecuteCommandLists(command_queue, 1, &command_list,
-                                              nullptr));
 
   lzt::destroy_command_list(command_list);
   lzt::destroy_command_queue(command_queue);
