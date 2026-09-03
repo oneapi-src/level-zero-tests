@@ -1,11 +1,11 @@
 # test_api_interop
 
 ## Description
-test_api_interop is a conformance test which validates oneAPI Level Zero driver interoperability features with DirectX APIs as described in https://oneapi-src.github.io/level-zero-spec/level-zero/latest/core/PROG.html#interoperability-with-other-apis.
+test_api_interop is a conformance test which validates oneAPI Level Zero driver interoperability features with DirectX and Vulkan APIs as described in https://oneapi-src.github.io/level-zero-spec/level-zero/latest/core/PROG.html#interoperability-with-other-apis.
 
-All tests are Windows-only and are skipped on Linux.
+The DirectX tests are Windows-only and are skipped on Linux. The Vulkan tests are gated per external handle type: the `OpaqueWin32` cases are skipped on Linux and the `OpaqueFd` cases are skipped on Windows. Every case is present in the binary on both platforms and skips at runtime, so `--gtest_list_tests` reports the same list everywhere.
 
-The test fixture setup matches the Level Zero device to the corresponding DXGI adapter by device ID before creating the DirectX device.
+The DirectX fixture setup matches the Level Zero device to the corresponding DXGI adapter by device ID before creating the DirectX device. The Vulkan fixture does the same against the Vulkan physical device, and additionally skips when the Vulkan loader cannot be loaded, when no physical device matches at the required API version, or when the required external memory/semaphore device extensions are absent.
 
 ## Tests
 
@@ -28,14 +28,11 @@ The test fixture setup matches the Level Zero device to the corresponding DXGI a
 Both ping-pong cases exercise the two gaps the one-shot cases above do not: reuse of a
 shared fence across frames, and Level Zero kernel execution behind that fence.
 
-## Kernels
-- `interop_double.cl` — `double_values`, doubles each `uint` of the imported buffer in
-  place. Written for this suite; the checked-in `interop_double.spv` is what
-  `add_lzt_test(... KERNELS ...)` installs, regenerate it with
-  `ocloc -file interop_double.cl -spv_only -output_no_suffix -options "-cl-std=CL3.0"`.
+### Vulkan Interoperability (`VulkanInteroperabilityWindowsTests`, `VulkanInteroperabilityLinuxTests`)
 
-## APIs Tested
-- `zeDeviceImportExternalSemaphoreExt`
-- `zeDeviceReleaseExternalSemaphoreExt`
-- `zeCommandListAppendWaitExternalSemaphoreExt` / `zeCommandListAppendSignalExternalSemaphoreExt`
-- `zeMemAllocDevice` (via `lzt::allocate_device_memory`) with `ze_external_memory_import_win32_handle_t`
+| Test | Description |
+|------|-------------|
+| `GivenVulkanSemaphoreWhenImportingExternalSemaphoreAsOpaqueWin32HandleThenIsSuccess` | Creates an exportable binary `VkSemaphore`, exports it with `vkGetSemaphoreWin32HandleKHR` and imports it into Level Zero via `zeDeviceImportExternalSemaphoreExt` with `ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_OPAQUE_WIN32`. Verifies the returned handle is non-null and releases it. |
+| `GivenVulkanTimelineSemaphoreWhenImportingExternalSemaphoreAsOpaqueWin32HandleThenIsSuccess` | As above for a timeline `VkSemaphore`, imported with `ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_VK_TIMELINE_SEMAPHORE_WIN32`. |
+| `GivenVulkanSemaphoreWhenImportingExternalSemaphoreAsOpaqueFdThenIsSuccess` | Creates an exportable binary `VkSemaphore`, exports it with `vkGetSemaphoreFdKHR` and imports it into Level Zero with `ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_OPAQUE_FD`. Verifies the returned handle is non-null and releases it. |
+| `GivenVulkanTimelineSemaphoreWhenImportingExternalSemaphoreAsOpaqueFdThenIsSuccess` | As above for a timeline `VkSemaphore`, imported with `ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_VK_TIMELINE_SEMAPHORE_FD`. |

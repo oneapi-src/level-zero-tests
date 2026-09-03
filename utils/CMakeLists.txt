@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2018 Intel Corporation
+# Copyright(c) 2018-2026 Intel Corporation
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,5 +25,6 @@ add_subdirectory(image)
 add_subdirectory(logging)
 add_subdirectory(net)
 add_subdirectory(random)
+add_subdirectory(system)
 add_subdirectory(utils)
 add_subdirectory(test_harness)
