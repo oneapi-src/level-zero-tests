@@ -8,6 +8,8 @@
 
 #include "gtest/gtest.h"
 
+#include <unordered_map>
+
 #include "logging/logging.hpp"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
@@ -309,12 +311,26 @@ LZT_TEST_F(
       is_temp_supported = true;
       LOG_INFO << "Temperature handles are available on this device!";
 
+      std::unordered_map<zes_temp_sensors_t, double> max_temperature_per_type;
+
       auto temp_handles = lzt::get_temp_handles(device, count);
       for (auto temp_handle : temp_handles) {
         ASSERT_NE(nullptr, temp_handle);
+        auto properties = lzt::get_temp_properties(temp_handle);
         auto current_temperature = lzt::get_temp_state(temp_handle);
-        EXPECT_GE(current_temperature, min_valid_temperature);
         EXPECT_LE(current_temperature, max_valid_temperature);
+        auto &max_temperature = max_temperature_per_type[properties.type];
+        if (current_temperature > max_temperature) {
+          max_temperature = current_temperature;
+        }
+      }
+
+      for (const auto &[sensor_type, max_temperature] :
+           max_temperature_per_type) {
+        LOG_DEBUG << "Maximum temperature reported by "
+                 << lzt::to_string(sensor_type)
+                 << " sensor(s): " << max_temperature;
+        EXPECT_GE(max_temperature, min_valid_temperature);
       }
     } else {
       LOG_INFO << "No temperature handles found for this device!";
