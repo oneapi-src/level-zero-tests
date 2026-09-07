@@ -41,6 +41,10 @@ struct SharedSystemRemoteDeviceTests
     device = devices[0];
     remote_device = devices[1];
 
+    if (!lzt::can_access_peer(device, remote_device)) {
+      GTEST_SKIP() << "P2P not functional";
+    }
+
     lzt::command_list_mode_t mode = GetParam();
     cmd_bundle = lzt::create_command_bundle(device, mode);
   }
