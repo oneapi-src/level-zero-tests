@@ -1176,6 +1176,353 @@ std::string to_string(const ze_device_readonly_memory_capability_t capability) {
   }
 }
 
+std::string to_string(const ze_bandwidth_unit_t unit) {
+  switch (unit) {
+  case ZE_BANDWIDTH_UNIT_UNKNOWN:
+    return "ZE_BANDWIDTH_UNIT_UNKNOWN";
+  case ZE_BANDWIDTH_UNIT_BYTES_PER_NANOSEC:
+    return "ZE_BANDWIDTH_UNIT_BYTES_PER_NANOSEC";
+  case ZE_BANDWIDTH_UNIT_BYTES_PER_CLOCK:
+    return "ZE_BANDWIDTH_UNIT_BYTES_PER_CLOCK";
+  case ZE_BANDWIDTH_UNIT_FORCE_UINT32:
+    return "ZE_BANDWIDTH_UNIT_FORCE_UINT32";
+  default:
+    return "Unknown ze_bandwidth_unit_t value: " +
+           std::to_string(static_cast<int>(unit));
+  }
+}
+
+std::string to_string(const ze_latency_unit_t unit) {
+  switch (unit) {
+  case ZE_LATENCY_UNIT_UNKNOWN:
+    return "ZE_LATENCY_UNIT_UNKNOWN";
+  case ZE_LATENCY_UNIT_NANOSEC:
+    return "ZE_LATENCY_UNIT_NANOSEC";
+  case ZE_LATENCY_UNIT_CLOCK:
+    return "ZE_LATENCY_UNIT_CLOCK";
+  case ZE_LATENCY_UNIT_HOP:
+    return "ZE_LATENCY_UNIT_HOP";
+  case ZE_LATENCY_UNIT_FORCE_UINT32:
+    return "ZE_LATENCY_UNIT_FORCE_UINT32";
+  default:
+    return "Unknown ze_latency_unit_t value: " +
+           std::to_string(static_cast<int>(unit));
+  }
+}
+
+std::string to_string(const ze_device_memory_ext_type_t type) {
+  switch (type) {
+  case ZE_DEVICE_MEMORY_EXT_TYPE_HBM:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_HBM";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_HBM2:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_HBM2";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_DDR:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_DDR";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_DDR2:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_DDR2";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_DDR3:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_DDR3";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_DDR4:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_DDR4";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_DDR5:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_DDR5";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR3:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR3";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR4:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR4";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR5:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR5";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_SRAM:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_SRAM";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_L1:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_L1";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_L3:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_L3";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_GRF:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_GRF";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_SLM:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_SLM";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_GDDR4:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_GDDR4";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_GDDR5:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_GDDR5";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_GDDR5X:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_GDDR5X";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_GDDR6:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_GDDR6";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_GDDR6X:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_GDDR6X";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_GDDR7:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_GDDR7";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_HBM2E:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_HBM2E";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_HBM3:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_HBM3";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_HBM3E:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_HBM3E";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_HBM4:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_HBM4";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR5X:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR5X";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR6:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_LPDDR6";
+  case ZE_DEVICE_MEMORY_EXT_TYPE_FORCE_UINT32:
+    return "ZE_DEVICE_MEMORY_EXT_TYPE_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_memory_ext_type_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+std::string to_string(const ze_device_event_properties_flag_t flag) {
+  switch (flag) {
+  case ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_EXTERNAL_AGGREGATE_STORAGE:
+    return "ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_EXTERNAL_AGGREGATE_"
+           "STORAGE";
+  case ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_IPC:
+    return "ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_IPC";
+  case ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_EXTERNAL_SYNC_ALLOCATION:
+    return "ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_EXTERNAL_SYNC_"
+           "ALLOCATION";
+  case ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_EXTERNAL_INTERRUPT_WAIT:
+    return "ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_EXTERNAL_INTERRUPT_"
+           "WAIT";
+  case ZE_DEVICE_EVENT_PROPERTIES_FLAG_FORCE_UINT32:
+    return "ZE_DEVICE_EVENT_PROPERTIES_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_event_properties_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_device_p2p_property_flag_t flag) {
+  switch (flag) {
+  case ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS:
+    return "ZE_DEVICE_P2P_PROPERTY_FLAG_ACCESS";
+  case ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS:
+    return "ZE_DEVICE_P2P_PROPERTY_FLAG_ATOMICS";
+  case ZE_DEVICE_P2P_PROPERTY_FLAG_FORCE_UINT32:
+    return "ZE_DEVICE_P2P_PROPERTY_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_p2p_property_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_device_dp_capability_flag_t flag) {
+  switch (flag) {
+  case ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_NON_SYSTOLIC_DPA4_SIMD_ALL:
+    return "ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_NON_SYSTOLIC_DPA4_SIMD_ALL";
+  case ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_DPAS_SIMD8:
+    return "ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_DPAS_SIMD8";
+  case ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_DPAS_SIMD16:
+    return "ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_DPAS_SIMD16";
+  case ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_BDPAS_SIMD16:
+    return "ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_BDPAS_SIMD16";
+  case ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_DPAS_DEPTH4:
+    return "ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_DPAS_DEPTH4";
+  case ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_DPAS_DEPTH8:
+    return "ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_DPAS_DEPTH8";
+  case ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_BDPAS_DEPTH8:
+    return "ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_BDPAS_DEPTH8";
+  case ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_OUTPUT_MATRIX_ROWCOUNT_UPTO8:
+    return "ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_OUTPUT_MATRIX_"
+           "ROWCOUNT_UPTO8";
+  case ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_OUTPUT_MATRIX_ROWCOUNT_FIXED8:
+    return "ZE_DEVICE_DP_CAPABILITY_FLAG_DEVICE_SYSTOLIC_OUTPUT_MATRIX_"
+           "ROWCOUNT_FIXED8";
+  case ZE_DEVICE_DP_CAPABILITY_FLAG_FORCE_UINT32:
+    return "ZE_DEVICE_DP_CAPABILITY_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_dp_capability_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_device_input_data_type_flag_t flag) {
+  switch (flag) {
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_TYPE_NONE:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_TYPE_NONE";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_ZE_DEVICE_INPUT_DATA_INT8_PACK4_PER_SIMD_LANE:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_ZE_DEVICE_INPUT_DATA_INT8_PACK4_PER_"
+           "SIMD_LANE";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_INT4_PACK8_PER_SIMD_LANE:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_INT4_PACK8_PER_"
+           "SIMD_LANE";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_INT2_PACK8_PER_SIMD_LANE:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_INT2_PACK8_PER_"
+           "SIMD_LANE";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_TF32_PACK1_PER_SIMD_LANE:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_TF32_PACK1_PER_"
+           "SIMD_LANE";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_FP16_PACK2_PER_SIMD_LANE:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_FP16_PACK2_PER_"
+           "SIMD_LANE";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_BF16_PACK2_PER_SIMD_LANE:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_BF16_PACK2_PER_"
+           "SIMD_LANE";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_FP8_PACK4_PER_SIMD_LANE:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_FP8_PACK4_PER_"
+           "SIMD_LANE";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_BF8_PACK4_PER_SIMD_LANE:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_BF8_PACK4_PER_"
+           "SIMD_LANE";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_E2M1_PACK8_PER_SIMD_LANE:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_E2M1_PACK8_PER_"
+           "SIMD_LANE";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_E3M0_PACK8_PER_SIMD_LANE:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_E3M0_PACK8_PER_"
+           "SIMD_LANE";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_INT8_PACK4_PER_SIMD_LANE:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_INT8_PACK4_PER_"
+           "SIMD_LANE";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_SCALING_UINT8:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_SCALING_UINT8";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_SCALING_UE5M3:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_SCALING_UE5M3";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_SCALING_UE4M3:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_DEVICE_INPUT_DATA_SCALING_UE4M3";
+  case ZE_DEVICE_INPUT_DATA_TYPE_FLAG_FORCE_UINT32:
+    return "ZE_DEVICE_INPUT_DATA_TYPE_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_input_data_type_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_device_output_data_type_flag_t flag) {
+  switch (flag) {
+  case ZE_DEVICE_OUTPUT_DATA_TYPE_FLAG_DEVICE_OUTPUT_DATA_INT32:
+    return "ZE_DEVICE_OUTPUT_DATA_TYPE_FLAG_DEVICE_OUTPUT_DATA_INT32";
+  case ZE_DEVICE_OUTPUT_DATA_TYPE_FLAG_DEVICE_OUTPUT_DATA_FP32:
+    return "ZE_DEVICE_OUTPUT_DATA_TYPE_FLAG_DEVICE_OUTPUT_DATA_FP32";
+  case ZE_DEVICE_OUTPUT_DATA_TYPE_FLAG_DEVICE_OUTPUT_DATA_FP16:
+    return "ZE_DEVICE_OUTPUT_DATA_TYPE_FLAG_DEVICE_OUTPUT_DATA_FP16";
+  case ZE_DEVICE_OUTPUT_DATA_TYPE_FLAG_DEVICE_OUTPUT_DATA_BF16:
+    return "ZE_DEVICE_OUTPUT_DATA_TYPE_FLAG_DEVICE_OUTPUT_DATA_BF16";
+  case ZE_DEVICE_OUTPUT_DATA_TYPE_FLAG_FORCE_UINT32:
+    return "ZE_DEVICE_OUTPUT_DATA_TYPE_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_device_output_data_type_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_driver_ddi_handle_ext_flag_t flag) {
+  switch (flag) {
+  case ZE_DRIVER_DDI_HANDLE_EXT_FLAG_DDI_HANDLE_EXT_SUPPORTED:
+    return "ZE_DRIVER_DDI_HANDLE_EXT_FLAG_DDI_HANDLE_EXT_SUPPORTED";
+  case ZE_DRIVER_DDI_HANDLE_EXT_FLAG_FORCE_UINT32:
+    return "ZE_DRIVER_DDI_HANDLE_EXT_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_driver_ddi_handle_ext_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_driver_memory_free_policy_ext_flag_t flag) {
+  switch (flag) {
+  case ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE:
+    return "ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_BLOCKING_FREE";
+  case ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE:
+    return "ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_DEFER_FREE";
+  case ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_FORCE_UINT32:
+    return "ZE_DRIVER_MEMORY_FREE_POLICY_EXT_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_driver_memory_free_policy_ext_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_rtas_device_ext_flag_t flag) {
+  switch (flag) {
+  case ZE_RTAS_DEVICE_EXT_FLAG_RESERVED:
+    return "ZE_RTAS_DEVICE_EXT_FLAG_RESERVED";
+  case ZE_RTAS_DEVICE_EXT_FLAG_FORCE_UINT32:
+    return "ZE_RTAS_DEVICE_EXT_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_rtas_device_ext_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+// ze_rtas_format_ext_t is an opaque, monotonically increasing version number:
+// only INVALID and MAX carry a fixed meaning, so any other value is reported
+// numerically.
+std::string to_string(const ze_rtas_format_ext_t format) {
+  switch (format) {
+  case ZE_RTAS_FORMAT_EXT_INVALID:
+    return "ZE_RTAS_FORMAT_EXT_INVALID";
+  case ZE_RTAS_FORMAT_EXT_MAX:
+    return "ZE_RTAS_FORMAT_EXT_MAX";
+  case ZE_RTAS_FORMAT_EXT_FORCE_UINT32:
+    return "ZE_RTAS_FORMAT_EXT_FORCE_UINT32";
+  default:
+    return std::to_string(static_cast<uint32_t>(format));
+  }
+}
+
+std::string to_string(const ze_rtas_device_exp_flag_t flag) {
+  switch (flag) {
+  case ZE_RTAS_DEVICE_EXP_FLAG_RESERVED:
+    return "ZE_RTAS_DEVICE_EXP_FLAG_RESERVED";
+  case ZE_RTAS_DEVICE_EXP_FLAG_FORCE_UINT32:
+    return "ZE_RTAS_DEVICE_EXP_FLAG_FORCE_UINT32";
+  default:
+    return "Unknown ze_rtas_device_exp_flag_t value: " +
+           std::to_string(static_cast<int>(flag));
+  }
+}
+
+std::string to_string(const ze_rtas_format_exp_t format) {
+  switch (format) {
+  case ZE_RTAS_FORMAT_EXP_INVALID:
+    return "ZE_RTAS_FORMAT_EXP_INVALID";
+  case ZE_RTAS_FORMAT_EXP_MAX:
+    return "ZE_RTAS_FORMAT_EXP_MAX";
+  case ZE_RTAS_FORMAT_EXP_FORCE_UINT32:
+    return "ZE_RTAS_FORMAT_EXP_FORCE_UINT32";
+  default:
+    return std::to_string(static_cast<uint32_t>(format));
+  }
+}
+
+std::string to_string(const ze_fabric_vertex_exp_type_t type) {
+  switch (type) {
+  case ZE_FABRIC_VERTEX_EXP_TYPE_UNKNOWN:
+    return "ZE_FABRIC_VERTEX_EXP_TYPE_UNKNOWN";
+  case ZE_FABRIC_VERTEX_EXP_TYPE_DEVICE:
+    return "ZE_FABRIC_VERTEX_EXP_TYPE_DEVICE";
+  case ZE_FABRIC_VERTEX_EXP_TYPE_SUBDEVICE:
+    return "ZE_FABRIC_VERTEX_EXP_TYPE_SUBDEVICE";
+  case ZE_FABRIC_VERTEX_EXP_TYPE_SWITCH:
+    return "ZE_FABRIC_VERTEX_EXP_TYPE_SWITCH";
+  case ZE_FABRIC_VERTEX_EXP_TYPE_FORCE_UINT32:
+    return "ZE_FABRIC_VERTEX_EXP_TYPE_FORCE_UINT32";
+  default:
+    return "Unknown ze_fabric_vertex_exp_type_t value: " +
+           std::to_string(static_cast<int>(type));
+  }
+}
+
+std::string to_string(const ze_fabric_edge_exp_duplexity_t duplexity) {
+  switch (duplexity) {
+  case ZE_FABRIC_EDGE_EXP_DUPLEXITY_UNKNOWN:
+    return "ZE_FABRIC_EDGE_EXP_DUPLEXITY_UNKNOWN";
+  case ZE_FABRIC_EDGE_EXP_DUPLEXITY_HALF_DUPLEX:
+    return "ZE_FABRIC_EDGE_EXP_DUPLEXITY_HALF_DUPLEX";
+  case ZE_FABRIC_EDGE_EXP_DUPLEXITY_FULL_DUPLEX:
+    return "ZE_FABRIC_EDGE_EXP_DUPLEXITY_FULL_DUPLEX";
+  case ZE_FABRIC_EDGE_EXP_DUPLEXITY_FORCE_UINT32:
+    return "ZE_FABRIC_EDGE_EXP_DUPLEXITY_FORCE_UINT32";
+  default:
+    return "Unknown ze_fabric_edge_exp_duplexity_t value: " +
+           std::to_string(static_cast<int>(duplexity));
+  }
+}
+
 } // namespace level_zero_tests
 
 std::ostream &operator<<(std::ostream &os, const ze_api_version_t &x) {
