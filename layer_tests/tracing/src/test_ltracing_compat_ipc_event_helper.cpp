@@ -11,14 +11,12 @@
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 #include "net/test_ipc_comm.hpp"
-#include <boost/process.hpp>
 #include <level_zero/ze_api.h>
 #include <level_zero/layers/zel_tracing_api.h>
 #include <level_zero/loader/ze_loader.h>
 #include <level_zero/layers/zel_tracing_register_cb.h>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
-#include <boost/process.hpp>
 
 namespace lzt = level_zero_tests;
 namespace bipc = boost::interprocess;

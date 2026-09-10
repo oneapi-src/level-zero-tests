@@ -9,10 +9,10 @@
 #ifndef __TEST_IPC_COMM_HPP__
 
 #define __TEST_IPC_COMM_HPP__
+#include <boost/asio.hpp>
 #include <utility>
 #include <level_zero/ze_api.h>
 #include <cstddef>
-#include <boost/asio.hpp>
 #include <chrono>
 #include <thread>
 #ifdef __linux__

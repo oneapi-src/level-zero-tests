@@ -6,6 +6,9 @@
  *
  */
 
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/read.hpp>
+
 #include <regex>
 #include "gtest/gtest.h"
 
@@ -15,8 +18,9 @@
 
 #include <boost/process.hpp>
 #include <boost/filesystem.hpp>
+#include <sstream>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v2;
 namespace fs = boost::filesystem;
 
 namespace lzt = level_zero_tests;
@@ -72,21 +76,27 @@ bool comparePciIdBusNumber(std::string &bdfString1, std::string &bdfString2) {
 
 static void run_child_process(uint32_t device_count,
                               std::string enablePciIdDeviceOrder) {
-  auto env = boost::this_process::environment();
-  bp::environment child_env = env;
-  child_env["ZE_ENABLE_PCI_ID_DEVICE_ORDER"] = enablePciIdDeviceOrder;
+  const auto child_env = lzt::child_environment(
+      {{"ZE_ENABLE_PCI_ID_DEVICE_ORDER", enablePciIdDeviceOrder}});
 
-  fs::path helper_path(boost::filesystem::current_path() / "device");
-  std::vector<boost::filesystem::path> paths;
-  paths.push_back(helper_path);
-  bp::ipstream child_output;
-  fs::path helper = bp::search_path("test_pci_device_order_helper", paths);
-  bp::child get_devices_process(helper, child_env, bp::std_out > child_output);
+  fs::path helper_path(fs::current_path() / "device");
+  fs::path helper = lzt::find_helper_executable("test_pci_device_order_helper",
+                                                {helper_path});
 
+  boost::asio::io_context io_ctx;
+  bp::popen get_devices_process(io_ctx, helper, {},
+                                bp::process_environment{child_env});
+  std::string output;
+  boost::system::error_code ec;
+  boost::asio::read(get_devices_process, boost::asio::dynamic_buffer(output),
+                    ec);
+  get_devices_process.wait();
+
+  std::istringstream output_stream(output);
   const std::string child_fail = "zeInit failed";
   std::vector<std::string> bdfString(device_count);
   for (uint32_t i = 0U; i < device_count; i++) {
-    std::getline(child_output, bdfString[i]);
+    std::getline(output_stream, bdfString[i]);
     // trim trailing whitespace from result_string
     bdfString[i].erase(std::find_if(bdfString[i].rbegin(), bdfString[i].rend(),
                                     [](int ch) { return !std::isspace(ch); })
@@ -96,7 +106,6 @@ static void run_child_process(uint32_t device_count,
       FAIL() << "zeInit Failure in child process";
     }
   }
-  get_devices_process.wait();
   std::vector<std::string> bdfStringSorted(bdfString.begin(), bdfString.end());
   std::sort(bdfStringSorted.begin(), bdfStringSorted.end(),
             comparePciIdBusNumber);

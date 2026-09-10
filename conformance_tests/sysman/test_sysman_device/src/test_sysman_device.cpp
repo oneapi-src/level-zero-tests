@@ -6,6 +6,9 @@
  *
  */
 
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/read.hpp>
+
 #include "gtest/gtest.h"
 
 #include "logging/logging.hpp"
@@ -16,8 +19,9 @@
 #include <boost/filesystem.hpp>
 #include <thread>
 #include <cctype>
+#include <sstream>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v2;
 namespace fs = boost::filesystem;
 
 namespace lzt = level_zero_tests;
@@ -66,23 +70,26 @@ class SysmanDeviceTest : public lzt::SysmanCtsClass {};
 
 void run_device_hierarchy_child_process() {
   fs::path helper_path(fs::current_path() / "sysman_device");
-  std::vector<fs::path> paths;
-  paths.push_back(helper_path);
-  bp::ipstream child_output;
 #ifdef USE_ZESINIT
-  fs::path helper =
-      bp::search_path("test_sysman_device_hierarchy_helper_zesinit", paths);
+  fs::path helper = lzt::find_helper_executable(
+      "test_sysman_device_hierarchy_helper_zesinit", {helper_path});
 #else
-  fs::path helper =
-      bp::search_path("test_sysman_device_hierarchy_helper", paths);
+  fs::path helper = lzt::find_helper_executable(
+      "test_sysman_device_hierarchy_helper", {helper_path});
 #endif
 
-  bp::child enumerate_devices_process(helper, bp::std_out > child_output);
+  boost::asio::io_context io_ctx;
+  bp::popen enumerate_devices_process(io_ctx, helper, {});
+  std::string child_output;
+  boost::system::error_code ec;
+  boost::asio::read(enumerate_devices_process,
+                    boost::asio::dynamic_buffer(child_output), ec);
   enumerate_devices_process.wait();
 
   LOG_INFO << "Child Process Logs";
+  std::istringstream output_stream(child_output);
   std::string result_string;
-  while (std::getline(child_output, result_string)) {
+  while (std::getline(output_stream, result_string)) {
     std::cout << result_string << "\n"; // Logs from Child Process
     if (result_string.find("Failure") != std::string::npos) {
       ADD_FAILURE() << "Test Case failed";
@@ -95,22 +102,25 @@ void run_device_hierarchy_child_process() {
 
 #ifdef USE_ZESINIT
 static void run_child_process(const std::string &device_hierarchy) {
-  auto env = boost::this_process::environment();
-  bp::environment child_env = env;
-  child_env["ZE_FLAT_DEVICE_HIERARCHY"] = device_hierarchy;
+  const auto child_env =
+      lzt::child_environment({{"ZE_FLAT_DEVICE_HIERARCHY", device_hierarchy}});
 
   fs::path helper_path(fs::current_path() / "sysman_device");
-  std::vector<fs::path> paths;
-  paths.push_back(helper_path);
-  bp::ipstream child_output;
-  fs::path helper = bp::search_path("test_sysman_device_helper_zesinit", paths);
+  fs::path helper = lzt::find_helper_executable(
+      "test_sysman_device_helper_zesinit", {helper_path});
 
-  bp::child validate_deviceUUID_process(helper, child_env,
-                                        bp::std_out > child_output);
+  boost::asio::io_context io_ctx;
+  bp::popen validate_deviceUUID_process(io_ctx, helper, {},
+                                        bp::process_environment{child_env});
+  std::string output;
+  boost::system::error_code ec;
+  boost::asio::read(validate_deviceUUID_process,
+                    boost::asio::dynamic_buffer(output), ec);
   validate_deviceUUID_process.wait();
   std::cout << std::endl;
+  std::istringstream output_stream(output);
   std::string result_string;
-  while (std::getline(child_output, result_string)) {
+  while (std::getline(output_stream, result_string)) {
     std::cout << result_string << "\n"; // Display logs from Child Process
     if (result_string.find("Failure") != std::string::npos) {
       ADD_FAILURE() << "Test Case failed";

@@ -17,7 +17,7 @@ namespace lzt = level_zero_tests;
 #include <thread>
 
 namespace fs = boost::filesystem;
-namespace bp = boost::process;
+namespace bp = boost::process::v2;
 namespace bi = boost::interprocess;
 
 using lzt::to_u32;
@@ -149,23 +149,33 @@ LZT_TEST_F(
   run_test(all_sub_devices, true, true);
 }
 
-bp::child launch_child_debugger_process(debug_test_type_t test_type,
-                                        std::string device_id,
-                                        bool use_sub_devices, uint32_t index,
-                                        uint32_t app_pid = 0,
-                                        bool verify_events = false) {
+bp::process launch_child_debugger_process(debug_test_type_t test_type,
+                                          std::string device_id,
+                                          bool use_sub_devices, uint32_t index,
+                                          uint32_t app_pid = 0,
+                                          bool verify_events = false) {
 
   fs::path debugger_path(fs::current_path() / "debug");
-  std::vector<fs::path> paths;
-  paths.push_back(debugger_path);
-  fs::path helper = bp::search_path("child_debugger", paths);
+  fs::path helper =
+      lzt::find_helper_executable("child_debugger", {debugger_path});
 
-  bp::child debugger(helper, "--test_type=" + std::to_string(test_type),
-                     "--device_id=" + device_id,
-                     (use_sub_devices ? "--use_sub_devices" : " "),
-                     "--index=" + std::to_string(index),
-                     app_pid ? "--app_pid=" + std::to_string(app_pid) : " ",
-                     verify_events ? "--verify_events" : " ");
+  std::vector<std::string> args{"--test_type=" + std::to_string(test_type),
+                                "--device_id=" + device_id,
+                                "--index=" + std::to_string(index)};
+  if (use_sub_devices) {
+    args.push_back("--use_sub_devices");
+  }
+  if (app_pid) {
+    args.push_back("--app_pid=" + std::to_string(app_pid));
+  }
+  if (verify_events) {
+    args.push_back("--verify_events");
+  }
+
+  // The returned process outlives this scope, so its execution context must
+  // outlive it too.
+  static boost::asio::io_context io_ctx;
+  bp::process debugger(io_ctx, helper, args);
 
   return debugger;
 }

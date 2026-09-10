@@ -6,6 +6,8 @@
  *
  */
 
+#include <boost/asio/io_context.hpp>
+
 #include "gtest/gtest.h"
 
 #include "logging/logging.hpp"
@@ -17,11 +19,11 @@
 #include <level_zero/layers/zel_tracing_api.h>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
-#include <boost/process.hpp>
 #include <level_zero/loader/ze_loader.h>
 
 namespace lzt = level_zero_tests;
 namespace bipc = boost::interprocess;
+namespace bp = boost::process::v2;
 
 namespace {
 
@@ -185,14 +187,15 @@ protected:
     std::memcpy(region.get_address(), &test_data,
                 sizeof(lzt::shared_ipc_event_data_t));
 
+    boost::asio::io_context io_ctx;
 #ifdef USE_RUNTIME_TRACING
     // launch child
-    boost::process::child c("./tracing/test_ltracing_ipc_event_helper_dynamic",
-                            test_type_name.c_str());
+    bp::process c(io_ctx, "./tracing/test_ltracing_ipc_event_helper_dynamic",
+                  {test_type_name});
 #else
     // launch child
-    boost::process::child c("./tracing/test_ltracing_ipc_event_helper",
-                            test_type_name.c_str());
+    bp::process c(io_ctx, "./tracing/test_ltracing_ipc_event_helper",
+                  {test_type_name});
 #endif
     lzt::send_ipc_handle(hIpcEventPool);
 

@@ -6,6 +6,8 @@
  *
  */
 
+#include <boost/asio/io_context.hpp>
+
 #include "gtest/gtest.h"
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
@@ -22,6 +24,7 @@
 
 namespace lzt = level_zero_tests;
 namespace bipc = boost::interprocess;
+namespace bp = boost::process::v2;
 namespace {
 
 static const ze_event_desc_t defaultEventDesc = {
@@ -203,7 +206,8 @@ static void run_ipc_event_test(parent_test_t parent_test,
 
   bipc::shared_memory_object::remove("ipc_event_test");
   // launch child
-  boost::process::child c("./ipc/test_ipc_event_helper");
+  boost::asio::io_context io_ctx;
+  bp::process c(io_ctx, "./ipc/test_ipc_event_helper", {});
 
   ze_result_t result = zeInit(0);
   if (result) {
@@ -306,7 +310,8 @@ static void run_ipc_event_test_opaque(parent_test_t parent_test,
   bipc::shared_memory_object::remove("ipc_event_test");
 
   // launch child
-  boost::process::child c("./ipc/test_ipc_event_helper");
+  boost::asio::io_context io_ctx;
+  bp::process c(io_ctx, "./ipc/test_ipc_event_helper", {});
 
   ze_result_t result = zeInit(0);
   if (result) {

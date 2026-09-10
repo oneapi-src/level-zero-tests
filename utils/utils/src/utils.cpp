@@ -10,12 +10,16 @@
 #include "logging/logging.hpp"
 #include "test_harness/test_harness.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <cerrno>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
+
+#include <boost/process.hpp>
 
 namespace level_zero_tests {
 
@@ -650,6 +654,50 @@ void create_and_execute_function(ze_device_handle_t device,
 
   destroy_function(function);
   destroy_command_bundle(cmd_bundle);
+}
+
+std::vector<std::string>
+child_environment(const std::map<std::string, std::string> &overrides) {
+  namespace bp = boost::process::v2;
+
+  // environment::key comparison follows the platform's rules, so the overrides
+  // also match case-insensitively on Windows.
+  std::vector<bp::environment::key> overridden_keys;
+  overridden_keys.reserve(overrides.size());
+  for (const auto &override_entry : overrides) {
+    overridden_keys.emplace_back(override_entry.first);
+  }
+
+  std::vector<std::string> environment;
+  for (auto entry : bp::environment::current()) {
+    const auto overridden =
+        std::any_of(overridden_keys.begin(), overridden_keys.end(),
+                    [&entry](const bp::environment::key &key) {
+                      return entry.key().compare(key.native_view()) == 0;
+                    });
+    if (!overridden) {
+      environment.push_back(entry.string());
+    }
+  }
+  for (const auto &override_entry : overrides) {
+    environment.push_back(override_entry.first + "=" + override_entry.second);
+  }
+  return environment;
+}
+
+boost::filesystem::path find_helper_executable(
+    const boost::filesystem::path &name,
+    const std::vector<boost::filesystem::path> &directories) {
+  for (const auto &directory : directories) {
+    const auto environment = child_environment({{"PATH", directory.string()}});
+    auto executable =
+        boost::process::v2::environment::find_executable(name, environment);
+    if (!executable.empty()) {
+      return executable;
+    }
+  }
+  throw std::runtime_error("Could not find helper executable: " +
+                           name.string());
 }
 
 } // namespace level_zero_tests

@@ -5,6 +5,9 @@
  * SPDX-License-Identifier: MIT
  *
  */
+
+#include <boost/asio/io_context.hpp>
+
 #ifdef __linux__
 #include <unistd.h>
 #include <boost/interprocess/shared_memory_object.hpp>
@@ -47,7 +50,8 @@ static void run_ipc_put_handle_test(ipc_put_mem_access_test_t test_type,
 
   bipc::shared_memory_object::remove("ipc_put_handle_test");
   // launch child
-  boost::process::child c("./ipc/test_ipc_put_handle_helper");
+  boost::asio::io_context io_ctx;
+  boost::process::v2::process c(io_ctx, "./ipc/test_ipc_put_handle_helper", {});
 
   shared_data_t test_data = {test_type, size, flags, Mode};
   bipc::shared_memory_object shm(bipc::create_only, "ipc_put_handle_test",

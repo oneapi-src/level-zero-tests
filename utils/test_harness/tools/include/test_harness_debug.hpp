@@ -11,6 +11,8 @@
 
 #include <boost/process.hpp>
 
+#include <future>
+
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
 #include "gtest/gtest.h"
@@ -69,7 +71,7 @@ bool get_register_set_props(ze_device_handle_t device,
                             zet_debug_regset_properties_t &reg);
 
 void debug_clean_assert_true(bool condition,
-                             boost::process::child &debug_helper);
+                             boost::process::v2::process &debug_helper);
 
 std::vector<zet_debug_regset_properties_t> get_thread_register_set_properties(
     const zet_debug_session_handle_t &debug_session,

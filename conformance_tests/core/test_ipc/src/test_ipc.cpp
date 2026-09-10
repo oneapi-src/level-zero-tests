@@ -1,19 +1,20 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
  */
+
+#include <boost/asio.hpp>
 #include "gtest/gtest.h"
 
 #include <vector>
 #include <algorithm>
-#include <boost/asio.hpp>
 #include <boost/process.hpp>
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
-namespace bp = boost::process;
+namespace bp = boost::process::v2;
 
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"

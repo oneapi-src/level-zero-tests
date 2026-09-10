@@ -18,6 +18,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <boost/filesystem/path.hpp>
 
 #include <level_zero/zet_api.h>
 #include <level_zero/zes_api.h>
@@ -137,6 +138,16 @@ void create_and_execute_function(ze_device_handle_t device,
 
 extern std::unique_ptr<std::map<std::string, std::vector<uint8_t>>>
     binary_file_map;
+
+// Returns the current environment as "KEY=VALUE" entries, with overrides
+// replacing any inherited entry of the same name. Appending instead of
+// replacing would leave duplicate keys, and getenv() reports the first one.
+std::vector<std::string>
+child_environment(const std::map<std::string, std::string> &overrides);
+
+boost::filesystem::path
+find_helper_executable(const boost::filesystem::path &name,
+                       const std::vector<boost::filesystem::path> &directories);
 
 } // namespace level_zero_tests
 

@@ -7,6 +7,13 @@
  */
 
 #include <boost/filesystem.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/readable_pipe.hpp>
+#include <boost/asio/writable_pipe.hpp>
+#include <boost/asio/read_until.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/streambuf.hpp>
 #include <boost/process.hpp>
 #include <chrono>
 #include <thread>
@@ -25,7 +32,7 @@
 #include <sstream>
 #include <string>
 
-namespace bp = boost::process;
+namespace bp = boost::process::v2;
 namespace fs = boost::filesystem;
 
 namespace lzt = level_zero_tests;
@@ -286,7 +293,9 @@ import_memory(ze_context_handle_t context, ze_device_handle_t device,
 
 #ifdef __linux__
 
-static int get_imported_fd(std::string driver_id, bp::opstream &child_input,
+static int get_imported_fd(std::string driver_id,
+                           boost::asio::io_context &io_ctx,
+                           boost::asio::writable_pipe &child_input,
                            lzt::command_list_mode_t mode,
                            memory_type_t memory_type) {
   int fd;
@@ -294,15 +303,13 @@ static int get_imported_fd(std::string driver_id, bp::opstream &child_input,
 
   // launch a new process that exports memory
   fs::path helper_path(fs::current_path() / "memory");
-  std::vector<fs::path> paths;
-  paths.push_back(helper_path);
-  fs::path helper = bp::search_path("test_import_helper", paths);
-  bp::child import_memory_helper(
-      helper,
-      bp::args({driver_id,
-                mode == lzt::command_list_mode_t::immediate ? "1" : "0",
-                memory_type != memory_type_t::host ? "1" : "0"}),
-      bp::std_in < child_input);
+  fs::path helper =
+      lzt::find_helper_executable("test_import_helper", {helper_path});
+  bp::process import_memory_helper(
+      io_ctx, helper,
+      {driver_id, mode == lzt::command_list_mode_t::immediate ? "1" : "0",
+       memory_type != memory_type_t::host ? "1" : "0"},
+      bp::process_stdio{child_input, {}, {}});
   import_memory_helper.detach();
 
   struct sockaddr_un local_addr, remote_addr;
@@ -355,29 +362,32 @@ static int get_imported_fd(std::string driver_id, bp::opstream &child_input,
   return fd;
 }
 #else
-static int send_handle(std::string driver_id, bp::opstream &child_input,
-                       uint64_t handle, lzt::lztWin32HandleTestType handle_type,
+static int send_handle(std::string driver_id, boost::asio::io_context &io_ctx,
+                       bp::popen &child, uint64_t handle,
+                       lzt::lztWin32HandleTestType handle_type,
                        lzt::command_list_mode_t mode,
                        memory_type_t memory_type) {
   // launch a new process that exports memory
   fs::path helper_path(fs::current_path() / "memory");
-  std::vector<fs::path> paths;
-  paths.push_back(helper_path);
-  bp::ipstream output;
-  fs::path helper = bp::search_path("test_import_helper", paths);
-  bp::child import_memory_helper(
-      helper,
-      bp::args({driver_id,
-                mode == lzt::command_list_mode_t::immediate ? "1" : "0",
-                memory_type != memory_type_t::host ? "1" : "0"}),
-      bp::std_in<child_input, bp::std_out> output);
+  fs::path helper =
+      lzt::find_helper_executable("test_import_helper", {helper_path});
+  child = bp::popen(io_ctx, helper,
+                    {driver_id,
+                     mode == lzt::command_list_mode_t::immediate ? "1" : "0",
+                     memory_type != memory_type_t::host ? "1" : "0"});
+  bp::popen &import_memory_helper = child;
   HANDLE targetHandle;
   auto result =
       DuplicateHandle(GetCurrentProcess(), reinterpret_cast<HANDLE>(handle),
                       import_memory_helper.native_handle(), &targetHandle,
                       GENERIC_READ | GENERIC_WRITE, FALSE, 0);
   if (result > 0) {
-    child_input << handle_type << std::endl;
+    {
+      std::ostringstream streamType;
+      streamType << handle_type << "\n";
+      boost::asio::write(import_memory_helper,
+                         boost::asio::buffer(streamType.str()));
+    }
 
     BOOL pipeConnected = FALSE;
     HANDLE hPipe = INVALID_HANDLE_VALUE;
@@ -415,11 +425,19 @@ static int send_handle(std::string driver_id, bp::opstream &child_input,
     std::ostringstream streamHandle;
     streamHandle << targetHandle;
     std::string handleString = streamHandle.str();
-    child_input << handleString << std::endl;
+    handleString += "\n";
+    boost::asio::write(import_memory_helper, boost::asio::buffer(handleString));
     std::string line;
-
-    while (std::getline(output, line) && !line.empty())
+    boost::asio::streambuf output;
+    boost::system::error_code ec;
+    while (boost::asio::read_until(import_memory_helper, output, '\n', ec) >
+           0) {
+      std::istream is(&output);
+      if (!std::getline(is, line) || line.empty()) {
+        break;
+      }
       LOG_INFO << line << std::endl;
+    }
     import_memory_helper.wait();
     return import_memory_helper.native_exit_code();
     CloseHandle(hPipe);
@@ -686,9 +704,10 @@ void zeDeviceGetExternalMemoryProperties::
 
   // set up request to import the external memory handle
   auto driver_properties = lzt::get_driver_properties(driver);
-  bp::opstream child_input;
+  boost::asio::io_context io_ctx;
+  boost::asio::writable_pipe child_input(io_ctx);
   auto imported_fd = get_imported_fd(lzt::to_string(driver_properties.uuid),
-                                     child_input, mode, memory_type);
+                                     io_ctx, child_input, mode, memory_type);
 
   size_t size = 1024;
   void *imported_memory = nullptr;
@@ -711,8 +730,8 @@ void zeDeviceGetExternalMemoryProperties::
 
   LOG_DEBUG << "Importer sending done msg " << std::endl;
   // import helper can now call free on its handle to memory
-  child_input << "Done"
-              << std::endl; // The content of this message doesn't really matter
+  // The content of this message doesn't really matter
+  boost::asio::write(child_input, boost::asio::buffer(std::string("Done\n")));
 
   for (size_t i = 0U; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(verification_memory)[i],
@@ -745,9 +764,11 @@ void zeDeviceGetExternalMemoryProperties::
 
   // Launch child process that exports device memory filled with pattern 0xAB
   auto driver_properties = lzt::get_driver_properties(driver);
-  bp::opstream child_input;
-  auto imported_fd = get_imported_fd(lzt::to_string(driver_properties.uuid),
-                                     child_input, mode, memory_type_t::device);
+  boost::asio::io_context io_ctx;
+  boost::asio::writable_pipe child_input(io_ctx);
+  auto imported_fd =
+      get_imported_fd(lzt::to_string(driver_properties.uuid), io_ctx,
+                      child_input, mode, memory_type_t::device);
 
   const size_t size = 1024;
 
@@ -788,7 +809,7 @@ void zeDeviceGetExternalMemoryProperties::
 
   LOG_DEBUG << "Importer sending done msg " << std::endl;
   // import helper can now call free on its handle to memory
-  child_input << "Done" << std::endl;
+  boost::asio::write(child_input, boost::asio::buffer(std::string("Done\n")));
 
   for (size_t i = 0U; i < size; i++) {
     EXPECT_EQ(static_cast<uint8_t *>(verification_memory)[i],
@@ -1008,9 +1029,10 @@ void zeDeviceGetExternalMemoryProperties::
   alloc_props.pNext = &export_handle;
   lzt::get_mem_alloc_properties(context, exported_memory, &alloc_props);
   auto driver_properties = lzt::get_driver_properties(driver);
-  bp::opstream child_input;
+  boost::asio::io_context io_ctx;
+  bp::popen child_process(io_ctx);
   int child_result =
-      send_handle(lzt::to_string(driver_properties.uuid), child_input,
+      send_handle(lzt::to_string(driver_properties.uuid), io_ctx, child_process,
                   reinterpret_cast<uint64_t>(export_handle.handle),
                   handle_test_type, mode, memory_type);
 

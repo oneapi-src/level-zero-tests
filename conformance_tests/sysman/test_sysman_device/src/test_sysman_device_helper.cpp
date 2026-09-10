@@ -12,16 +12,16 @@
 
 namespace lzt = level_zero_tests;
 
-typedef std::array<uint8_t, ZE_MAX_DEVICE_UUID_SIZE> UUID;
+typedef std::array<uint8_t, ZE_MAX_DEVICE_UUID_SIZE> device_uuid;
 
 #define TO_STD_ARRAY(x)                                                        \
   [](const uint8_t(&arr)[ZE_MAX_DEVICE_UUID_SIZE]) {                           \
-    UUID uuid;                                                                 \
+    device_uuid uuid;                                                          \
     std::copy(std::begin(arr), std::end(arr), uuid.begin());                   \
     return uuid;                                                               \
   }(x)
 
-UUID get_sysman_device_uuid(zes_device_handle_t sysman_device) {
+device_uuid get_sysman_device_uuid(zes_device_handle_t sysman_device) {
   zes_device_properties_t properties = {ZES_STRUCTURE_TYPE_DEVICE_PROPERTIES};
   zes_device_ext_properties_t ext_properties = {
       ZES_STRUCTURE_TYPE_DEVICE_EXT_PROPERTIES};
@@ -31,8 +31,9 @@ UUID get_sysman_device_uuid(zes_device_handle_t sysman_device) {
   return TO_STD_ARRAY(sysman_device_uuid.id);
 }
 
-void get_sysman_sub_devices_uuids(zes_device_handle_t sysman_device,
-                                  std::vector<UUID> &sysman_device_uuids) {
+void get_sysman_sub_devices_uuids(
+    zes_device_handle_t sysman_device,
+    std::vector<device_uuid> &sysman_device_uuids) {
   uint32_t num_sub_devices = 0;
   auto sub_device_properties =
       lzt::get_sysman_subdevice_properties(sysman_device, num_sub_devices);
@@ -43,14 +44,14 @@ void get_sysman_sub_devices_uuids(zes_device_handle_t sysman_device,
   }
 }
 
-UUID get_ze_device_uuid(ze_device_handle_t ze_device) {
+device_uuid get_ze_device_uuid(ze_device_handle_t ze_device) {
   auto ze_device_properties = lzt::get_device_properties(ze_device);
   auto ze_device_uuid = ze_device_properties.uuid;
   return TO_STD_ARRAY(ze_device_uuid.id);
 }
 
-UUID get_ze_root_uuid(ze_device_handle_t ze_device,
-                      const char *device_hierarchy) {
+device_uuid get_ze_root_uuid(ze_device_handle_t ze_device,
+                             const char *device_hierarchy) {
   ze_device_handle_t ze_root_device = nullptr;
   if (strcmp(device_hierarchy, "COMBINED") == 0) {
     ze_root_device = lzt::get_root_device(ze_device);
@@ -67,8 +68,8 @@ UUID get_ze_root_uuid(ze_device_handle_t ze_device,
   return get_ze_device_uuid(ze_root_device);
 }
 
-bool compare_core_and_sysman_uuid(std::vector<UUID> core_uuids,
-                                  std::vector<UUID> sysman_uuids) {
+bool compare_core_and_sysman_uuid(std::vector<device_uuid> core_uuids,
+                                  std::vector<device_uuid> sysman_uuids) {
   std::sort(core_uuids.begin(), core_uuids.end());
   std::sort(sysman_uuids.begin(), sysman_uuids.end());
   return (
@@ -110,8 +111,8 @@ int main(int argc, char **argv) {
       lzt::get_zes_device_count(zes_driver_used), zes_driver_used);
   EXPECT_FALSE(sysman_devices.empty());
 
-  std::vector<UUID> sysman_device_uuids{};
-  std::vector<UUID> ze_device_uuids{};
+  std::vector<device_uuid> sysman_device_uuids{};
+  std::vector<device_uuid> ze_device_uuids{};
 
   if (strcmp(device_hierarchy, "FLAT") != 0) { // composite or combined mode
     for (const auto &sysman_device : sysman_devices) {

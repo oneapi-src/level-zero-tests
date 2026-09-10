@@ -14,7 +14,6 @@
 
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
-#include <boost/process.hpp>
 
 #include <level_zero/ze_api.h>
 

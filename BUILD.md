@@ -22,27 +22,10 @@ Expand-Archive (Join-Path $LZT_TEMP 'libpng.zip') -DestinationPath $LZT_TEMP;
 Move-Item (Join-Path $LZT_TEMP 'lpng1647') (Join-Path $LZT_TEMP 'libpng');
 Remove-Item (Join-Path $LZT_TEMP 'libpng.zip')
 
-Invoke-WebRequest -UserAgent "Wget" -Uri 'https://sourceforge.net/projects/boost/files/boost/1.79.0/boost_1_79_0.zip' -OutFile (Join-Path $LZT_TEMP 'Boost.zip') -UseBasicParsing;
+Invoke-WebRequest -UserAgent "Wget" -Uri 'https://sourceforge.net/projects/boost/files/boost/1.92.0/boost_1_92_0.zip' -OutFile (Join-Path $LZT_TEMP 'Boost.zip') -UseBasicParsing;
 Add-Type -AssemblyName System.IO.Compression.FileSystem;
 [System.IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $LZT_TEMP 'Boost.zip'), $LZT_TEMP);
-Move-Item (Join-Path $LZT_TEMP 'boost_1_79_0') (Join-Path $LZT_TEMP 'Boost');
-
-$msvcJamPath = Join-Path $LZT_TEMP 'Boost\tools\build\src\tools\msvc.jam'
-$reader = New-Object System.IO.StreamReader($msvcJamPath, [System.Text.UTF8Encoding]::new($false), $true)
-try {
-  $msvcJamContent = $reader.ReadToEnd()
-  $encoding = $reader.CurrentEncoding
-} finally {
-  $reader.Close()
-}
-$old1 = 'if [ MATCH "(14.3)"'
-$new1 = 'if [ MATCH "(14.[3-9])"'
-$old2 = 'if [ MATCH "(MSVC\\\\14.3)" : $(command) ]'
-$new2 = 'if [ MATCH "(MSVC\\\\14.[3-9])" : $(command) ]'
-if (-not $msvcJamContent.Contains($old1)) { throw "Pattern not found: $old1" }
-if (-not $msvcJamContent.Contains($old2)) { throw "Pattern not found: $old2" }
-$updatedMsvcJamContent = $msvcJamContent.Replace($old1, $new1).Replace($old2, $new2)
-[System.IO.File]::WriteAllText($msvcJamPath, $updatedMsvcJamContent, $encoding)
+Move-Item (Join-Path $LZT_TEMP 'boost_1_92_0') (Join-Path $LZT_TEMP 'Boost');
 Remove-Item (Join-Path $LZT_TEMP 'Boost.zip');
 
 $LZT_WORKSPACE = if ($env:LZT_WORKSPACE) { $env:LZT_WORKSPACE } else { 'C:\LZT_Workspace' }
@@ -66,7 +49,7 @@ cmake --build (Join-Path $LZT_TEMP 'build\libpng') --config Release --target ins
 cd (Join-Path $LZT_TEMP 'Boost')
 .\bootstrap.bat vc143
 .\b2.exe install `
-  define=BOOST_USE_WINAPI_VERSION=0x0601 `
+  define=BOOST_USE_WINAPI_VERSION=0x0A00 `
   --prefix=$LZT_WORKSPACE\Boost `
   -j 16 `
   address-model=64 `
@@ -74,7 +57,7 @@ cd (Join-Path $LZT_TEMP 'Boost')
   --with-log `
   --with-program_options `
   --with-serialization `
-  --with-system `
+  --with-process `
   --with-date_time `
   --with-timer
 
@@ -100,10 +83,10 @@ On SLES distributions only:
 Requires the `level-zero`, `level-zero-devel`, `libpng16-devel`, `libva-devel`
 packages to be installed.
 
-In addition to the above, the Boost C++ Library needs to be installed. Example below with Boost 1.79 (i.e. https://www.boost.org/users/history/version_1_79_0.html)
+In addition to the above, the Boost C++ Library needs to be installed. Example below with Boost 1.92 (i.e. https://www.boost.org/users/history/version_1_92_0.html)
 
 ```bash
-git clone --recurse-submodules --branch boost-1.79.0 https://github.com/boostorg/boost.git
+git clone --recurse-submodules --branch boost-1.92.0 https://github.com/boostorg/boost.git
 cd boost
 ./bootstrap.sh
 ./b2 install \
@@ -113,7 +96,7 @@ cd boost
   --with-log \
   --with-program_options \
   --with-serialization \
-  --with-system \
+  --with-process \
   --with-date_time \
   --with-timer
 ```

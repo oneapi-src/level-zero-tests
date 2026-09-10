@@ -4,7 +4,6 @@
 set(ipc_libraries
   level_zero_tests::logging
   level_zero_tests::utils
-  Boost::system
 )
 
 if(UNIX)

@@ -6,6 +6,10 @@
  *
  */
 
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/asio/buffer.hpp>
+
 #include <chrono>
 #include <ctime>
 #include <thread>
@@ -16,6 +20,7 @@
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/named_condition.hpp>
+#include <boost/process.hpp>
 
 #include "gtest/gtest.h"
 
@@ -26,7 +31,7 @@
 
 namespace lzt = level_zero_tests;
 namespace fs = boost::filesystem;
-namespace bp = boost::process;
+namespace bp = boost::process::v2;
 namespace bi = boost::interprocess;
 
 #include <level_zero/ze_api.h>
@@ -2288,13 +2293,10 @@ LZT_TEST(
   //================================================================================
   LOG_INFO << "Starting workload in separate process";
   fs::path helper_path(fs::current_path() / "metrics");
-  std::vector<fs::path> paths;
-  paths.push_back(helper_path);
-  paths.push_back(fs::current_path());
-  fs::path helper = bp::search_path("test_metric_helper", paths);
-  ASSERT_FALSE(helper.empty())
-      << "Could not find test_metric_helper in current or ./metrics/ directory";
-  bp::child metric_helper(helper);
+  fs::path helper = lzt::find_helper_executable(
+      "test_metric_helper", {helper_path, fs::current_path()});
+  boost::asio::io_context io_ctx;
+  bp::process metric_helper(io_ctx, helper, {});
 
   // start monitor
   do {
@@ -2384,15 +2386,11 @@ LZT_TEST(
   //================================================================================
   LOG_INFO << "Starting workload in separate process";
   fs::path helper_path(fs::current_path() / "metrics");
-  std::vector<fs::path> paths;
-  paths.push_back(helper_path);
-  paths.push_back(fs::current_path());
-  fs::path helper = bp::search_path("test_metric_helper", paths);
-  ASSERT_FALSE(helper.empty())
-      << "Could not find test_metric_helper in current or ./metrics/ directory";
+  fs::path helper = lzt::find_helper_executable(
+      "test_metric_helper", {helper_path, fs::current_path()});
 
-  bp::opstream child_input;
-  bp::child metric_helper(helper, "-i", bp::std_in < child_input);
+  boost::asio::io_context io_ctx;
+  bp::popen metric_helper(io_ctx, helper, {"-i"});
 
   // start monitor
   LOG_DEBUG << "Waiting for data (event synchronize)...";
@@ -2425,7 +2423,7 @@ LZT_TEST(
 
   // send interrupt
   LOG_DEBUG << "Sending interrupt to process";
-  child_input << "stop" << std::endl;
+  boost::asio::write(metric_helper, boost::asio::buffer(std::string("stop\n")));
 
   // wait 1 second
   std::this_thread::sleep_for(std::chrono::seconds(1));

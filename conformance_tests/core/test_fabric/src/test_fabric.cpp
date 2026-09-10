@@ -6,6 +6,8 @@
  *
  */
 
+#include <boost/asio/io_context.hpp>
+
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
@@ -13,9 +15,10 @@
 #include "logging/logging.hpp"
 
 #include <boost/filesystem.hpp>
+#include <boost/process.hpp>
 
 namespace fs = boost::filesystem;
-namespace bp = boost::process;
+namespace bp = boost::process::v2;
 
 #include <level_zero/ze_api.h>
 
@@ -70,13 +73,13 @@ LZT_TEST(
     GTEST_SKIP();
   }
 
-  bp::environment child_env = boost::this_process::environment();
-  child_env["ZE_AFFINITY_MASK"] = "0.1";
+  const auto child_env = lzt::child_environment({{"ZE_AFFINITY_MASK", "0.1"}});
   fs::path helper_path(fs::current_path() / "fabric");
-  std::vector<fs::path> paths;
-  paths.push_back(helper_path);
-  fs::path helper = bp::search_path("test_fabric_helper", paths);
-  bp::child fabric_helper(helper, child_env);
+  fs::path helper =
+      lzt::find_helper_executable("test_fabric_helper", {helper_path});
+  boost::asio::io_context io_ctx;
+  bp::process fabric_helper(io_ctx, helper, {},
+                            bp::process_environment{child_env});
 
   fabric_helper.wait();
   const auto is_affinity_set_correctly = (fabric_helper.exit_code() == 0);

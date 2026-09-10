@@ -6,6 +6,13 @@
  *
  */
 
+#include <algorithm>
+#include <stdexcept>
+
+#include <boost/process.hpp>
+#include <boost/process/v2/ext/exe.hpp>
+#include <boost/filesystem.hpp>
+
 #include "utils/utils.hpp"
 #include "utils/utils_command_bundle.hpp"
 #include "gtest/gtest.h"
@@ -542,4 +549,140 @@ LZT_TEST(CommandBundleTImmediateAppendRegularWithParams,
   EXPECT_EQ(b.list, b.submit_list());
   EXPECT_EQ(b.append_list, static_cast<ze_command_list_handle_t>(b));
   EXPECT_NE(b.record_list(), b.submit_list());
+}
+
+namespace {
+
+namespace bp = boost::process::v2;
+
+constexpr const char *test_var = "LZT_UNIT_TEST_VAR";
+constexpr const char *keep_var = "LZT_UNIT_TEST_KEEP";
+
+int count_entries(const std::vector<std::string> &environment,
+                  const std::string &key) {
+  return static_cast<int>(std::count_if(environment.begin(), environment.end(),
+                                        [&key](const std::string &entry) {
+                                          return entry.rfind(key + "=", 0) == 0;
+                                        }));
+}
+
+bool contains(const std::vector<std::string> &environment,
+              const std::string &entry) {
+  return std::find(environment.begin(), environment.end(), entry) !=
+         environment.end();
+}
+
+class scoped_environment_variable {
+public:
+  scoped_environment_variable(const char *key, const char *value) : key_(key) {
+    bp::environment::set(key_, value);
+  }
+  scoped_environment_variable(const scoped_environment_variable &) = delete;
+  scoped_environment_variable &
+  operator=(const scoped_environment_variable &) = delete;
+  ~scoped_environment_variable() { bp::environment::unset(key_); }
+
+private:
+  const char *key_;
+};
+
+} // namespace
+
+LZT_TEST(ChildEnvironment, OverrideReplacesInheritedEntry) {
+  const scoped_environment_variable inherited(test_var, "inherited");
+  ASSERT_TRUE(contains(level_zero_tests::child_environment({}),
+                       std::string(test_var) + "=inherited"))
+      << "the variable must be inherited for the override to replace anything";
+
+  const auto environment =
+      level_zero_tests::child_environment({{test_var, "override"}});
+
+  EXPECT_EQ(1, count_entries(environment, test_var));
+  EXPECT_TRUE(contains(environment, std::string(test_var) + "=override"));
+  EXPECT_FALSE(contains(environment, std::string(test_var) + "=inherited"));
+}
+
+LZT_TEST(ChildEnvironment, OverrideOfUnsetVariableIsAdded) {
+  bp::environment::unset(test_var);
+
+  const auto environment =
+      level_zero_tests::child_environment({{test_var, "added"}});
+
+  EXPECT_EQ(1, count_entries(environment, test_var));
+  EXPECT_TRUE(contains(environment, std::string(test_var) + "=added"));
+}
+
+LZT_TEST(ChildEnvironment, UnrelatedInheritedEntriesArePreserved) {
+  const scoped_environment_variable kept(keep_var, "kept");
+
+  const auto environment =
+      level_zero_tests::child_environment({{test_var, "override"}});
+
+  EXPECT_TRUE(contains(environment, std::string(keep_var) + "=kept"));
+}
+
+namespace {
+
+namespace fs = boost::filesystem;
+
+class HelperExecutable : public ::testing::Test {
+protected:
+  void SetUp() override {
+    original_path = bp::environment::get("PATH");
+    directory =
+        fs::temp_directory_path() / fs::unique_path("lzt helper-%%%%-%%%%");
+    fs::create_directories(directory / "first");
+    fs::create_directories(directory / "second");
+    const auto self = bp::ext::exe(bp::current_pid());
+    filename = "lookup_helper" + self.extension().string();
+    fs::copy_file(self, directory / "second" / filename);
+  }
+
+  void TearDown() override {
+    bp::environment::set("PATH", original_path);
+    fs::remove_all(directory);
+  }
+
+  bp::environment::value original_path;
+  fs::path directory;
+  fs::path filename;
+};
+
+} // namespace
+
+LZT_TEST_F(HelperExecutable, ResolvesExtensionlessNameInDirectoryWithSpaces) {
+  EXPECT_EQ(directory / "second" / filename,
+            level_zero_tests::find_helper_executable("lookup_helper",
+                                                     {directory / "second"}));
+}
+
+LZT_TEST_F(HelperExecutable, AcceptsExistingExtension) {
+  EXPECT_EQ(directory / "second" / filename,
+            level_zero_tests::find_helper_executable(filename,
+                                                     {directory / "second"}));
+}
+
+LZT_TEST_F(HelperExecutable, SearchesDirectoriesInOrder) {
+  EXPECT_EQ(directory / "second" / filename,
+            level_zero_tests::find_helper_executable(
+                "lookup_helper", {directory / "first", directory / "second"}));
+  fs::copy_file(directory / "second" / filename,
+                directory / "first" / filename);
+  EXPECT_EQ(directory / "first" / filename,
+            level_zero_tests::find_helper_executable(
+                "lookup_helper", {directory / "first", directory / "second"}));
+}
+
+LZT_TEST_F(HelperExecutable, DoesNotSearchInheritedPathOrModifyIt) {
+  bp::environment::set("PATH", (directory / "second").native());
+  EXPECT_THROW(level_zero_tests::find_helper_executable("lookup_helper",
+                                                        {directory / "first"}),
+               std::runtime_error);
+  EXPECT_EQ((directory / "second").string(),
+            bp::environment::get("PATH").string());
+}
+
+LZT_TEST_F(HelperExecutable, RejectsEmptySearchDirectories) {
+  EXPECT_THROW(level_zero_tests::find_helper_executable("lookup_helper", {}),
+               std::runtime_error);
 }

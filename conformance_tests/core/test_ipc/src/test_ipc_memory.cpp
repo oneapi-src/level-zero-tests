@@ -5,6 +5,9 @@
  * SPDX-License-Identifier: MIT
  *
  */
+
+#include <boost/asio/io_context.hpp>
+
 #ifdef __linux__
 #include <unistd.h>
 #endif
@@ -12,6 +15,7 @@
 #include <boost/interprocess/sync/named_semaphore.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/process.hpp>
+#include <boost/system/system_error.hpp>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -65,7 +69,8 @@ static void run_ipc_mem_access_test(ipc_mem_access_test_t test_type,
 
   bipc::shared_memory_object::remove("ipc_memory_test");
   // launch child
-  boost::process::child c("./ipc/test_ipc_memory_helper");
+  boost::asio::io_context io_ctx;
+  boost::process::v2::process c(io_ctx, "./ipc/test_ipc_memory_helper", {});
 
   ze_ipc_mem_handle_t ipc_handle = {};
   shared_data_t test_data = {
@@ -239,10 +244,11 @@ static void run_ipc_dev_mem_access_test_opaque(ipc_mem_access_test_t test_type,
 #else
     std::string helper_path = "./ipc/test_ipc_memory_helper";
 #endif
-    boost::process::child c;
+    boost::asio::io_context io_ctx;
+    boost::process::v2::process c(io_ctx);
     try {
-      c = boost::process::child(helper_path);
-    } catch (const boost::process::process_error &e) {
+      c = boost::process::v2::process(io_ctx, helper_path, {});
+    } catch (const boost::system::system_error &e) {
       std::cerr << "Failed to launch child process: " << e.what() << std::endl;
       throw;
     }
@@ -315,10 +321,11 @@ static void run_ipc_host_mem_access_test_opaque(size_t size,
 #else
   std::string helper_path = "./ipc/test_ipc_memory_helper";
 #endif
-  boost::process::child c;
+  boost::asio::io_context io_ctx;
+  boost::process::v2::process c(io_ctx);
   try {
-    c = boost::process::child(helper_path);
-  } catch (const boost::process::process_error &e) {
+    c = boost::process::v2::process(io_ctx, helper_path, {});
+  } catch (const boost::system::system_error &e) {
     std::cerr << "Failed to launch child process: " << e.what() << std::endl;
     throw;
   }
@@ -505,10 +512,11 @@ static void run_ipc_mem_access_test_opaque_with_properties(
 #else
     std::string helper_path = "./ipc/test_ipc_memory_helper";
 #endif
-    boost::process::child c;
+    boost::asio::io_context io_ctx;
+    boost::process::v2::process c(io_ctx);
     try {
-      c = boost::process::child(helper_path);
-    } catch (const boost::process::process_error &e) {
+      c = boost::process::v2::process(io_ctx, helper_path, {});
+    } catch (const boost::system::system_error &e) {
       std::cerr << "Failed to launch child process: " << e.what() << std::endl;
       throw;
     }
@@ -1316,10 +1324,11 @@ static void run_ipc_mem_access_loop_test(uint32_t num_iterations, size_t size,
 #else
   std::string helper_path = "./ipc/test_ipc_memory_helper";
 #endif
-  boost::process::child c;
+  boost::asio::io_context io_ctx;
+  boost::process::v2::process c(io_ctx);
   try {
-    c = boost::process::child(helper_path);
-  } catch (const boost::process::process_error &e) {
+    c = boost::process::v2::process(io_ctx, helper_path, {});
+  } catch (const boost::system::system_error &e) {
     std::cerr << "Failed to launch child process: " << e.what() << std::endl;
     throw;
   }
@@ -1421,10 +1430,11 @@ static void run_ipc_physical_mem_getipchwithprops_opaque(
 #else
   std::string helper_path = "./ipc/test_ipc_memory_helper";
 #endif
-  boost::process::child c;
+  boost::asio::io_context io_ctx;
+  boost::process::v2::process c(io_ctx);
   try {
-    c = boost::process::child(helper_path);
-  } catch (const boost::process::process_error &e) {
+    c = boost::process::v2::process(io_ctx, helper_path, {});
+  } catch (const boost::system::system_error &e) {
     std::cerr << "Failed to launch child process: " << e.what() << std::endl;
     throw;
   }

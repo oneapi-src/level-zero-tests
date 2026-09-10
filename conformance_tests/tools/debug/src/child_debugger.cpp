@@ -111,7 +111,8 @@ int main(int argc, char **argv) {
   zet_debug_config_t debug_config = {};
 
   ProcessLauncher launcher;
-  bp::child debug_helper;
+  boost::asio::io_context debug_io_context;
+  bp::process debug_helper{debug_io_context};
 
   if (options.app_pid_in) {
     // attach to pid from options

@@ -9,11 +9,15 @@
 #ifndef TEST_DEBUG_HPP
 #define TEST_DEBUG_HPP
 
+#include <boost/asio/io_context.hpp>
+
 #include "test_debug_common.hpp"
+
+#include <boost/process.hpp>
 
 namespace lzt = level_zero_tests;
 namespace fs = boost::filesystem;
-namespace bp = boost::process;
+namespace bp = boost::process::v2;
 namespace bi = boost::interprocess;
 
 const uint32_t eventsTimeoutMS = 120000;
@@ -25,10 +29,11 @@ typedef enum { DEBUG, INFO, WARNING } log_level_t;
 
 class ProcessLauncher {
 public:
-  bp::child launch_process(debug_test_type_t test_type,
-                           ze_device_handle_t device, bool use_sub_devices,
-                           const char *module_name, std::string module_options,
-                           uint64_t index, bool use_many_threads) {
+  bp::process launch_process(debug_test_type_t test_type,
+                             ze_device_handle_t device, bool use_sub_devices,
+                             const char *module_name,
+                             std::string module_options, uint64_t index,
+                             bool use_many_threads) {
 
     std::string device_id = " ";
     if (device) {
@@ -36,72 +41,75 @@ public:
       device_id = lzt::to_string(device_properties.uuid);
     }
     fs::path helper_path(fs::current_path() / "debug");
-    std::vector<fs::path> paths;
-    paths.push_back(helper_path);
-    fs::path helper = bp::search_path(bin_name, paths);
+    fs::path helper = lzt::find_helper_executable(bin_name, {helper_path});
 
     auto optionize = [](const char *option, std::string value) {
-      std::string option_string = " ";
+      std::string option_string = "--" + std::string(option);
       if (!value.empty()) {
-        option_string = "--" + std::string(option) + "=" + value;
-      } else {
-        option_string = "--" + std::string(option);
+        option_string += "=" + value;
       }
       return option_string;
     };
 
-    std::string module_name_option = " ";
+    std::vector<std::string> args{
+        optionize(test_type_string, std::to_string(test_type))};
+    if (device) {
+      args.push_back(optionize(device_id_string, device_id));
+    }
     if (module_name && module_name[0] != '\0') {
-      module_name_option = optionize(module_string, module_name);
+      args.push_back(optionize(module_string, module_name));
     }
-    std::string module_build_options = " ";
     if (!module_options.empty()) {
-      module_build_options = optionize(module_options_string, module_options);
+      args.push_back(optionize(module_options_string, module_options));
     }
-    bp::child debug_helper(
-        helper, optionize(test_type_string, std::to_string(test_type)),
+    if (use_sub_devices) {
+      args.push_back(optionize(use_sub_devices_string, ""));
+    }
+    args.push_back(optionize(index_string, std::to_string(index)));
+    if (use_many_threads) {
+      args.push_back(optionize(use_many_threads_string, ""));
+    }
 
-        device ? optionize(device_id_string, device_id) : " ",
-        module_name_option, module_build_options,
-        (use_sub_devices ? optionize(use_sub_devices_string, "") : " "),
-        optionize(index_string, std::to_string(index)),
-        (use_many_threads ? optionize(use_many_threads_string, "") : " "));
+    // The returned process outlives this scope, so its execution context must
+    // outlive it too.
+    static boost::asio::io_context io_ctx;
+    bp::process debug_helper(io_ctx, helper, args);
 
     return debug_helper;
   }
 
-  bp::child launch_process(debug_test_type_t test_type,
-                           ze_device_handle_t device, bool use_sub_devices,
-                           const char *module_name, uint64_t index,
-                           bool use_many_threads) {
+  bp::process launch_process(debug_test_type_t test_type,
+                             ze_device_handle_t device, bool use_sub_devices,
+                             const char *module_name, uint64_t index,
+                             bool use_many_threads) {
     return launch_process(test_type, device, use_sub_devices, module_name, "",
                           index, use_many_threads);
   }
 
-  bp::child launch_process(debug_test_type_t test_type,
-                           ze_device_handle_t device, bool use_sub_devices,
-                           const char *module_name,
-                           std::string module_options) {
+  bp::process launch_process(debug_test_type_t test_type,
+                             ze_device_handle_t device, bool use_sub_devices,
+                             const char *module_name,
+                             std::string module_options) {
     return launch_process(test_type, device, use_sub_devices, module_name,
                           module_options, 0, false);
   }
 
-  bp::child launch_process(debug_test_type_t test_type,
-                           ze_device_handle_t device, bool use_sub_devices,
-                           const char *module_name) {
+  bp::process launch_process(debug_test_type_t test_type,
+                             ze_device_handle_t device, bool use_sub_devices,
+                             const char *module_name) {
     return launch_process(test_type, device, use_sub_devices, module_name, "",
                           0, false);
   }
 
-  bp::child launch_process(debug_test_type_t test_type,
-                           ze_device_handle_t device, bool use_sub_devices,
-                           bool use_many_threads) {
+  bp::process launch_process(debug_test_type_t test_type,
+                             ze_device_handle_t device, bool use_sub_devices,
+                             bool use_many_threads) {
     return launch_process(test_type, device, use_sub_devices, "", "", 0,
                           use_many_threads);
   }
 
-  bp::child launch_process(debug_test_type_t test_type,
-                           ze_device_handle_t device, bool use_sub_devices) {
+  bp::process launch_process(debug_test_type_t test_type,
+                             ze_device_handle_t device, bool use_sub_devices) {
     return launch_process(test_type, device, use_sub_devices, "", "", 0, false);
   }
 
@@ -191,7 +199,8 @@ public:
     }
   }
 
-  bp::child debugHelper;
+  boost::asio::io_context debug_io_context;
+  bp::process debugHelper{debug_io_context};
   zet_debug_session_handle_t debugSession;
   bool one_event_per_kernel = false;
 };

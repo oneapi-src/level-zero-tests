@@ -25,7 +25,6 @@
 
 namespace lzt = level_zero_tests;
 namespace fs = boost::filesystem;
-namespace bp = boost::process;
 namespace bi = boost::interprocess;
 
 constexpr auto device_id_string = "device_id";
