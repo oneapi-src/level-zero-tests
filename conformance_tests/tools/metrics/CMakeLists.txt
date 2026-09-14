@@ -7,7 +7,6 @@ add_lzt_test(
   SOURCES
     src/test_metric_utils.cpp
     src/test_metric.cpp
-    src/test_metric_tracer.cpp
     src/test_metric_programmable.cpp
     src/main.cpp
   LINK_LIBRARIES

@@ -2,7 +2,7 @@
 
 Metrics related test content - Level Zero Specification reference: [Metrics](https://oneapi-src.github.io/level-zero-spec/level-zero/latest/tools/PROG.html#metrics)
 
-Validates the following scenarios for both the Metric Query and Metric Tracer APIs:
+Validates the following scenarios for both the Metric Query and Metric Streamer APIs:
 
 - Metric Enumeration
 - Metric Activation

@@ -275,56 +275,9 @@ std::map<uint32_t, std::vector<zet_metric_group_handle_t>>
 get_device_metric_groups_by_source_id(
     const std::vector<zet_metric_group_handle_t> &metricGroupHandleList);
 
-void metric_tracer_create(
-    zet_context_handle_t context_handle, zet_device_handle_t device_handle,
-    uint32_t metric_group_count,
-    zet_metric_group_handle_t *ptr_metric_group_handle,
-    zet_metric_tracer_exp_desc_t *ptr_tracer_descriptor,
-    ze_event_handle_t notification_event_handle,
-    zet_metric_tracer_exp_handle_t *ptr_metric_tracer_handle);
-
-void metric_tracer_destroy(zet_metric_tracer_exp_handle_t metric_tracer_handle);
-
-void metric_tracer_enable(zet_metric_tracer_exp_handle_t metric_tracer_handle,
-                          ze_bool_t synchronous);
-
-void metric_tracer_disable(zet_metric_tracer_exp_handle_t metric_tracer_handle,
-                           ze_bool_t synchronous);
-
 void enable_metrics_runtime(ze_device_handle_t device);
 
 void disable_metrics_runtime(ze_device_handle_t device);
-
-void metric_decoder_create(
-    zet_metric_tracer_exp_handle_t metric_tracer_handle,
-    zet_metric_decoder_exp_handle_t *ptr_metric_decoder_handle);
-
-void metric_decoder_destroy(
-    zet_metric_decoder_exp_handle_t metric_decoder_handle);
-
-uint32_t metric_decoder_get_decodable_metrics_count(
-    zet_metric_decoder_exp_handle_t metric_decoder_handle);
-
-void metric_decoder_get_decodable_metrics(
-    zet_metric_decoder_exp_handle_t metric_decoder_handle,
-    std::vector<zet_metric_handle_t> *ptr_decodable_metric_handles);
-
-void metric_tracer_decode_get_various_counts(
-    zet_metric_decoder_exp_handle_t metric_decoder_handle,
-    size_t *ptr_raw_data_size, std::vector<uint8_t> *ptr_raw_data,
-    uint32_t decodable_metric_count,
-    std::vector<zet_metric_handle_t> *ptr_decodable_metric_handles,
-    uint32_t *ptr_set_count, uint32_t *ptr_metric_entries_count);
-
-void metric_tracer_decode(
-    zet_metric_decoder_exp_handle_t metric_decoder_handle,
-    size_t *ptr_raw_data_size, std::vector<uint8_t> *ptr_raw_data,
-    uint32_t decodable_metric_count,
-    std::vector<zet_metric_handle_t> *ptr_decodable_metric_handles,
-    uint32_t *ptr_set_count,
-    std::vector<uint32_t> *ptr_metric_entries_count_per_set,
-    uint32_t *ptr_metric_entries_count,
-    std::vector<zet_metric_entry_exp_t> *ptr_metric_entries);
 
 void get_metric_groups_supporting_dma_buf(
     const std::vector<zet_metric_group_handle_t> &metric_group_handles,
@@ -340,11 +293,6 @@ void *metric_map_dma_buf_fd_to_memory(ze_device_handle_t device,
 
 void run_matrix_multiplication_workload(ze_device_handle_t device,
                                         uint32_t dimensions = 1024);
-
-void run_matrix_multiplication_and_collect_tracer_data(
-    ze_device_handle_t device,
-    zet_metric_tracer_exp_handle_t metric_tracer_handle,
-    std::vector<uint8_t> &raw_data);
 
 void run_matrix_multiplication_and_collect_streamer_data(
     ze_device_handle_t device,
