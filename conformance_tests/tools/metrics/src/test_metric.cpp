@@ -9,6 +9,7 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/asio/buffer.hpp>
+#include <boost/asio/writable_pipe.hpp>
 
 #include <chrono>
 #include <ctime>
@@ -2390,7 +2391,10 @@ LZT_TEST(
       "test_metric_helper", {helper_path, fs::current_path()});
 
   boost::asio::io_context io_ctx;
-  bp::popen metric_helper(io_ctx, helper, {"-i"});
+  boost::asio::writable_pipe child_input(io_ctx);
+  // Only redirect stdin; capturing unread stdout can block a verbose helper.
+  bp::process metric_helper(io_ctx, helper, {"-i"},
+                            bp::process_stdio{child_input, {}, {}});
 
   // start monitor
   LOG_DEBUG << "Waiting for data (event synchronize)...";
@@ -2423,7 +2427,7 @@ LZT_TEST(
 
   // send interrupt
   LOG_DEBUG << "Sending interrupt to process";
-  boost::asio::write(metric_helper, boost::asio::buffer(std::string("stop\n")));
+  boost::asio::write(child_input, boost::asio::buffer(std::string("stop\n")));
 
   // wait 1 second
   std::this_thread::sleep_for(std::chrono::seconds(1));

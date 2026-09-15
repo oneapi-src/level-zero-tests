@@ -80,14 +80,14 @@ void zetDebugAttachDetachTest::run_test(
       int loop = 1;
       for (loop = 1; loop < 11; loop++) {
         LOG_INFO << "[Debugger] Attaching. Loop " << loop;
-        auto debugSession = lzt::debug_attach(device, debug_config);
+        debugSession = lzt::debug_attach(device, debug_config);
         if (!debugSession) {
           FAIL()
               << "[Debugger] Failed to attach to start a debug session. Loop "
               << loop;
         }
 
-        // delay last detach to happen after application finishes
+        // Keep the final session attached until termination is requested.
         if (loop < 10) {
           LOG_INFO << "[Debugger] Detaching. Loop " << loop;
           lzt::debug_detach(debugSession);
@@ -106,10 +106,13 @@ void zetDebugAttachDetachTest::run_test(
 
           synchro->notify_application();
           std::this_thread::sleep_for(std::chrono::seconds(1));
-          debugHelper.terminate();
-          LOG_INFO << "[Debugger] LAST Detach after aplication finished. Loop "
+          // Request termination before detach, but only wait once the debug
+          // session has released any pending module events.
+          lzt::request_process_termination(debugHelper);
+          LOG_INFO << "[Debugger] LAST Detach after termination request. Loop "
                    << loop;
           lzt::debug_detach(debugSession);
+          debugHelper.wait();
         }
       }
     }
@@ -322,8 +325,14 @@ void zetDebugAttachDetachTest::
   auto debug_session_1 = lzt::debug_attach(device1, debug_config_1);
 
   if (!debug_session_0 || !debug_session_1) {
-    debug_helper_0.terminate();
-    debug_helper_1.terminate();
+    if (debug_session_0) {
+      lzt::debug_detach(debug_session_0);
+    }
+    if (debug_session_1) {
+      lzt::debug_detach(debug_session_1);
+    }
+    lzt::terminate_process(debug_helper_0);
+    lzt::terminate_process(debug_helper_1);
     FAIL() << "[Debugger] Failed to attach to 1 or both applications start a "
               "debug session";
   }
@@ -502,7 +511,7 @@ void zetDebugAttachDetachTest::run_new_debugger_attach_test(
     synchro_1.clear_child_signal();
 
     // first debugger has attached, terminate without it detaching
-    debugger.terminate();
+    lzt::terminate_process(debugger);
     LOG_INFO << "[Debugger] Terminated child debugger without detaching\n\n";
 
     // launch debugger 2 using synchro 1
@@ -533,7 +542,7 @@ void zetDebugAttachDetachTest::run_new_debugger_attach_test(
     EXPECT_EQ(debugger_2.exit_code(), 0);
 
     if (!verify_events) {
-      debugHelper.terminate();
+      lzt::terminate_process(debugHelper);
     } else {
       LOG_INFO << "Waiting on application to finish";
       debugHelper.wait();
@@ -1183,7 +1192,7 @@ void zetDebugMemAccessTest::run_module_isa_elf_test(
     readWriteModuleMemory(debugSession, thread, module_event, false);
     lzt::debug_ack_event(debugSession, &module_event);
     lzt::debug_detach(debugSession);
-    debugHelper.terminate();
+    lzt::terminate_process(debugHelper);
   }
 }
 
@@ -2200,8 +2209,9 @@ void MultiDeviceDebugTest::
   // tell application to continue
   synchro->notify_application();
 
-  debugHelper.terminate();
+  lzt::request_process_termination(debugHelper);
   debugger_1.wait();
+  debugHelper.wait();
 
   ASSERT_EQ(debugger_1.exit_code(), 0);
 }

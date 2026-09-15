@@ -12,6 +12,7 @@
 #include <boost/asio/io_context.hpp>
 
 #include "test_debug_common.hpp"
+#include "utils/utils_process.hpp"
 
 #include <boost/process.hpp>
 
@@ -169,19 +170,21 @@ protected:
   void TearDown() override {
     if (::testing::Test::HasFailure()) {
       LOG_WARNING << "[Debugger] Teardown with failure cleaning ";
-      debugHelper.terminate();
       if ((lzt::sessionsAttachStatus.find(debugSession) !=
            lzt::sessionsAttachStatus.end()) &&
           (lzt::sessionsAttachStatus[debugSession])) {
         // Ingore detach result
         zetDebugDetach(debugSession);
       }
+      boost::system::error_code ec;
+      lzt::terminate_process(debugHelper, ec);
+      EXPECT_FALSE(ec) << "[Debugger] Helper cleanup failed: " << ec.message();
     }
 
     delete synchro;
   }
 
-  process_synchro *synchro;
+  process_synchro *synchro = nullptr;
 
 public:
   static bool is_debug_supported(ze_device_handle_t device) {
@@ -201,7 +204,7 @@ public:
 
   boost::asio::io_context debug_io_context;
   bp::process debugHelper{debug_io_context};
-  zet_debug_session_handle_t debugSession;
+  zet_debug_session_handle_t debugSession = nullptr;
   bool one_event_per_kernel = false;
 };
 
