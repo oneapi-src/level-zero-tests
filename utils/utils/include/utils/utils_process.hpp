@@ -28,13 +28,19 @@ struct process_output {
   std::string output;
   int exit_code = -1;
   bool timed_out = false;
+  std::string stderr_output;
 };
 
+enum class process_stderr { inherit, capture };
+
+// Drain the selected streams and wait for exit under one deadline. On timeout,
+// return partial output after terminating and reaping the child.
 process_output run_process_with_timeout(
     const boost::filesystem::path &executable,
     const std::vector<std::string> &arguments,
     const std::vector<std::string> &environment,
-    std::chrono::steady_clock::duration timeout = default_process_timeout);
+    std::chrono::steady_clock::duration timeout = default_process_timeout,
+    process_stderr stderr_mode = process_stderr::inherit);
 
 } // namespace level_zero_tests
 

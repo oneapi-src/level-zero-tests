@@ -24,6 +24,9 @@ inline constexpr const char *result = "result";
 inline constexpr const char *closed = "closed";
 inline constexpr const char *silent = "silent";
 inline constexpr const char *continuous = "continuous";
+inline constexpr const char *stdout_closed = "stdout_closed";
+inline constexpr const char *stderr_closed = "stderr_closed";
+inline constexpr const char *pid = "pid";
 } // namespace mode
 
 enum class exit_code : int {
@@ -44,6 +47,10 @@ inline constexpr std::string_view fail_result = "1:0\n";
 inline constexpr std::string_view fail_reason = "zeInit failed";
 inline constexpr std::string_view debug_line = "debug settings\n";
 inline constexpr std::string_view partial_line = "partial line";
+inline constexpr const char *stderr_argument = "stderr";
+inline constexpr std::string_view stderr_line = "stderr diagnostics\n";
+inline constexpr std::string_view stderr_failure = "helper failed";
+inline constexpr std::string_view stderr_partial = "partial stderr";
 
 // "large" writes this many newline-terminated lines to overflow the pipe
 // capacity before the final result line.

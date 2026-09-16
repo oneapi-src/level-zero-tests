@@ -15,6 +15,9 @@
 #ifdef _WIN32
 #include <boost/process/v2/windows/creation_flags.hpp>
 #include <windows.h>
+#else
+#include <cerrno>
+#include <sys/wait.h>
 #endif
 
 namespace lzt = level_zero_tests;
@@ -201,5 +204,117 @@ INSTANTIATE_TEST_SUITE_P(ProcessTimeout, HungProcess,
                          testing::Values(mode::silent, mode::partial,
                                          mode::result, mode::closed,
                                          mode::continuous));
+
+lzt::process_output
+run_with_stderr(const std::string &selected_mode,
+                std::chrono::steady_clock::duration timeout) {
+  return lzt::run_process_with_timeout(
+      helper_path(), {selected_mode, helper::stderr_argument},
+      lzt::child_environment({}), timeout, lzt::process_stderr::capture);
+}
+
+LZT_TEST(ProcessStderr, AllowsSlowInitialization) {
+  const auto result = run_with_stderr(mode::slow, 15s);
+  EXPECT_FALSE(result.timed_out);
+  EXPECT_EQ(result.exit_code, helper::to_int(exit_code::initialization_failed));
+  EXPECT_EQ(result.output,
+            std::string(helper::debug_line).append(helper::pass_result));
+  EXPECT_EQ(result.stderr_output,
+            std::string(helper::stderr_line).append(helper::stderr_failure));
+}
+
+LZT_TEST(ProcessStderr, DrainsBothStreamsBeyondPipeCapacity) {
+  const auto result = run_with_stderr(mode::large, 5s);
+  EXPECT_FALSE(result.timed_out);
+  EXPECT_EQ(result.exit_code, helper::to_int(exit_code::success));
+  EXPECT_EQ(result.output.size(), helper::large_output_size);
+  EXPECT_EQ(
+      result.stderr_output,
+      std::string(helper::large_line_count * helper::large_line_length, 'E'));
+}
+
+LZT_TEST(ProcessStderr, PreservesFailureAndUnterminatedLines) {
+  const auto result = run_with_stderr(mode::error, 5s);
+  EXPECT_FALSE(result.timed_out);
+  EXPECT_EQ(result.exit_code, helper::to_int(exit_code::initialization_failed));
+  EXPECT_EQ(result.output,
+            std::string(helper::fail_result).append(helper::fail_reason));
+  EXPECT_EQ(result.stderr_output, helper::stderr_failure);
+}
+
+LZT_TEST(ProcessStderr, AcceptsEmptyOutput) {
+  const auto result = run_with_stderr(mode::empty, 5s);
+  EXPECT_FALSE(result.timed_out);
+  EXPECT_EQ(result.exit_code, helper::to_int(exit_code::success));
+  EXPECT_TRUE(result.output.empty());
+  EXPECT_TRUE(result.stderr_output.empty());
+}
+
+LZT_TEST(ProcessStderr, PassesChildEnvironment) {
+  const auto result = lzt::run_process_with_timeout(
+      helper_path(), {mode::environment},
+      lzt::child_environment({{helper::environment_variable, "override"}}), 5s,
+      lzt::process_stderr::capture);
+  EXPECT_FALSE(result.timed_out);
+  EXPECT_EQ(result.exit_code, helper::to_int(exit_code::success));
+  EXPECT_EQ(result.output, "override\n");
+}
+
+LZT_TEST(ProcessStderr, TimeoutTerminatesAndReapsHelper) {
+  const auto result = run_with_stderr(mode::pid, 1s);
+  ASSERT_TRUE(result.timed_out);
+  ASSERT_FALSE(result.output.empty());
+  const auto pid = std::stoul(result.output);
+#ifdef _WIN32
+  HANDLE handle = OpenProcess(SYNCHRONIZE, FALSE, static_cast<DWORD>(pid));
+  if (handle) {
+    EXPECT_EQ(WaitForSingleObject(handle, 0), WAIT_OBJECT_0);
+    CloseHandle(handle);
+  } else {
+    EXPECT_EQ(GetLastError(), ERROR_INVALID_PARAMETER);
+  }
+#else
+  int status = 0;
+  errno = 0;
+  EXPECT_EQ(waitpid(static_cast<pid_t>(pid), &status, WNOHANG), -1);
+  EXPECT_EQ(errno, ECHILD);
+#endif
+}
+
+class HungProcessStderr : public testing::TestWithParam<const char *> {};
+
+LZT_TEST_P(HungProcessStderr, DeadlineCoversBothStreamsAndExit) {
+  const auto start = std::chrono::steady_clock::now();
+  const auto result = run_with_stderr(GetParam(), 1s);
+  EXPECT_TRUE(result.timed_out);
+  EXPECT_NE(result.exit_code, helper::to_int(exit_code::success));
+  EXPECT_LT(std::chrono::steady_clock::now() - start, 5s);
+  const std::string selected_mode = GetParam();
+  if (selected_mode == mode::partial) {
+    EXPECT_EQ(result.output, helper::partial_line);
+    EXPECT_EQ(result.stderr_output, helper::stderr_partial);
+  } else if (selected_mode == mode::closed) {
+    EXPECT_EQ(result.output, helper::pass_result);
+    EXPECT_TRUE(result.stderr_output.empty());
+  } else if (selected_mode == mode::stdout_closed) {
+    EXPECT_TRUE(result.output.empty());
+    EXPECT_EQ(result.stderr_output, helper::stderr_partial);
+  } else if (selected_mode == mode::stderr_closed) {
+    EXPECT_EQ(result.output, helper::partial_line);
+    EXPECT_TRUE(result.stderr_output.empty());
+  } else if (selected_mode == mode::continuous) {
+    EXPECT_NE(result.output.find(helper::debug_line), std::string::npos);
+    EXPECT_NE(result.stderr_output.find(helper::stderr_line),
+              std::string::npos);
+  } else {
+    EXPECT_TRUE(result.output.empty());
+    EXPECT_TRUE(result.stderr_output.empty());
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(ProcessStderr, HungProcessStderr,
+                         testing::Values(mode::silent, mode::partial,
+                                         mode::continuous, mode::stdout_closed,
+                                         mode::stderr_closed, mode::closed));
 
 } // namespace
