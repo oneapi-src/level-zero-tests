@@ -44,105 +44,82 @@ typedef struct _ze_peer_device_t {
       engines;
 } ze_peer_device_t;
 
-static const char *usage_str =
-    "\nze_peer: Level Zero microbenchmark to analyze the P2P performance\n"
-    "of a multi-GPU system.\n"
-    "\n"
-    "To execute: ze_peer [OPTIONS]\n"
-    "\n"
-    "By default, unidirectional transfer bandwidth and latency tests \n"
-    "are executed, for sizes between 8 B and 256 MB, for write and read \n"
-    "operations, between all devices detected in the system, using the \n"
-    "first compute engine in the device.\n"
-    "\n"
-    "\n OPTIONS:"
-    "\n  -b                          run bidirectional mode. Default: Not set."
-    "\n  -c                          run continuously until hitting CTRL+C. "
-    "Default: Not set."
-    "\n  -i                          number of iterations to run. Default: 50."
-    "\n  -z                          size to run in bytes. Default: 8192(8MB) "
-    "to 268435456(256MB)."
-    "\n  -v                          validate data (only 1 iteration is "
-    "executed). Default: Not set."
-    "\n  -t                          type of transfer to measure"
-    "\n      transfer_bw             run transfer bandwidth test"
-    "\n      latency                 run latency test"
-    "\n  -o                          operation to perform"
-    "\n      read                    read from remote"
-    "\n      write                   write to remote"
-    "\n"
-    "\n Engine selection:\n"
-    "\n  -q                          query for number of engines available"
-    "\n  -u                          engine to use (use -q option to see "
-    "available values)."
-    "\n                              Accepts a comma-separated list of engines "
-    "when running "
-    "\n                              parallel tests with multiple targets."
-    "\n Device selection:\n"
-    "\n  -d                          comma separated list of destination "
-    "devices"
-    "\n  -s                          comma separated list of source devices"
-    "\n"
-    "\n Tests:"
-    "\n  --parallel_single_target    Divide the buffer into the number of "
-    "engines passed "
-    "\n                              with option -u, and perform parallel "
-    "copies using those "
-    "\n                              engines from the source passed with "
-    "option -s to a single "
-    "\n                              target specified with option -d."
-    "\n                              By default, copy is made from device 0 to "
-    "device 1 using "
-    "\n                              all available engines with compute "
-    "capability."
-    "\n                              Extra options: -x"
-    "\n"
-    "\n  --parallel_multiple_targets Perform parallel copies from the source "
-    "passed with option -s "
-    "\n                              to the targets specified with option -d, "
-    "each one using a "
-    "\n                              separate engine specified with option -u."
-    "\n                              By default, copy is made from device 0 to "
-    "all other devices, "
-    "\n                              using all available engines with compute "
-    "capability."
-    "\n                              Extra options: -x, --divide_buffers"
-    "\n"
-    "\n  --parallel_pair_targets     (Experimental) Perform parallel copies "
-    "from "
-    "pairs of source "
-    "\n                              and targets each one using a separate "
-    "engine "
-    "specified with "
-    "\n                              option -u. Accepts a comma-separated list "
-    "of "
-    "pair devices, "
-    "\n                              with source and destination pairs defined "
-    "with a colon."
-    "\n                              Example pair list: src1:dst1,src2:dst2 "
-    "\n                              Extra options: -x, --divide_buffers"
-    "\n"
-    "\n  --divide_buffers            for parallel multiple targets test, "
-    "divide "
-    "buffers across available"
-    "\n                              engines specified with option -u."
-    "\n"
-    "\n  -x                          for unidirectional parallel tests, select "
-    "where to place the queue"
-    "\n      src                     use queue in source"
-    "\n      dst                     use queue in source"
-    "\n"
-    "\n  --ipc                       perform a copy between two devices, "
-    "specified by options -s and -d, "
-    "\n                              with each device being managed by a "
-    "separate process."
-    "\n"
-    "\n  --regular_cmdlist           use regular command list instead of "
-    "immediate"
-    "\n"
-    "\n  --version                   display version"
-    "\n  -h, --help                  display help message"
-    "\n";
+// clang-format off
+static const char *usage_str = R"HELP(
+ze_peer: Level Zero microbenchmark to analyze the P2P performance
+of a multi-GPU system.
+
+To execute: ze_peer [OPTIONS]
+
+By default, unidirectional transfer bandwidth and latency tests 
+are executed, for sizes between 8 B and 256 MB, for write and read 
+operations, between all devices detected in the system, using the 
+first compute engine in the device.
+
+
+ OPTIONS:
+  -b                          run bidirectional mode. Default: Not set.
+  -c                          run continuously until hitting CTRL+C. Default: Not set.
+  -i                          number of iterations to run. Default: 50.
+  -z                          size to run in bytes. Default: 8192(8MB) to 268435456(256MB).
+  -v                          validate data (only 1 iteration is executed). Default: Not set.
+  -t                          type of transfer to measure
+      transfer_bw             run transfer bandwidth test
+      latency                 run latency test
+  -o                          operation to perform
+      read                    read from remote
+      write                   write to remote
+
+ Engine selection:
+
+  -q                          query for number of engines available
+  -u                          engine to use (use -q option to see available values).
+                              Accepts a comma-separated list of engines when running 
+                              parallel tests with multiple targets.
+ Device selection:
+
+  -d                          comma separated list of destination devices
+  -s                          comma separated list of source devices
+
+ Tests:
+  --parallel_single_target    Divide the buffer into the number of engines passed 
+                              with option -u, and perform parallel copies using those 
+                              engines from the source passed with option -s to a single 
+                              target specified with option -d.
+                              By default, copy is made from device 0 to device 1 using 
+                              all available engines with compute capability.
+                              Extra options: -x
+
+  --parallel_multiple_targets Perform parallel copies from the source passed with option -s 
+                              to the targets specified with option -d, each one using a 
+                              separate engine specified with option -u.
+                              By default, copy is made from device 0 to all other devices, 
+                              using all available engines with compute capability.
+                              Extra options: -x, --divide_buffers
+
+  --parallel_pair_targets     (Experimental) Perform parallel copies from pairs of source 
+                              and targets each one using a separate engine specified with 
+                              option -u. Accepts a comma-separated list of pair devices, 
+                              with source and destination pairs defined with a colon.
+                              Example pair list: src1:dst1,src2:dst2 
+                              Extra options: -x, --divide_buffers
+
+  --divide_buffers            for parallel multiple targets test, divide buffers across available
+                              engines specified with option -u.
+
+  -x                          for unidirectional parallel tests, select where to place the queue
+      src                     use queue in source
+      dst                     use queue in source
+
+  --ipc                       perform a copy between two devices, specified by options -s and -d, 
+                              with each device being managed by a separate process.
+
+  --regular_cmdlist           use regular command list instead of immediate
+
+  --version                   display version
+  -h, --help                  display help message
+)HELP";
+// clang-format on
 
 class ZePeer {
 public:

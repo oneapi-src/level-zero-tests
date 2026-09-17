@@ -13,88 +13,64 @@
 #include <string>
 #include <string_view>
 
-static const char *usage_str =
-    "\n ze_bandwidth [OPTIONS]"
-    "\n"
-    "\n OPTIONS:"
-    "\n  -t, string               run a particular test [default:h2d, d2h]:"
-    "\n      h2d or H2D                       run only Host-to-Device tests"
-    "\n      d2h or D2H                       run only Device-to-Host tests "
-    "\n      bidir                            run only bidirectional tests "
-    "\n      bidir_h2d                        bidirectional, report Host-to-"
-    "Device only, "
-    "\n                                       interfering copy runs at twice "
-    "the size"
-    "\n      bidir_d2h                        bidirectional, report Device-to-"
-    "Host only, "
-    "\n                                       interfering copy runs at twice "
-    "the size"
-    "\n      h2d_kernel                       Host-to-Device driven by a "
-    "compute kernel"
-    "\n      d2h_kernel                       Device-to-Host driven by a "
-    "compute kernel"
-    "\n      bidir_kernel                     bidirectional through a single "
-    "kernel that "
-    "\n                                       alternates direction across "
-    "stripes"
-    "\n      all_to_host                      Device-to-Host on one device "
-    "while every "
-    "\n                                       other device interferes, "
-    "reported per device"
-    "\n      host_to_all                      Host-to-Device on one device "
-    "while every "
-    "\n                                       other device interferes, "
-    "reported per device"
-    "\n      all_to_host_bidir                as all_to_host, with "
-    "bidirectional traffic"
-    "\n      host_to_all_bidir                as host_to_all, with "
-    "bidirectional traffic"
-    "\n      all_to_host_kernel               kernel driven variants of the "
-    "above;"
-    "\n      host_to_all_kernel               these default to every device, "
-    "override"
-    "\n      host_to_all_bidir_kernel         with -d. the split kernel is "
-    "symmetric,"
-    "\n                                       so there is no all_to_host "
-    "variant of it"
-    "\n  -v                       enable verification"
-    "\n                            [default:  disabled]"
-    "\n  -i                       set number of iterations per transfer"
-    "\n                            [default:  500]"
-    "\n  -w                       set number of warmup iterations"
-    "\n                            [default:  100]"
-    "\n  -s                       select only one transfer size (bytes) "
-    "\n  -sb                      select beginning transfer size (bytes)"
-    "\n                            [default:  1]"
-    "\n  -se                      select ending transfer size (bytes)"
-    "\n                            [default: 2^28]"
-    "\n  -q                       query for number of engines available"
-    "\n  -d                       comma separated list of devices for "
-    "\n                            parallel h2d/d2h tests (default: 0)"
-    "\n  -g, group                select engine group (default: 0)."
-    "\n                            when using bidir tests, a comma-separated "
-    "list "
-    "\n                            of engine groups may be passed, for h2d and "
-    "d2h"
-    "\n  -n, number               select engine index (default: 0)"
-    "\n                            when using bidir tests, a comma-separated "
-    "list "
-    "\n                            of engine groups may be passed, for h2d and "
-    "d2h"
-    "\n  --h2dEngine name         engine used for the Host-to-Device direction,"
-    "\n                            e.g. bcs0, bcs1, ccs0. mutually exclusive "
-    "with -g / -n"
-    "\n  --d2hEngine name         engine used for the Device-to-Host direction,"
-    "\n                            e.g. bcs0, bcs1, ccs0. mutually exclusive "
-    "with -g / -n"
-    "\n  --useEvents              measure with GPU timestamps instead of the "
-    "host timer"
-    "\n                            [default:  host timer]"
-    "\n  --immediate              use immediate command lists (default: "
-    "disabled)"
-    "\n  --csv                    output in csv format (default: disabled)"
-    "\n  -h, --help               display help message"
-    "\n";
+// clang-format off
+static const char *usage_str = R"HELP(
+ ze_bandwidth [OPTIONS]
+
+ OPTIONS:
+  -t, string               run a particular test [default:h2d, d2h]:
+      h2d or H2D                       run only Host-to-Device tests
+      d2h or D2H                       run only Device-to-Host tests 
+      bidir                            run only bidirectional tests 
+      bidir_h2d                        bidirectional, report Host-to-Device only, 
+                                       interfering copy runs at twice the size
+      bidir_d2h                        bidirectional, report Device-to-Host only, 
+                                       interfering copy runs at twice the size
+      h2d_kernel                       Host-to-Device driven by a compute kernel
+      d2h_kernel                       Device-to-Host driven by a compute kernel
+      bidir_kernel                     bidirectional through a single kernel that 
+                                       alternates direction across stripes
+      all_to_host                      Device-to-Host on one device while every 
+                                       other device interferes, reported per device
+      host_to_all                      Host-to-Device on one device while every 
+                                       other device interferes, reported per device
+      all_to_host_bidir                as all_to_host, with bidirectional traffic
+      host_to_all_bidir                as host_to_all, with bidirectional traffic
+      all_to_host_kernel               kernel driven variants of the above;
+      host_to_all_kernel               these default to every device, override
+      host_to_all_bidir_kernel         with -d. the split kernel is symmetric,
+                                       so there is no all_to_host variant of it
+  -v                       enable verification
+                            [default:  disabled]
+  -i                       set number of iterations per transfer
+                            [default:  500]
+  -w                       set number of warmup iterations
+                            [default:  100]
+  -s                       select only one transfer size (bytes) 
+  -sb                      select beginning transfer size (bytes)
+                            [default:  1]
+  -se                      select ending transfer size (bytes)
+                            [default: 2^28]
+  -q                       query for number of engines available
+  -d                       comma separated list of devices for 
+                            parallel h2d/d2h tests (default: 0)
+  -g, group                select engine group (default: 0).
+                            when using bidir tests, a comma-separated list 
+                            of engine groups may be passed, for h2d and d2h
+  -n, number               select engine index (default: 0)
+                            when using bidir tests, a comma-separated list 
+                            of engine groups may be passed, for h2d and d2h
+  --h2dEngine name         engine used for the Host-to-Device direction,
+                            e.g. bcs0, bcs1, ccs0. mutually exclusive with -g / -n
+  --d2hEngine name         engine used for the Device-to-Host direction,
+                            e.g. bcs0, bcs1, ccs0. mutually exclusive with -g / -n
+  --useEvents              measure with GPU timestamps instead of the host timer
+                            [default:  host timer]
+  --immediate              use immediate command lists (default: disabled)
+  --csv                    output in csv format (default: disabled)
+  -h, --help               display help message
+)HELP";
+// clang-format on
 
 //---------------------------------------------------------------------
 // One parser for every numeric argument. strtoul reported a non-numeric

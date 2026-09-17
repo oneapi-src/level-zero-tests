@@ -8,39 +8,34 @@
 
 #include "../include/ze_peak.h"
 
-static const char *usage_str =
-    "\n ze_peak [OPTIONS]"
-    "\n"
-    "\n OPTIONS:"
-    "\n  -r, --driver num            choose driver (num starts with 0)"
-    "\n  -d, --device num            choose device   (num starts with 0)"
-    "\n  -e                          time using ze events instead of std "
-    "chrono timer"
-    "\n                              hide driver latencies [default: No]"
-    "\n  -t, string                  selectively run particular tests"
-    "\n      global_bw               selectively run global bandwidth test"
-    "\n      hp_compute              selectively run half precision compute "
-    "test"
-    "\n      sp_compute              selectively run single precision compute "
-    "test"
-    "\n      dp_compute              selectively run double precision compute "
-    "test"
-    "\n      int_compute             selectively run integer compute test"
-    "\n      transfer_bw             selectively run transfer bandwidth test"
-    "\n      kernel_lat              selectively run kernel latency test"
-    "\n  -a                          run all above tests [default]"
-    "\n  -v                          enable verbose prints"
-    "\n  -i                          set number of iterations to run[default: "
-    "50]"
-    "\n  -w                          set number of warmup iterations to "
-    "run[default: 10]"
-    "\n  -x                          enable explicit scaling [default: "
-    "Disabled]"
-    "\n  -q                          query for number of engines available"
-    "\n  -g, group                   select engine group (default: 0)"
-    "\n  -n, number                  select engine index (default: 0)"
-    "\n  -h, --help                  display help message"
-    "\n";
+// clang-format off
+static const char *usage_str = R"HELP(
+ ze_peak [OPTIONS]
+
+ OPTIONS:
+  -r, --driver num            choose driver (num starts with 0)
+  -d, --device num            choose device   (num starts with 0)
+  -e                          time using ze events instead of std chrono timer
+                              hide driver latencies [default: No]
+  -t, string                  selectively run particular tests
+      global_bw               selectively run global bandwidth test
+      hp_compute              selectively run half precision compute test
+      sp_compute              selectively run single precision compute test
+      dp_compute              selectively run double precision compute test
+      int_compute             selectively run integer compute test
+      transfer_bw             selectively run transfer bandwidth test
+      kernel_lat              selectively run kernel latency test
+  -a                          run all above tests [default]
+  -v                          enable verbose prints
+  -i                          set number of iterations to run[default: 50]
+  -w                          set number of warmup iterations to run[default: 10]
+  -x                          enable explicit scaling [default: Disabled]
+  -q                          query for number of engines available
+  -g, group                   select engine group (default: 0)
+  -n, number                  select engine index (default: 0)
+  -h, --help                  display help message
+)HELP";
+// clang-format on
 
 template <typename T> inline constexpr uint32_t to_u32(T val) {
   return static_cast<uint32_t>(val);
