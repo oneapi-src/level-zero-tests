@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2021 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -95,6 +95,7 @@ void ZePeer::bandwidth_latency_ipc(peer_test_t test_type,
                                    uint32_t remote_device_id) {
 
   size_t buffer_size = 0;
+  int exit_code = 0;
   ze_command_queue_handle_t command_queue = {};
   ze_command_list_handle_t command_list = {};
 
@@ -116,7 +117,7 @@ void ZePeer::bandwidth_latency_ipc(peer_test_t test_type,
       std::cerr << "Failing to get dma_buf fd from server\n";
       std::terminate();
     }
-    ze_ipc_mem_handle_t pIpcHandle;
+    ze_ipc_mem_handle_t pIpcHandle = {};
     memcpy(&pIpcHandle, static_cast<void *>(&dma_buf_fd), sizeof(dma_buf_fd));
     benchmark->memoryOpenIpcHandle(local_device_id, pIpcHandle,
                                    &ze_buffers[remote_device_id]);
@@ -141,6 +142,22 @@ void ZePeer::bandwidth_latency_ipc(peer_test_t test_type,
   }
 
   if (is_server == false) {
+    void *probe_dst = ze_buffers[local_device_id];
+    void *probe_src = ze_buffers[remote_device_id];
+    if (transfer_type != PEER_READ) {
+      std::swap(probe_dst, probe_src);
+    }
+    ze_result_t probe_result = try_copy(command_list, command_queue, probe_dst,
+                                        probe_src, buffer_size);
+    if (probe_result != ZE_RESULT_SUCCESS) {
+      std::cout << "[FAIL] Copy against the imported allocation failed for "
+                << buffer_size << " B: result 0x" << std::hex
+                << static_cast<uint32_t>(probe_result) << std::dec << "\n";
+      exit(1);
+    }
+  }
+
+  if (is_server == false) {
     if (transfer_type == PEER_READ) {
       if (ZePeer::use_immediate_cmdlist) {
         perform_copy_immediate(test_type, command_list,
@@ -152,14 +169,20 @@ void ZePeer::bandwidth_latency_ipc(peer_test_t test_type,
                      buffer_size);
       }
       if (validate_results) {
+        bool validated = false;
         if (ZePeer::use_immediate_cmdlist) {
-          validate_buffer_immediate(command_list, ze_host_validate_buffer,
-                                    ze_buffers[local_device_id], ze_host_buffer,
-                                    buffer_size);
+          validated = validate_buffer_immediate(
+              command_list, ze_host_validate_buffer,
+              ze_buffers[local_device_id], ze_host_buffer, buffer_size);
         } else {
-          validate_buffer(command_list, command_queue, ze_host_validate_buffer,
-                          ze_buffers[local_device_id], ze_host_buffer,
-                          buffer_size);
+          validated = validate_buffer(
+              command_list, command_queue, ze_host_validate_buffer,
+              ze_buffers[local_device_id], ze_host_buffer, buffer_size);
+        }
+        if (!validated) {
+          std::cout << "[FAIL] Data validation failed for " << buffer_size
+                    << " B\n";
+          exit_code = 1;
         }
       }
     } else {
@@ -183,16 +206,27 @@ void ZePeer::bandwidth_latency_ipc(peer_test_t test_type,
                 << strerror(errno) << "\n";
       std::terminate();
     }
-    if (transfer_type == PEER_WRITE) {
+
+    if (!WIFEXITED(child_status) || WEXITSTATUS(child_status) != 0) {
+      std::cout << "[FAIL] Importing process reported a failure for "
+                << buffer_size << " B\n";
+      exit_code = 1;
+    } else if (transfer_type == PEER_WRITE) {
       if (validate_results) {
+        bool validated = false;
         if (ZePeer::use_immediate_cmdlist) {
-          validate_buffer_immediate(command_list, ze_host_validate_buffer,
-                                    ze_buffers[local_device_id], ze_host_buffer,
-                                    buffer_size);
+          validated = validate_buffer_immediate(
+              command_list, ze_host_validate_buffer,
+              ze_buffers[local_device_id], ze_host_buffer, buffer_size);
         } else {
-          validate_buffer(command_list, command_queue, ze_host_validate_buffer,
-                          ze_buffers[local_device_id], ze_host_buffer,
-                          buffer_size);
+          validated = validate_buffer(
+              command_list, command_queue, ze_host_validate_buffer,
+              ze_buffers[local_device_id], ze_host_buffer, buffer_size);
+        }
+        if (!validated) {
+          std::cout << "[FAIL] Data validation failed for " << buffer_size
+                    << " B\n";
+          exit_code = 1;
         }
       }
     }
@@ -206,5 +240,5 @@ void ZePeer::bandwidth_latency_ipc(peer_test_t test_type,
   benchmark->memoryFree(ze_host_buffer);
   benchmark->memoryFree(ze_host_validate_buffer);
 
-  exit(0);
+  exit(exit_code);
 }

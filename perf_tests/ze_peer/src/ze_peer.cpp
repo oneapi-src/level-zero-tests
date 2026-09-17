@@ -82,15 +82,16 @@ void print_results_header(
   std::cout << output_stream.str();
 }
 
-void run_ipc_test(int size_to_run, uint32_t remote_device_id,
+bool run_ipc_test(int size_to_run, uint32_t remote_device_id,
                   uint32_t local_device_id, uint32_t queue,
                   peer_test_t test_type, peer_transfer_t transfer_type) {
 
   if (ZePeer::bidirectional) {
     std::cerr << "[ERROR] Bidirectional mode with IPC tests not implemented\n";
-    return;
+    return false;
   }
 
+  bool passed = true;
   pid_t pid;
   int sv[2];
   if (socketpair(PF_UNIX, SOCK_STREAM, 0, sv) < 0) {
@@ -143,6 +144,9 @@ void run_ipc_test(int size_to_run, uint32_t remote_device_id,
                   << strerror(errno) << "\n";
         std::terminate();
       }
+      if (!WIFEXITED(child_status) || WEXITSTATUS(child_status) != 0) {
+        passed = false;
+      }
     }
     if (size_to_run != -1) {
       break;
@@ -152,6 +156,8 @@ void run_ipc_test(int size_to_run, uint32_t remote_device_id,
 
   close(sv[0]);
   close(sv[1]);
+
+  return passed;
 }
 
 void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
@@ -256,6 +262,7 @@ int main(int argc, char **argv) {
   peer_transfer_t transfer_type_to_run = PEER_TRANSFER_MAX;
   peer_test_t test_type_to_run = PEER_TEST_MAX;
   uint32_t num_devices = 32;
+  bool tests_passed = true;
 
   auto parse_and_insert = [&](std::string &s,
                               std::vector<uint32_t> &vector_of_indexes) {
@@ -585,11 +592,13 @@ int main(int argc, char **argv) {
             std::cout << "-----------------------------------------------------"
                          "---------------------------\n";
             if (run_ipc) {
-              run_ipc_test(size_to_run, remote_device_id, local_device_id,
-                           queues[current_queue_index %
-                                  static_cast<uint32_t>(queues.size())],
-                           static_cast<peer_test_t>(test_type),
-                           static_cast<peer_transfer_t>(transfer_type));
+              if (!run_ipc_test(size_to_run, remote_device_id, local_device_id,
+                                queues[current_queue_index %
+                                       static_cast<uint32_t>(queues.size())],
+                                static_cast<peer_test_t>(test_type),
+                                static_cast<peer_transfer_t>(transfer_type))) {
+                tests_passed = false;
+              }
             } else {
               std::vector<uint32_t> tmp_remote_device_ids{remote_device_id};
               std::vector<uint32_t> tmp_local_device_ids{local_device_id};
@@ -610,7 +619,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  return 0;
+  return tests_passed ? 0 : 1;
 }
 
 ZePeer::ZePeer(uint32_t *num_devices) {

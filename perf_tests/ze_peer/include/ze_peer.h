@@ -281,12 +281,12 @@ public:
                           std::vector<uint32_t> &local_device_ids,
                           char *host_buffer, size_t buffer_size);
 
-  void validate_buffer(ze_command_list_handle_t command_list,
+  bool validate_buffer(ze_command_list_handle_t command_list,
                        ze_command_queue_handle_t command_queue,
                        char *validate_buffer, void *dst_buffer,
                        char *host_buffer, size_t buffer_size);
 
-  void validate_buffer_immediate(ze_command_list_handle_t command_list,
+  bool validate_buffer_immediate(ze_command_list_handle_t command_list,
                                  char *validate_buffer, void *dst_buffer,
                                  char *host_buffer, size_t buffer_size);
 
@@ -318,6 +318,10 @@ public:
 
   int sendmsg_fd(int socket, int fd);
   int recvmsg_fd(int socket);
+
+  ze_result_t try_copy(ze_command_list_handle_t command_list,
+                       ze_command_queue_handle_t command_queue,
+                       void *dst_buffer, void *src_buffer, size_t buffer_size);
 
   ZeApp *benchmark;
 

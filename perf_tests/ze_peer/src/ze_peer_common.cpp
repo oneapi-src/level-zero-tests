@@ -1,12 +1,44 @@
 /*
  *
- * Copyright (C) 2019-2021 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
  */
 
 #include "ze_peer.h"
+
+ze_result_t ZePeer::try_copy(ze_command_list_handle_t command_list,
+                             ze_command_queue_handle_t command_queue,
+                             void *dst_buffer, void *src_buffer,
+                             size_t buffer_size) {
+  ze_result_t result = zeCommandListAppendMemoryCopy(
+      command_list, dst_buffer, src_buffer, buffer_size, nullptr, 0, nullptr);
+  if (result != ZE_RESULT_SUCCESS) {
+    return result;
+  }
+
+  if (use_immediate_cmdlist) {
+    return zeCommandListHostSynchronize(command_list,
+                                        std::numeric_limits<uint64_t>::max());
+  }
+
+  result = zeCommandListClose(command_list);
+  if (result != ZE_RESULT_SUCCESS) {
+    return result;
+  }
+  result = zeCommandQueueExecuteCommandLists(command_queue, 1, &command_list,
+                                             nullptr);
+  if (result != ZE_RESULT_SUCCESS) {
+    return result;
+  }
+  result = zeCommandQueueSynchronize(command_queue,
+                                     std::numeric_limits<uint64_t>::max());
+  if (result != ZE_RESULT_SUCCESS) {
+    return result;
+  }
+  return zeCommandListReset(command_list);
+}
 
 void ZePeer::query_engines() {
   for (uint32_t device_index = 0;
@@ -268,7 +300,7 @@ void ZePeer::initialize_buffers(std::vector<uint32_t> &remote_device_ids,
   }
 }
 
-void ZePeer::validate_buffer(ze_command_list_handle_t command_list,
+bool ZePeer::validate_buffer(ze_command_list_handle_t command_list,
                              ze_command_queue_handle_t command_queue,
                              char *validate_buffer, void *dst_buffer,
                              char *host_buffer, size_t buffer_size) {
@@ -288,12 +320,14 @@ void ZePeer::validate_buffer(ze_command_list_handle_t command_list,
                 << static_cast<uint32_t>(validate_buffer[i])
                 << " != host_buffer " << static_cast<uint32_t>(host_buffer[i])
                 << "\n";
-      break;
+      return false;
     }
   }
+
+  return true;
 }
 
-void ZePeer::validate_buffer_immediate(ze_command_list_handle_t command_list,
+bool ZePeer::validate_buffer_immediate(ze_command_list_handle_t command_list,
                                        char *validate_buffer, void *dst_buffer,
                                        char *host_buffer, size_t buffer_size) {
   SUCCESS_OR_TERMINATE(
@@ -308,7 +342,9 @@ void ZePeer::validate_buffer_immediate(ze_command_list_handle_t command_list,
                 << static_cast<uint32_t>(validate_buffer[i])
                 << " != host_buffer " << static_cast<uint32_t>(host_buffer[i])
                 << "\n";
-      break;
+      return false;
     }
   }
+
+  return true;
 }
