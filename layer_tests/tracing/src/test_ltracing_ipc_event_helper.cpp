@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -53,9 +53,6 @@ int main(int argc, char **argv) {
   std::memcpy(&shared_data, region.get_address(),
               sizeof(lzt::shared_ipc_event_data_t));
 
-  memcpy(&(hIpcEventPool), static_cast<void *>(&ipc_descriptor),
-         sizeof(ipc_descriptor));
-
   ze_context_handle_t context = lzt::get_default_context();
 
   lzt::test_api_ltracing_user_data user_data = {};
@@ -79,8 +76,13 @@ int main(int argc, char **argv) {
   lzt::enable_ltracer(tracer_handle);
 
   ze_event_pool_handle_t hEventPool = 0;
-  lzt::open_ipc_event_handle(lzt::get_default_context(), hIpcEventPool,
-                             &hEventPool);
+  const auto context_initial = context;
+  lzt::open_received_ipc_handle(hIpcEventPool, ipc_descriptor,
+                                [&](const ze_ipc_event_pool_handle_t &handle) {
+                                  return zeEventPoolOpenIpcHandle(
+                                      context, handle, &hEventPool);
+                                });
+  EXPECT_EQ(context, context_initial);
   if (!hEventPool) {
     LOG_DEBUG << "Child exit due to null event pool";
     exit(EXIT_FAILURE);

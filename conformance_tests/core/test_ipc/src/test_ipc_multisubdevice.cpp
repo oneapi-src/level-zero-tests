@@ -195,14 +195,11 @@ void multi_sub_device_receiver(size_t size) {
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
   ze_ipc_mem_handle_t ipc_handle{};
   std::fill_n(ipc_handle.data, ZE_MAX_IPC_HANDLE_SIZE, 0);
-  auto ipc_descriptor =
-      lzt::receive_ipc_handle<ze_ipc_mem_handle_t>(ipc_handle.data);
-  memcpy(&ipc_handle, static_cast<void *>(&ipc_descriptor),
-         sizeof(ipc_descriptor));
-
   void *memory = nullptr;
-  EXPECT_ZE_RESULT_SUCCESS(
-      zeMemOpenIpcHandle(context, device, ipc_handle, 0, &memory));
+  lzt::receive_and_open_ipc_handle(
+      ipc_handle, [&](const ze_ipc_mem_handle_t &handle) {
+        return zeMemOpenIpcHandle(context, device, handle, 0, &memory);
+      });
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);

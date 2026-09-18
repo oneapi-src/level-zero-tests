@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -13,13 +13,17 @@
 #include <utility>
 #include <level_zero/ze_api.h>
 #include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <chrono>
 #include <thread>
 #ifdef __linux__
 #include <sys/socket.h>
+#include <unistd.h>
 #endif
 
 #include "logging/logging.hpp"
+#include "utils/utils_gtest_helper.hpp"
 
 namespace boost_ip = boost::asio::ip;
 
@@ -95,6 +99,43 @@ template <typename T> int receive_ipc_handle(char *data) {
   close(other_socket);
   close(unix_rcv_socket);
   return ipc_descriptor;
+}
+
+// Reports the outcome with EXPECT_ZE_RESULT_SUCCESS. A negative
+// ipc_descriptor means the payload did not arrive over a socket and disables
+// the descriptor fallback.
+template <typename T, typename OpenFn>
+void open_received_ipc_handle(T &ipc_handle, int ipc_descriptor,
+                              OpenFn &&open_handle) {
+  ze_result_t open_ipc_handle_result = open_handle(ipc_handle);
+
+  if (open_ipc_handle_result == ZE_RESULT_SUCCESS) {
+    LOG_DEBUG << "Opened the IPC handle with the payload exactly as received";
+    if (ipc_descriptor >= 0) {
+      close(ipc_descriptor);
+    }
+  } else if (ipc_descriptor >= 0) {
+    LOG_WARNING << "Opening the IPC handle as received failed (result "
+                << static_cast<uint32_t>(open_ipc_handle_result)
+                << "), retrying with the descriptor delivered as ancillary "
+                   "socket data substituted into the payload";
+    std::memcpy(&ipc_handle, static_cast<const void *>(&ipc_descriptor),
+                sizeof(ipc_descriptor));
+
+    open_ipc_handle_result = open_handle(ipc_handle);
+    if (open_ipc_handle_result != ZE_RESULT_SUCCESS) {
+      close(ipc_descriptor);
+    }
+  }
+
+  EXPECT_ZE_RESULT_SUCCESS(open_ipc_handle_result);
+}
+
+template <typename T, typename OpenFn>
+void receive_and_open_ipc_handle(T &ipc_handle, OpenFn &&open_handle) {
+  const int ipc_descriptor = receive_ipc_handle<T>(ipc_handle.data);
+  open_received_ipc_handle(ipc_handle, ipc_descriptor,
+                           std::forward<OpenFn>(open_handle));
 }
 
 template <typename T>

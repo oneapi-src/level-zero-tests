@@ -34,13 +34,10 @@ static void child_device_access_test(size_t size, ze_ipc_memory_flags_t flags) {
   // Signal parent to send IPC handle
   semaphore.post();
 
-  int ipc_descriptor =
-      lzt::receive_ipc_handle<ze_ipc_mem_handle_t>(ipc_handle.data);
-  memcpy(&ipc_handle, static_cast<void *>(&ipc_descriptor),
-         sizeof(ipc_descriptor));
-
-  EXPECT_ZE_RESULT_SUCCESS(
-      zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
+  lzt::receive_and_open_ipc_handle(
+      ipc_handle, [&](const ze_ipc_mem_handle_t &handle) {
+        return zeMemOpenIpcHandle(context, device, handle, flags, &memory);
+      });
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);
@@ -80,14 +77,11 @@ static void child_subdevice_access_test(size_t size,
   // Signal parent to send IPC handle
   semaphore.post();
 
-  int ipc_descriptor =
-      lzt::receive_ipc_handle<ze_ipc_mem_handle_t>(ipc_handle.data);
-  memcpy(&ipc_handle, static_cast<void *>(&ipc_descriptor),
-         sizeof(ipc_descriptor));
-
   // Open IPC buffer with root device
-  EXPECT_ZE_RESULT_SUCCESS(
-      zeMemOpenIpcHandle(context, device, ipc_handle, flags, &memory));
+  lzt::receive_and_open_ipc_handle(
+      ipc_handle, [&](const ze_ipc_mem_handle_t &handle) {
+        return zeMemOpenIpcHandle(context, device, handle, flags, &memory);
+      });
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);

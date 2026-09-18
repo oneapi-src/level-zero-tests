@@ -267,12 +267,11 @@ int main() {
   ze_ipc_event_pool_handle_t hIpcEventPool{};
 
   // Handle both socket-based and opaque (shared memory) modes
+  int ipc_descriptor = -1;
   if (shared_data.test_sock_type == TEST_SOCK) {
     // Socket-based: receive IPC handle via socket
-    int ipc_descriptor =
+    ipc_descriptor =
         lzt::receive_ipc_handle<ze_ipc_event_pool_handle_t>(hIpcEventPool.data);
-    memcpy(&(hIpcEventPool), static_cast<void *>(&ipc_descriptor),
-           sizeof(ipc_descriptor));
   } else {
     // Opaque mode: IPC handle is already in shared memory
     hIpcEventPool = shared_data.ipc_handle;
@@ -290,7 +289,13 @@ int main() {
       lzt::create_context_ex(lzt::get_default_driver(), std::move(devices));
   ze_event_pool_handle_t hEventPool = 0;
   LOG_INFO << "IPC Child open event handle";
-  lzt::open_ipc_event_handle(context, hIpcEventPool, &hEventPool);
+  const auto context_initial = context;
+  lzt::open_received_ipc_handle(hIpcEventPool, ipc_descriptor,
+                                [&](const ze_ipc_event_pool_handle_t &handle) {
+                                  return zeEventPoolOpenIpcHandle(
+                                      context, handle, &hEventPool);
+                                });
+  EXPECT_EQ(context, context_initial);
 
   if (!hEventPool) {
     LOG_DEBUG << "Child exit due to null event pool";

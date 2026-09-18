@@ -1,4 +1,4 @@
-# Copyright (C) 2021 Intel Corporation
+# Copyright (C) 2021-2026 Intel Corporation
 # SPDX-License-Identifier: MIT
 
 add_core_library(net
@@ -12,5 +12,7 @@ add_core_library(net
 target_link_libraries(net
     PUBLIC
     level_zero_tests::logging
+    GTest::GTest
+    level_zero_tests::utils
     ${LZT_LEVEL_ZERO_TARGET}
 )

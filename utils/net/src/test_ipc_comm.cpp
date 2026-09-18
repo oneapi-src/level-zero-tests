@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2021-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -32,8 +32,9 @@ int read_fd_from_socket(int unix_socket, char *data) {
   msg_header.msg_control = cmsg_buff;
   msg_header.msg_controllen = CMSG_LEN(sizeof(fd));
 
+  // A partial delivery would silently produce a corrupt handle
   auto bytes = recvmsg(unix_socket, &msg_header, 0);
-  if (bytes == -1) {
+  if (bytes != static_cast<ssize_t>(msg_buffer.iov_len)) {
     throw std::runtime_error(
         "Client: Error receiving ipc handle (file descriptor)");
   }
@@ -69,9 +70,8 @@ int write_fd_to_socket(int unix_socket, int fd,
   control_header->cmsg_len = CMSG_LEN(sizeof(fd));
 
   *(int *)CMSG_DATA(control_header) = fd;
-  // call sendmsg to send descriptor across socket
   ssize_t bytesSent = sendmsg(unix_socket, &msg_header, 0);
-  if (bytesSent < 0) {
+  if (bytesSent != static_cast<ssize_t>(msg_buffer.iov_len)) {
     return -1;
   }
 
