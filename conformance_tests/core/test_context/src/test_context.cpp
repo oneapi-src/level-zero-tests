@@ -25,8 +25,9 @@ protected:
     devices = lzt::get_devices(driver);
   }
 
+  template <lzt::command_list_mode_t Mode>
   void run_test(ze_context_handle_t context,
-                std::vector<ze_device_handle_t> devices, bool is_immediate) {
+                std::vector<ze_device_handle_t> devices) {
 
     const size_t buff_size = 256;
     auto buffer = lzt::allocate_host_memory(buff_size, 1, context);
@@ -36,11 +37,10 @@ protected:
 
     for (auto device : devices) {
       memset(buffer, 0, buff_size);
-      auto bundle = lzt::create_command_bundle(
-          context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
-          ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, is_immediate);
-      lzt::append_memory_set(bundle.list, buffer, &val, buff_size);
-      lzt::close_command_list(bundle.list);
+      auto bundle = lzt::create_command_bundle<Mode>(
+          context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
+          ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u);
+      lzt::append_memory_set(bundle.record_list(), buffer, &val, buff_size);
       lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
       EXPECT_EQ(memcmp(ref_buffer, buffer, buff_size), 0);
@@ -61,14 +61,14 @@ protected:
 LZT_TEST_F(ContextExCreateTests,
            GivenContextOnAllDevicesWhenUsingContextThenSuccess) {
   auto context = lzt::create_context_ex(driver);
-  run_test(context, devices, false);
+  run_test<lzt::command_list_mode_t::regular>(context, devices);
 }
 
 LZT_TEST_F(
     ContextExCreateTests,
     GivenContextOnAllDevicesWhenUsingContextWithImmediateCmdListThenSuccess) {
   auto context = lzt::create_context_ex(driver);
-  run_test(context, devices, true);
+  run_test<lzt::command_list_mode_t::immediate>(context, devices);
 }
 
 LZT_TEST_F(ContextExCreateTests,
@@ -81,7 +81,7 @@ LZT_TEST_F(ContextExCreateTests,
   // remove an element so test is creating context on only some devices.
   devices.pop_back();
   auto context = lzt::create_context_ex(driver, devices);
-  run_test(context, devices, false);
+  run_test<lzt::command_list_mode_t::regular>(context, devices);
 }
 
 LZT_TEST_F(
@@ -95,7 +95,7 @@ LZT_TEST_F(
   // remove an element so test is creating context on only some devices.
   devices.pop_back();
   auto context = lzt::create_context_ex(driver, devices);
-  run_test(context, devices, true);
+  run_test<lzt::command_list_mode_t::immediate>(context, devices);
 }
 
 LZT_TEST(

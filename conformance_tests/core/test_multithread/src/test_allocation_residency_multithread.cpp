@@ -179,10 +179,10 @@ void indirect_access_Kernel(ze_module_handle_t module,
 
     lzt::set_argument_value(kernel, 0, sizeof(node *), &data);
     lzt::set_argument_value(kernel, 1, sizeof(size_t), &size);
-    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
-                                0, nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::close_command_list(cmd_bundle.list);
+    lzt::append_launch_function(cmd_bundle.record_list(), kernel, &group_count,
+                                nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::close_command_list(cmd_bundle.record_list());
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     // check

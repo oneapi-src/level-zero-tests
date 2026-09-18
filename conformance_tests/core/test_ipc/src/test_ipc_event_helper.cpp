@@ -69,7 +69,7 @@ static void child_device_reads(ze_event_pool_handle_t hEventPool,
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
   auto cmdbundle = lzt::create_command_bundle<Mode>(context, device);
-  lzt::append_wait_on_events(cmdbundle.list, 1, &hEvent);
+  lzt::append_wait_on_events(cmdbundle.record_list(), 1, &hEvent);
   lzt::execute_and_sync_command_bundle(cmdbundle,
                                        std::numeric_limits<uint64_t>::max());
 
@@ -86,13 +86,13 @@ static void child_device2_reads(ze_event_pool_handle_t hEventPool,
       zeEventCreate(hEventPool, &defaultEventDesc, &hEvent));
   auto devices = lzt::get_ze_devices();
   auto cmdbundle = lzt::create_command_bundle<Mode>(context, devices[1]);
-  lzt::append_wait_on_events(cmdbundle.list, 1, &hEvent);
+  lzt::append_wait_on_events(cmdbundle.record_list(), 1, &hEvent);
   printf("execute second device\n");
   lzt::execute_and_sync_command_bundle(cmdbundle,
                                        std::numeric_limits<uint64_t>::max());
 
   // cleanup
-  lzt::reset_command_list(cmdbundle.list);
+  lzt::reset_command_list(cmdbundle.record_list());
   lzt::destroy_command_bundle(cmdbundle);
   EXPECT_ZE_RESULT_SUCCESS(zeEventDestroy(hEvent));
 }
@@ -213,7 +213,8 @@ static void child_device_query_timestamp(
           sizeof(ze_kernel_timestamp_result_t), 1, context));
 
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendQueryKernelTimestamps(
-      cmdbundle.list, 1, &hEvent, tsResult, nullptr, nullptr, 1, &hEvent));
+      cmdbundle.record_list(), 1, &hEvent, tsResult, nullptr, nullptr, 1,
+      &hEvent));
 
   lzt::execute_and_sync_command_bundle(cmdbundle,
                                        std::numeric_limits<uint64_t>::max());

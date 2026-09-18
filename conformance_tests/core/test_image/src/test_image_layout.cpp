@@ -110,14 +110,14 @@ public:
     }
 
     // copy input buff to image_in object
-    lzt::append_image_copy_from_mem(cmd_bundle.list, image_in, buffer_in,
-                                    nullptr);
-    lzt::append_barrier(cmd_bundle.list);
+    lzt::append_image_copy_from_mem(cmd_bundle.record_list(), image_in,
+                                    buffer_in, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list());
     if (test == IMAGE_OBJECT_ONLY) {
       LOG_DEBUG << "IMAGE_OBJECT_ONLY";
-      lzt::append_image_copy_to_mem(cmd_bundle.list, buffer_out, image_in,
-                                    nullptr);
-      lzt::append_barrier(cmd_bundle.list);
+      lzt::append_image_copy_to_mem(cmd_bundle.record_list(), buffer_out,
+                                    image_in, nullptr);
+      lzt::append_barrier(cmd_bundle.record_list());
     } else {
       // call kernel to copy image_in -> image_convert
       uint32_t group_size_x, group_size_y, group_size_z;
@@ -142,13 +142,13 @@ public:
                                      image_dims.height / group_size_y,
                                      image_dims.depth / group_size_z};
 
-      lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems, nullptr,
-                                  0, nullptr);
-      lzt::append_barrier(cmd_bundle.list);
+      lzt::append_launch_function(cmd_bundle.record_list(), kernel, &group_dems,
+                                  nullptr, 0, nullptr);
+      lzt::append_barrier(cmd_bundle.record_list());
 
       if (test == ONE_KERNEL_ONLY) {
         LOG_DEBUG << "ONE_KERNEL_ONLY";
-        lzt::append_image_copy_to_mem(cmd_bundle.list, buffer_out,
+        lzt::append_image_copy_to_mem(cmd_bundle.record_list(), buffer_out,
                                       image_convert, nullptr);
       } else {
         LOG_DEBUG << "TWO_KERNEL_CONVERT";
@@ -173,18 +173,18 @@ public:
                       image_dims.height / group_size_y,
                       image_dims.depth / group_size_z};
 
-        lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems,
-                                    nullptr, 0, nullptr);
+        lzt::append_launch_function(cmd_bundle.record_list(), kernel,
+                                    &group_dems, nullptr, 0, nullptr);
         // finalize, copy to buffer_out
-        lzt::append_barrier(cmd_bundle.list);
-        lzt::append_image_copy_to_mem(cmd_bundle.list, buffer_out, image_out,
-                                      nullptr);
+        lzt::append_barrier(cmd_bundle.record_list());
+        lzt::append_image_copy_to_mem(cmd_bundle.record_list(), buffer_out,
+                                      image_out, nullptr);
       }
       LOG_DEBUG << "group_size_x = " << group_size_x
                 << " group_size_y = " << group_size_y
                 << " group_size_z = " << group_size_z;
     }
-    lzt::close_command_list(cmd_bundle.list);
+    lzt::close_command_list(cmd_bundle.record_list());
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
     LOG_DEBUG << "buffer size = " << buffer_size;
 
@@ -604,11 +604,12 @@ LZT_TEST_P(zeImageDepthFormatLayoutTests,
     ptr2[i] = 0xff;
   }
 
-  lzt::append_image_copy_from_mem(cmd_bundle.list, image_in, buffer_in,
+  lzt::append_image_copy_from_mem(cmd_bundle.record_list(), image_in, buffer_in,
                                   nullptr);
-  lzt::append_barrier(cmd_bundle.list);
-  lzt::append_image_copy_to_mem(cmd_bundle.list, buffer_out, image_in, nullptr);
-  lzt::close_command_list(cmd_bundle.list);
+  lzt::append_barrier(cmd_bundle.record_list());
+  lzt::append_image_copy_to_mem(cmd_bundle.record_list(), buffer_out, image_in,
+                                nullptr);
+  lzt::close_command_list(cmd_bundle.record_list());
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   EXPECT_EQ(memcmp(buffer_in, buffer_out, buffer_size), 0);
@@ -674,9 +675,9 @@ LZT_TEST_P(
     }
   }
 
-  lzt::append_image_copy_from_mem(cmd_bundle.list, image_in, buffer_in,
+  lzt::append_image_copy_from_mem(cmd_bundle.record_list(), image_in, buffer_in,
                                   nullptr);
-  lzt::append_barrier(cmd_bundle.list);
+  lzt::append_barrier(cmd_bundle.record_list());
 
   uint32_t group_size_x, group_size_y, group_size_z;
   lzt::suggest_group_size(kernel, to_u32(image_dims.width), image_dims.height,
@@ -707,12 +708,12 @@ LZT_TEST_P(
                                  image_dims.height / group_size_y,
                                  image_dims.depth / group_size_z};
 
-  lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems, nullptr, 0,
-                              nullptr);
-  lzt::append_barrier(cmd_bundle.list);
-  lzt::append_image_copy_to_mem(cmd_bundle.list, buffer_out, image_out,
+  lzt::append_launch_function(cmd_bundle.record_list(), kernel, &group_dems,
+                              nullptr, 0, nullptr);
+  lzt::append_barrier(cmd_bundle.record_list());
+  lzt::append_image_copy_to_mem(cmd_bundle.record_list(), buffer_out, image_out,
                                 nullptr);
-  lzt::close_command_list(cmd_bundle.list);
+  lzt::close_command_list(cmd_bundle.record_list());
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   EXPECT_EQ(memcmp(buffer_in, buffer_out, buffer_size), 0);
@@ -761,11 +762,12 @@ LZT_TEST_P(
     ptr2[i] = 0xff;
   }
 
-  lzt::append_image_copy_from_mem(cmd_bundle.list, image_in, buffer_in,
+  lzt::append_image_copy_from_mem(cmd_bundle.record_list(), image_in, buffer_in,
                                   nullptr);
-  lzt::append_barrier(cmd_bundle.list);
-  lzt::append_image_copy_to_mem(cmd_bundle.list, buffer_out, image_in, nullptr);
-  lzt::close_command_list(cmd_bundle.list);
+  lzt::append_barrier(cmd_bundle.record_list());
+  lzt::append_image_copy_to_mem(cmd_bundle.record_list(), buffer_out, image_in,
+                                nullptr);
+  lzt::close_command_list(cmd_bundle.record_list());
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   EXPECT_EQ(memcmp(buffer_in, buffer_out, buffer_size), 0);

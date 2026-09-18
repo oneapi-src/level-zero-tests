@@ -66,9 +66,9 @@ void RunGivenMemoryCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify GPU reads event
-  lzt::append_memory_copy(cmd_bundle.list, dst_buffer, src_buffer, test.size,
-                          test.hEvent);
-  lzt::append_wait_on_events(cmd_bundle.list, 1, &test.hEvent);
+  lzt::append_memory_copy(cmd_bundle.record_list(), dst_buffer, src_buffer,
+                          test.size, test.hEvent);
+  lzt::append_wait_on_events(cmd_bundle.record_list(), 1, &test.hEvent);
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Verify Host Reads Event as set
@@ -133,9 +133,9 @@ void RunGivenMemorySetThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify GPU reads event
-  lzt::append_memory_set(cmd_bundle.list, dst_buffer, &one, test.size,
+  lzt::append_memory_set(cmd_bundle.record_list(), dst_buffer, &one, test.size,
                          test.hEvent);
-  lzt::append_wait_on_events(cmd_bundle.list, 1, &test.hEvent);
+  lzt::append_wait_on_events(cmd_bundle.record_list(), 1, &test.hEvent);
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Verify Host Reads Event as set
@@ -204,10 +204,11 @@ void RunGivenMemoryCopyRegionThatSignalsEventWhenCompleteWhenExecutingCommandLis
   // Execute and verify GPU reads event
   ze_copy_region_t sr = {0U, 0U, 0U, width, height, 0U};
   ze_copy_region_t dr = {0U, 0U, 0U, width, height, 0U};
-  lzt::append_memory_copy_region(cmd_bundle.list, dst_buffer, &dr, width, 0,
-                                 src_buffer, &sr, width, 0, test.hEvent);
-  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  lzt::append_wait_on_events(cmd_bundle.list, 1, &test.hEvent);
+  lzt::append_memory_copy_region(cmd_bundle.record_list(), dst_buffer, &dr,
+                                 width, 0, src_buffer, &sr, width, 0,
+                                 test.hEvent);
+  lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+  lzt::append_wait_on_events(cmd_bundle.record_list(), 1, &test.hEvent);
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Verify Host Reads Event as set
@@ -276,10 +277,10 @@ void RunGivenMemoryCopiesWithDependenciesWhenExecutingCommandListTest(
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify GPU reads event
-  lzt::append_memory_copy(cmd_bundle.list, temp_buffer, src_buffer, test.size,
-                          test.hEvent, 0, nullptr);
-  lzt::append_memory_copy(cmd_bundle.list, dst_buffer, temp_buffer, test.size,
-                          nullptr, 1, &hEvent1);
+  lzt::append_memory_copy(cmd_bundle.record_list(), temp_buffer, src_buffer,
+                          test.size, test.hEvent, 0, nullptr);
+  lzt::append_memory_copy(cmd_bundle.record_list(), dst_buffer, temp_buffer,
+                          test.size, nullptr, 1, &hEvent1);
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Verify Copy Waits for Signal
@@ -359,8 +360,8 @@ void RunGivenMemoryCopyThatWaitsOnEventWhenExecutingCommandListTest(
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify GPU reads event
-  lzt::append_memory_copy(cmd_bundle.list, dst_buffer, src_buffer, test.size,
-                          nullptr, 1, &test.hEvent);
+  lzt::append_memory_copy(cmd_bundle.record_list(), dst_buffer, src_buffer,
+                          test.size, nullptr, 1, &test.hEvent);
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // This sleep simulates work (e.g. file i/o) on the host that would cause
@@ -436,10 +437,10 @@ void RunGivenMemoryFillsThatSignalAndWaitWhenExecutingCommandListTest(
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify GPU reads event
-  lzt::append_memory_fill(cmd_bundle.list, dst_buffer, &zero, sizeof(zero),
-                          test.size, test.hEvent, 0, nullptr);
-  lzt::append_memory_fill(cmd_bundle.list, dst_buffer, &one, sizeof(one),
-                          test.size, nullptr, 1, &hEvent1);
+  lzt::append_memory_fill(cmd_bundle.record_list(), dst_buffer, &zero,
+                          sizeof(zero), test.size, test.hEvent, 0, nullptr);
+  lzt::append_memory_fill(cmd_bundle.record_list(), dst_buffer, &one,
+                          sizeof(one), test.size, nullptr, 1, &hEvent1);
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   lzt::event_host_synchronize(test.hEvent,
@@ -516,8 +517,8 @@ void RunGivenMemoryFillThatWaitsOnEventWhenExecutingCommandListTest(
   EXPECT_EQ(ZE_RESULT_NOT_READY, zeEventHostSynchronize(test.hEvent, 0));
 
   // Execute and verify GPU reads event
-  lzt::append_memory_fill(cmd_bundle.list, dst_buffer, &one, sizeof(one),
-                          test.size, nullptr, 1, &test.hEvent);
+  lzt::append_memory_fill(cmd_bundle.record_list(), dst_buffer, &one,
+                          sizeof(one), test.size, nullptr, 1, &test.hEvent);
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Verify Device waits for Signal
@@ -601,12 +602,12 @@ void RunGivenMemoryCopyRegionWithDependenciesWhenExecutingCommandListTest(
   // Execute and verify Device reads event
   ze_copy_region_t sr = {0U, 0U, 0U, width, height, 0U};
   ze_copy_region_t dr = {0U, 0U, 0U, width, height, 0U};
-  lzt::append_memory_copy_region(cmd_bundle.list, temp_buffer, &dr, width, 0,
-                                 src_buffer, &sr, width, 0, test.hEvent, 0,
-                                 nullptr);
-  lzt::append_memory_copy_region(cmd_bundle.list, dst_buffer, &dr, width, 0,
-                                 temp_buffer, &sr, width, 0, nullptr, 1,
-                                 &hEvent1);
+  lzt::append_memory_copy_region(cmd_bundle.record_list(), temp_buffer, &dr,
+                                 width, 0, src_buffer, &sr, width, 0,
+                                 test.hEvent, 0, nullptr);
+  lzt::append_memory_copy_region(cmd_bundle.record_list(), dst_buffer, &dr,
+                                 width, 0, temp_buffer, &sr, width, 0, nullptr,
+                                 1, &hEvent1);
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Verify Copy Waits for Signal
@@ -690,9 +691,9 @@ void RunGivenMemoryCopyRegionThatWaitsOnEventWhenExecutingCommandListTest(
   // Execute and verify Device reads event
   ze_copy_region_t sr = {0U, 0U, 0U, width, height, 0U};
   ze_copy_region_t dr = {0U, 0U, 0U, width, height, 0U};
-  lzt::append_memory_copy_region(cmd_bundle.list, dst_buffer, &dr, width, 0,
-                                 src_buffer, &sr, width, 0, nullptr, 1,
-                                 &test.hEvent);
+  lzt::append_memory_copy_region(cmd_bundle.record_list(), dst_buffer, &dr,
+                                 width, 0, src_buffer, &sr, width, 0, nullptr,
+                                 1, &test.hEvent);
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);
   // Verify Copy Waits for Signal
@@ -792,23 +793,23 @@ void RunGivenImageCopyThatSignalsEventWhenCompleteWhenExecutingCommandListTest(
   test.ep.create_event(hEvent4, ZE_EVENT_SCOPE_FLAG_HOST, 0);
 
   // Use ImageCopyFromMemory to upload ImageA
-  lzt::append_image_copy_from_mem(cmd_bundle.list, input_xeimage,
+  lzt::append_image_copy_from_mem(cmd_bundle.record_list(), input_xeimage,
                                   input.raw_data(), hEvent1);
-  lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent1);
+  lzt::append_wait_on_events(cmd_bundle.record_list(), 1, &hEvent1);
   // use ImageCopy to copy A -> B
-  lzt::append_image_copy(cmd_bundle.list, output_xeimage, input_xeimage,
-                         hEvent2);
-  lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent2);
+  lzt::append_image_copy(cmd_bundle.record_list(), output_xeimage,
+                         input_xeimage, hEvent2);
+  lzt::append_wait_on_events(cmd_bundle.record_list(), 1, &hEvent2);
   // use ImageCopyRegion to copy part of A -> B
   ze_image_region_t sr = {0, 0, 0, 1, 1, 1};
   ze_image_region_t dr = {0, 0, 0, 1, 1, 1};
-  lzt::append_image_copy_region(cmd_bundle.list, output_xeimage, input_xeimage,
-                                &dr, &sr, hEvent3);
-  lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent3);
+  lzt::append_image_copy_region(cmd_bundle.record_list(), output_xeimage,
+                                input_xeimage, &dr, &sr, hEvent3);
+  lzt::append_wait_on_events(cmd_bundle.record_list(), 1, &hEvent3);
   // use ImageCopyToMemory to download ImageB
-  lzt::append_image_copy_to_mem(cmd_bundle.list, output.raw_data(),
+  lzt::append_image_copy_to_mem(cmd_bundle.record_list(), output.raw_data(),
                                 output_xeimage, hEvent4);
-  lzt::append_wait_on_events(cmd_bundle.list, 1, &hEvent4);
+  lzt::append_wait_on_events(cmd_bundle.record_list(), 1, &hEvent4);
   // execute commands
   lzt::close_command_bundle(cmd_bundle);
   lzt::submit_command_bundle(cmd_bundle);

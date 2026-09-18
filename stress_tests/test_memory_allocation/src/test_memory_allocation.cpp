@@ -25,13 +25,14 @@ using lzt::to_u32;
 class zeDriverMemoryAllocationStressTest
     : public ::testing::Test,
       public ::testing::WithParamInterface<
-          std::tuple<double, double, uint32_t, ze_memory_type_t, bool, bool>> {
+          std::tuple<double, double, uint32_t, ze_memory_type_t,
+                     lzt::command_list_mode_t, bool>> {
 protected:
   typedef uint32_t kernel_copy_unit_t;
   const size_t kernel_copy_unit_size = sizeof(kernel_copy_unit_t);
 
   struct MemoryAllocationTestArguments : public TestArguments_t {
-    bool immediate;
+    lzt::command_list_mode_t cmdlist_mode;
     bool indirect_access;
   } test_arguments_;
 
@@ -62,8 +63,9 @@ protected:
       uint32_t number_of_dispatch, uint64_t one_case_allocation_count,
       ze_context_handle_t context) {
     auto cmd_bundle = lzt::create_command_bundle(
-        context, device, 0, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, test_arguments_.immediate);
+        context, device, 0u, ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
+        ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u,
+        test_arguments_.cmdlist_mode);
 
     std::vector<ze_kernel_handle_t> test_functions;
     [[maybe_unused]] std::vector<Buffer> host_src_ptrs(number_of_dispatch);
@@ -90,13 +92,13 @@ protected:
       }
 
       if (test_arguments_.memory_type == ZE_MEMORY_TYPE_DEVICE) {
-        lzt::append_memory_copy(cmd_bundle.list, src_allocation_ptrs,
+        lzt::append_memory_copy(cmd_bundle.record_list(), src_allocation_ptrs,
                                 host_src_ptrs.data(),
                                 number_of_dispatch * sizeof(void *), nullptr);
-        lzt::append_memory_copy(cmd_bundle.list, dst_allocation_ptrs,
+        lzt::append_memory_copy(cmd_bundle.record_list(), dst_allocation_ptrs,
                                 host_dst_ptrs.data(),
                                 number_of_dispatch * sizeof(void *), nullptr);
-        lzt::append_barrier(cmd_bundle.list);
+        lzt::append_barrier(cmd_bundle.record_list());
       } else {
         std::memcpy(src_allocation_ptrs, host_src_ptrs.data(),
                     number_of_dispatch * sizeof(void *));
@@ -150,36 +152,33 @@ protected:
           to_u32(one_case_allocation_count / workgroup_size_x_);
       ze_group_count_t thread_group_dimensions = {group_count_x, 1, 1};
 
-      lzt::append_memory_fill(cmd_bundle.list, src_allocation, &init_value_2_,
-                              sizeof(init_value_2_),
+      lzt::append_memory_fill(cmd_bundle.record_list(), src_allocation,
+                              &init_value_2_, sizeof(init_value_2_),
                               one_case_allocation_count * kernel_copy_unit_size,
                               nullptr);
 
-      lzt::append_memory_fill(cmd_bundle.list, dst_allocation, &init_value_3_,
-                              sizeof(init_value_3_),
+      lzt::append_memory_fill(cmd_bundle.record_list(), dst_allocation,
+                              &init_value_3_, sizeof(init_value_3_),
                               one_case_allocation_count * kernel_copy_unit_size,
                               nullptr);
 
-      lzt::append_barrier(cmd_bundle.list, nullptr);
+      lzt::append_barrier(cmd_bundle.record_list(), nullptr);
 
-      lzt::append_launch_function(cmd_bundle.list, kernel_handle,
+      lzt::append_launch_function(cmd_bundle.record_list(), kernel_handle,
                                   &thread_group_dimensions, nullptr, 0,
                                   nullptr);
 
-      lzt::append_barrier(cmd_bundle.list, nullptr);
+      lzt::append_barrier(cmd_bundle.record_list(), nullptr);
 
       if (memory_type == ZE_MEMORY_TYPE_DEVICE) {
         lzt::append_memory_copy(
-            cmd_bundle.list, data_out[dispatch_id].data(), dst_allocation,
-            one_case_allocation_count * kernel_copy_unit_size, nullptr);
+            cmd_bundle.record_list(), data_out[dispatch_id].data(),
+            dst_allocation, one_case_allocation_count * kernel_copy_unit_size,
+            nullptr);
       }
-      lzt::append_barrier(cmd_bundle.list, nullptr);
+      lzt::append_barrier(cmd_bundle.record_list(), nullptr);
 
       test_functions.push_back(kernel_handle);
-    }
-
-    if (!test_arguments_.immediate) {
-      lzt::close_command_list(cmd_bundle.list);
     }
 
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
@@ -197,7 +196,7 @@ protected:
   kernel_copy_unit_t init_value_2_ = 0xAAAAAAAA; // 1010 1010
   kernel_copy_unit_t init_value_3_ = 0x55555555; // 0101 0101
   bool indirect_access = false;
-  bool immediate = false;
+  lzt::command_list_mode_t cmdlist_mode = lzt::command_list_mode_t::regular;
 };
 
 LZT_TEST_P(
@@ -209,7 +208,7 @@ LZT_TEST_P(
       std::get<1>(GetParam()), // one allocation size limit
       std::get<2>(GetParam()), // dispatch multiplier
       std::get<3>(GetParam()), // memory type
-      std::get<4>(GetParam()), // immediate
+      std::get<4>(GetParam()), // cmdlist_mode
       std::get<5>(GetParam())  // indirect access
   };
 
@@ -373,7 +372,9 @@ struct CombinationsTestNameSuffix {
     std::stringstream ss;
     ss << "dispatches_" << std::get<2>(info.param);
     ss << "_memoryType_" << print_allocation_type(std::get<3>(info.param));
-    ss << (std::get<4>(info.param) ? "_immediate" : "");
+    ss << (std::get<4>(info.param) == lzt::command_list_mode_t::immediate
+               ? "_immediate"
+               : "");
     ss << (std::get<5>(info.param) ? "_indirectAccess" : "");
     return ss.str();
   }
@@ -389,7 +390,9 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::Values(ZE_MEMORY_TYPE_HOST,
                                          ZE_MEMORY_TYPE_SHARED,
                                          ZE_MEMORY_TYPE_DEVICE),
-                       ::testing::Bool(), ::testing::Bool()),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate),
+                       ::testing::Bool()),
     CombinationsTestNameSuffix());
 
 INSTANTIATE_TEST_SUITE_P(
@@ -400,7 +403,9 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::Values(ZE_MEMORY_TYPE_HOST,
                                          ZE_MEMORY_TYPE_SHARED,
                                          ZE_MEMORY_TYPE_DEVICE),
-                       ::testing::Bool(), ::testing::Bool()),
+                       ::testing::Values(lzt::command_list_mode_t::regular,
+                                         lzt::command_list_mode_t::immediate),
+                       ::testing::Bool()),
     CombinationsTestNameSuffix());
 
 } // namespace

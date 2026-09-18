@@ -116,39 +116,39 @@ protected:
 
     ze_group_count_t thread_group_dimensions = {1, 1, 1};
 
-    lzt::append_memory_copy(cmd_bundle.list, gpu_expected_output_buffer,
-                            host_expected_output_buffer,
-                            output_count * sizeof(uint64_t), nullptr);
-    lzt::append_memory_copy(cmd_bundle.list, gpu_found_output_buffer,
+    lzt::append_memory_copy(
+        cmd_bundle.record_list(), gpu_expected_output_buffer,
+        host_expected_output_buffer, output_count * sizeof(uint64_t), nullptr);
+    lzt::append_memory_copy(cmd_bundle.record_list(), gpu_found_output_buffer,
                             host_found_output_buffer,
                             output_count * sizeof(uint64_t), nullptr);
 
     EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchKernel(
-        cmd_bundle.list, fill_function, &thread_group_dimensions, nullptr, 0,
-        nullptr));
+        cmd_bundle.record_list(), fill_function, &thread_group_dimensions,
+        nullptr, 0, nullptr));
 
-    EXPECT_ZE_RESULT_SUCCESS(
-        zeCommandListAppendBarrier(cmd_bundle.list, nullptr, 0, nullptr));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendBarrier(
+        cmd_bundle.record_list(), nullptr, 0, nullptr));
 
     EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchKernel(
-        cmd_bundle.list, test_function, &thread_group_dimensions, nullptr, 0,
-        nullptr));
+        cmd_bundle.record_list(), test_function, &thread_group_dimensions,
+        nullptr, 0, nullptr));
 
-    EXPECT_ZE_RESULT_SUCCESS(
-        zeCommandListAppendBarrier(cmd_bundle.list, nullptr, 0, nullptr));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendBarrier(
+        cmd_bundle.record_list(), nullptr, 0, nullptr));
 
-    lzt::append_memory_copy(cmd_bundle.list, host_expected_output_buffer,
-                            gpu_expected_output_buffer,
-                            output_count * sizeof(uint64_t), nullptr);
+    lzt::append_memory_copy(
+        cmd_bundle.record_list(), host_expected_output_buffer,
+        gpu_expected_output_buffer, output_count * sizeof(uint64_t), nullptr);
 
-    lzt::append_memory_copy(cmd_bundle.list, host_found_output_buffer,
+    lzt::append_memory_copy(cmd_bundle.record_list(), host_found_output_buffer,
                             gpu_found_output_buffer,
                             output_count * sizeof(uint64_t), nullptr);
 
-    EXPECT_ZE_RESULT_SUCCESS(
-        zeCommandListAppendBarrier(cmd_bundle.list, nullptr, 0, nullptr));
+    EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendBarrier(
+        cmd_bundle.record_list(), nullptr, 0, nullptr));
 
-    lzt::close_command_list(cmd_bundle.list);
+    lzt::close_command_list(cmd_bundle.record_list());
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
     lzt::destroy_command_bundle(cmd_bundle);
     EXPECT_ZE_RESULT_SUCCESS(zeKernelDestroy(fill_function));

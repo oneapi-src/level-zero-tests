@@ -90,10 +90,10 @@ int main(int argc, char **argv) {
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
 
   uint8_t pattern = 0xAB;
-  lzt::append_memory_fill(cmd_bundle.list, exported_memory, &pattern,
+  lzt::append_memory_fill(cmd_bundle.record_list(), exported_memory, &pattern,
                           sizeof(pattern), size, nullptr);
 
-  lzt::close_command_list(cmd_bundle.list);
+  lzt::close_command_list(cmd_bundle.record_list());
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   ze_external_memory_export_fd_t export_fd = {};
@@ -264,10 +264,10 @@ int main(int argc, char **argv) {
 
   auto verification_memory =
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
-  lzt::append_memory_copy(cmd_bundle.list, verification_memory, imported_memory,
-                          size);
+  lzt::append_memory_copy(cmd_bundle.record_list(), verification_memory,
+                          imported_memory, size);
 
-  lzt::close_command_list(cmd_bundle.list);
+  lzt::close_command_list(cmd_bundle.record_list());
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (size_t i = 0; i < size; i++) {

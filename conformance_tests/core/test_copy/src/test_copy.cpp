@@ -207,15 +207,15 @@ void zeCommandListAppendMemoryFillTests::RunMaxMemoryFillTest(
 
     if (is_shared_system && use_madvise) {
       lzt::append_memory_advise(
-          bundle.list, device, memory, size,
+          bundle.record_list(), device, memory, size,
           ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
     }
 
-    lzt::append_memory_fill(bundle.list, memory, &pattern, pattern_size, size,
-                            nullptr);
+    lzt::append_memory_fill(bundle.record_list(), memory, &pattern,
+                            pattern_size, size, nullptr);
 
     execute_and_sync_command_bundle(bundle, UINT64_MAX);
-    reset_command_list(bundle.list);
+    reset_command_list(bundle.record_list());
     lzt::free_memory_with_allocator_selector(memory, is_shared_system);
     lzt::destroy_command_bundle(bundle);
   }
@@ -2293,7 +2293,8 @@ void zeCommandListAppendMemoryCopyTests::
   void *memory = lzt::allocate_shared_memory_with_allocator_selector(
       alloc_size, is_shared_system);
 
-  lzt::append_memory_copy(cmd_bundle.list, memory, host_memory.data(), 0);
+  lzt::append_memory_copy(cmd_bundle.record_list(), memory, host_memory.data(),
+                          0);
   lzt::execute_and_sync_command_bundle(cmd_bundle,
                                        std::numeric_limits<uint64_t>().max());
 
@@ -2342,8 +2343,9 @@ void zeCommandListAppendMemoryCopyTests::
   ze_copy_region_t dstRegion = {};
   ze_copy_region_t srcRegion = {};
 
-  lzt::append_memory_copy_region(cmd_bundle.list, memory, &dstRegion, 0, 0,
-                                 host_memory.data(), &srcRegion, 0, 0, nullptr);
+  lzt::append_memory_copy_region(cmd_bundle.record_list(), memory, &dstRegion,
+                                 0, 0, host_memory.data(), &srcRegion, 0, 0,
+                                 nullptr);
   lzt::execute_and_sync_command_bundle(cmd_bundle,
                                        std::numeric_limits<uint64_t>().max());
 
@@ -3126,21 +3128,22 @@ protected:
         0u, ordinal, 0u, mode);
 
     lzt::append_memory_set(
-        cmd_bundle.list,
+        cmd_bundle.record_list(),
         static_cast<void *>(static_cast<uint8_t *>(buf_src) + offset),
         &value_after, buf_sz);
     if (offset > 0) {
-      lzt::append_memory_set(cmd_bundle.list, buf_src, &value_before, offset);
+      lzt::append_memory_set(cmd_bundle.record_list(), buf_src, &value_before,
+                             offset);
     }
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     lzt::append_memory_copy(
-        cmd_bundle.list, buf_dst,
+        cmd_bundle.record_list(), buf_dst,
         static_cast<void *>(static_cast<uint8_t *>(buf_src) + offset), buf_sz);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(ref + offset),
-                            buf_dst, buf_sz);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_memory_copy(cmd_bundle.record_list(),
+                            static_cast<void *>(ref + offset), buf_dst, buf_sz);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
-    lzt::reset_command_list(cmd_bundle.list);
+    lzt::reset_command_list(cmd_bundle.record_list());
     for (size_t i = 0; i < offset; i++) {
       EXPECT_EQ(ref[i], 0);
     }
@@ -3210,10 +3213,11 @@ protected:
     memset(temp_dest, 0, buf_sz);
     lzt::write_data_pattern(temp_src, buf_sz, 1);
 
-    lzt::append_memory_copy(cmd_bundle.list, destination_memory, temp_dest,
+    lzt::append_memory_copy(cmd_bundle.record_list(), destination_memory,
+                            temp_dest, buf_sz);
+    lzt::append_memory_copy(cmd_bundle.record_list(), source_memory, temp_src,
                             buf_sz);
-    lzt::append_memory_copy(cmd_bundle.list, source_memory, temp_src, buf_sz);
-    lzt::append_barrier(cmd_bundle.list);
+    lzt::append_barrier(cmd_bundle.record_list());
 
     void *verification_memory = lzt::allocate_host_memory(buf_sz);
 
@@ -3248,13 +3252,13 @@ protected:
       dest_region.depth = depth;
 
       lzt::append_memory_copy_region(
-          cmd_bundle.list, destination_memory, &dest_region, wdth, wdth * hght,
-          source_memory, &src_region, wdth, wdth * hght, nullptr);
-      lzt::append_barrier(cmd_bundle.list);
-      lzt::append_memory_copy(cmd_bundle.list, verification_memory,
+          cmd_bundle.record_list(), destination_memory, &dest_region, wdth,
+          wdth * hght, source_memory, &src_region, wdth, wdth * hght, nullptr);
+      lzt::append_barrier(cmd_bundle.record_list());
+      lzt::append_memory_copy(cmd_bundle.record_list(), verification_memory,
                               destination_memory, buf_sz);
       lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
-      lzt::reset_command_list(cmd_bundle.list);
+      lzt::reset_command_list(cmd_bundle.record_list());
 
       for (size_t z = 0U; z < depth; z++) {
         for (size_t y = 0U; y < height; y++) {

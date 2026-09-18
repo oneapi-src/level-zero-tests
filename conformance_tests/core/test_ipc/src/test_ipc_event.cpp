@@ -99,7 +99,7 @@ static void parent_device_signals(ze_event_handle_t hEvent,
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
   auto cmdbundle = lzt::create_command_bundle<Mode>(context, device);
-  lzt::append_signal_event(cmdbundle.list, hEvent);
+  lzt::append_signal_event(cmdbundle.record_list(), hEvent);
   lzt::execute_and_sync_command_bundle(cmdbundle,
                                        std::numeric_limits<uint64_t>::max());
 

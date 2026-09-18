@@ -121,11 +121,11 @@ static void run_simple_test_kernel_with_dst(ze_context_handle_t context,
 
   auto bundle = lzt::create_command_bundle<Mode>(context, device, 0u);
 
-  lzt::append_launch_function(bundle.list, kernel, &dispatch, event1, 0,
-                              nullptr);
-  lzt::append_barrier(bundle.list, nullptr, 1, &event1);
-  lzt::append_memory_copy(bundle.list, result_buf, dst, kernel_buf_size,
-                          event2);
+  lzt::append_launch_function(bundle.record_list(), kernel, &dispatch, event1,
+                              0, nullptr);
+  lzt::append_barrier(bundle.record_list(), nullptr, 1, &event1);
+  lzt::append_memory_copy(bundle.record_list(), result_buf, dst,
+                          kernel_buf_size, event2);
 
   LOG_INFO
       << "[child=" << child_index << " pid=" << pid

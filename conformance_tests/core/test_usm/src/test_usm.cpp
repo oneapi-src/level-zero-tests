@@ -92,36 +92,36 @@ public:
     LOG_DEBUG << "thread group dimension is ::" << threadGroup;
     ze_group_count_t thread_group_dimensions = {threadGroup, 1, 1};
 
-    lzt::append_memory_copy(cmd_bundle.list, gpu_expected_output_buffer,
-                            host_expected_output_buffer,
-                            output_count * sizeof(uint64_t), nullptr);
-    lzt::append_memory_copy(cmd_bundle.list, gpu_found_output_buffer,
+    lzt::append_memory_copy(
+        cmd_bundle.record_list(), gpu_expected_output_buffer,
+        host_expected_output_buffer, output_count * sizeof(uint64_t), nullptr);
+    lzt::append_memory_copy(cmd_bundle.record_list(), gpu_found_output_buffer,
                             host_found_output_buffer,
                             output_count * sizeof(uint64_t), nullptr);
 
     // Access to pattern buffer from device using the compute kernel to fill
     // data.
-    lzt::append_launch_function(cmd_bundle.list, fill_function,
+    lzt::append_launch_function(cmd_bundle.record_list(), fill_function,
                                 &thread_group_dimensions, nullptr, 0, nullptr);
 
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
 
     // Access to pattern buffer from device using the compute kernel to test
     // data.
-    lzt::append_launch_function(cmd_bundle.list, test_function,
+    lzt::append_launch_function(cmd_bundle.record_list(), test_function,
                                 &thread_group_dimensions, nullptr, 0, nullptr);
 
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
 
-    lzt::append_memory_copy(cmd_bundle.list, host_expected_output_buffer,
-                            gpu_expected_output_buffer,
-                            output_count * sizeof(uint64_t), nullptr);
+    lzt::append_memory_copy(
+        cmd_bundle.record_list(), host_expected_output_buffer,
+        gpu_expected_output_buffer, output_count * sizeof(uint64_t), nullptr);
 
-    lzt::append_memory_copy(cmd_bundle.list, host_found_output_buffer,
+    lzt::append_memory_copy(cmd_bundle.record_list(), host_found_output_buffer,
                             gpu_found_output_buffer,
                             output_count * sizeof(uint64_t), nullptr);
 
-    lzt::close_command_list(cmd_bundle.list);
+    lzt::close_command_list(cmd_bundle.record_list());
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     lzt::destroy_command_bundle(cmd_bundle);
@@ -642,18 +642,14 @@ LZT_TEST_P(
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
   ;
 
-  lzt::append_memory_fill(cmd_bundle.list, static_cast<uint8_t *>(device_mem),
-                          &pattern, pattern_size, size_of_chunk, nullptr);
-  lzt::close_command_list(cmd_bundle.list);
-  if (mode != lzt::command_list_mode_t::immediate) {
-    lzt::execute_command_lists(cmd_bundle.queue, 1, &cmd_bundle.list, nullptr);
-  }
+  lzt::append_memory_fill(cmd_bundle.record_list(),
+                          static_cast<uint8_t *>(device_mem), &pattern,
+                          pattern_size, size_of_chunk, nullptr);
+  lzt::close_command_bundle(cmd_bundle);
+  lzt::submit_command_bundle(cmd_bundle);
+
   memset(host_mem, 0x0, size_of_chunk);
-  if (mode == lzt::command_list_mode_t::immediate) {
-    lzt::synchronize_command_list_host(cmd_bundle.list, UINT64_MAX);
-  } else {
-    lzt::synchronize(cmd_bundle.queue, UINT64_MAX);
-  }
+  lzt::sync_command_bundle(cmd_bundle, std::numeric_limits<uint64_t>::max());
 
   for (uint32_t i = 0; i < size_of_chunk; i++) {
     ASSERT_EQ((device_mem)[i], pattern);
@@ -705,8 +701,8 @@ test_multi_device_shared_memory(std::vector<ze_device_handle_t> devices) {
 
   for (size_t i = 0U; i < devices.size(); i++) {
     auto cmd_bundle = lzt::create_command_bundle<Mode>(devices[i]);
-    lzt::append_memory_fill(cmd_bundle.list, memory, &pattern, pattern_size,
-                            memory_size, nullptr);
+    lzt::append_memory_fill(cmd_bundle.record_list(), memory, &pattern,
+                            pattern_size, memory_size, nullptr);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
     lzt::destroy_command_bundle(cmd_bundle);
 

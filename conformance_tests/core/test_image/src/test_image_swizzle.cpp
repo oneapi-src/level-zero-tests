@@ -94,8 +94,9 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
 
   uint32_t group_size_x, group_size_y, group_size_z;
   ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
-  lzt::append_image_copy_from_mem(bundle.list, img_in, inbuff, nullptr);
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+  lzt::append_image_copy_from_mem(bundle.record_list(), img_in, inbuff,
+                                  nullptr);
+  lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
   lzt::suggest_group_size(kernel, to_u32(image_dims.width), image_dims.height,
                           image_dims.depth, group_size_x, group_size_y,
                           group_size_z);
@@ -117,11 +118,12 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
   ze_group_count_t group_dems = {to_u32(image_dims.width / group_size_x),
                                  image_dims.height / group_size_y,
                                  image_dims.depth / group_size_z};
-  lzt::append_launch_function(bundle.list, kernel, &group_dems, nullptr, 0,
-                              nullptr);
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-  lzt::append_image_copy_to_mem(bundle.list, outbuff, img_out, nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::append_launch_function(bundle.record_list(), kernel, &group_dems,
+                              nullptr, 0, nullptr);
+  lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+  lzt::append_image_copy_to_mem(bundle.record_list(), outbuff, img_out,
+                                nullptr);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   for (size_t i = 0U; i < image_size; i++) {

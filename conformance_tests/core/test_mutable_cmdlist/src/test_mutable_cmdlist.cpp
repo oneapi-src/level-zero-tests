@@ -1682,7 +1682,9 @@ LZT_TEST_F(
                     "supported";
   }
 
-  auto cmd_bundle = lzt::create_command_bundle(context, device, true);
+  auto cmd_bundle =
+      lzt::create_command_bundle<lzt::command_list_mode_t::immediate>(context,
+                                                                      device);
   auto cmd_list = lzt::create_command_list(context, device, false);
   lzt::zeEventPool ep;
   ze_event_handle_t event = nullptr;
@@ -1733,8 +1735,9 @@ LZT_TEST_F(
   lzt::close_command_list(cmd_list);
   lzt::close_command_list(mutableCmdList);
 
-  lzt::append_command_lists_immediate_exp(
-      cmd_bundle.list, 2, tested_cmd_lists.data(), nullptr, 0, nullptr);
+  lzt::append_command_lists_immediate_exp(cmd_bundle.record_list(), 2,
+                                          tested_cmd_lists.data(), nullptr, 0,
+                                          nullptr);
 
   lzt::execute_and_sync_command_bundle(cmd_bundle,
                                        std::numeric_limits<uint64_t>::max());
@@ -1767,8 +1770,9 @@ LZT_TEST_F(
                           event);
   lzt::close_command_list(cmd_list);
 
-  lzt::append_command_lists_immediate_exp(
-      cmd_bundle.list, 2, tested_cmd_lists.data(), nullptr, 0, nullptr);
+  lzt::append_command_lists_immediate_exp(cmd_bundle.record_list(), 2,
+                                          tested_cmd_lists.data(), nullptr, 0,
+                                          nullptr);
 
   lzt::execute_and_sync_command_bundle(cmd_bundle,
                                        std::numeric_limits<uint64_t>::max());

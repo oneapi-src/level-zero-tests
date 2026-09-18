@@ -72,8 +72,8 @@ void RunGivenModulesWithLinkageDependenciesWhenCreatingTest() {
 
   ze_group_count_t group_count = {1, 1, 1};
 
-  lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr, 0,
-                              nullptr);
+  lzt::append_launch_function(cmd_bundle.record_list(), kernel, &group_count,
+                              nullptr, 0, nullptr);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   int expectedResult = (x + y);

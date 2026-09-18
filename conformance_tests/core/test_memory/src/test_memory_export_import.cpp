@@ -189,11 +189,11 @@ export_memory(ze_context_handle_t context, ze_device_handle_t device,
       context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
 
-  lzt::append_memory_fill(cmd_bundle.list, *exported_memory, &pattern,
+  lzt::append_memory_fill(cmd_bundle.record_list(), *exported_memory, &pattern,
                           sizeof(pattern), size, nullptr);
   if (memory_type > memory_type_t::device) {
-    lzt::append_barrier(cmd_bundle.list);
-    lzt::append_image_copy_from_mem(cmd_bundle.list, *image_handle,
+    lzt::append_barrier(cmd_bundle.record_list());
+    lzt::append_image_copy_from_mem(cmd_bundle.record_list(), *image_handle,
                                     *exported_memory, nullptr);
   }
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
@@ -522,13 +522,14 @@ void zeDeviceGetExternalMemoryProperties::
   auto verification_memory =
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
   if (memory_type > memory_type_t::device) {
-    lzt::append_image_copy_to_mem(import_cmd_bundle.list, verification_memory,
-                                  import_image_handle, nullptr);
+    lzt::append_image_copy_to_mem(import_cmd_bundle.record_list(),
+                                  verification_memory, import_image_handle,
+                                  nullptr);
   } else {
-    lzt::append_memory_copy(import_cmd_bundle.list, verification_memory,
-                            imported_memory, size);
+    lzt::append_memory_copy(import_cmd_bundle.record_list(),
+                            verification_memory, imported_memory, size);
   }
-  lzt::close_command_list(import_cmd_bundle.list);
+  lzt::close_command_list(import_cmd_bundle.record_list());
   lzt::execute_and_sync_command_bundle(import_cmd_bundle, UINT64_MAX);
 
   for (size_t i = 0; i < size; i++) {
@@ -574,13 +575,13 @@ void memory_import_thread(ThreadArgs *args) {
   auto verification_memory =
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
   if (args->memory_type > memory_type_t::device) {
-    lzt::append_image_copy_to_mem(cmd_bundle.list, verification_memory,
+    lzt::append_image_copy_to_mem(cmd_bundle.record_list(), verification_memory,
                                   image_handle, nullptr);
   } else {
-    lzt::append_memory_copy(cmd_bundle.list, verification_memory,
+    lzt::append_memory_copy(cmd_bundle.record_list(), verification_memory,
                             imported_memory, size);
   }
-  lzt::close_command_list(cmd_bundle.list);
+  lzt::close_command_list(cmd_bundle.record_list());
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (size_t i = 0U; i < size; i++) {
@@ -719,13 +720,13 @@ void zeDeviceGetExternalMemoryProperties::
   auto verification_memory =
       lzt::allocate_shared_memory(size, 1, 0, 0, device, context);
   if (memory_type > memory_type_t::device) {
-    lzt::append_image_copy_to_mem(cmd_bundle.list, verification_memory,
+    lzt::append_image_copy_to_mem(cmd_bundle.record_list(), verification_memory,
                                   image_handle, nullptr);
   } else {
-    lzt::append_memory_copy(cmd_bundle.list, verification_memory,
+    lzt::append_memory_copy(cmd_bundle.record_list(), verification_memory,
                             imported_memory, size);
   }
-  lzt::close_command_list(cmd_bundle.list);
+  lzt::close_command_list(cmd_bundle.record_list());
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   LOG_DEBUG << "Importer sending done msg " << std::endl;
@@ -803,8 +804,8 @@ void zeDeviceGetExternalMemoryProperties::
   auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, mode);
-  lzt::append_memory_copy(cmd_bundle.list, verification_memory, virtual_address,
-                          size);
+  lzt::append_memory_copy(cmd_bundle.record_list(), verification_memory,
+                          virtual_address, size);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   LOG_DEBUG << "Importer sending done msg " << std::endl;
@@ -902,8 +903,8 @@ void zeDeviceGetExternalMemoryProperties::
   auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0, 0, 0, mode);
-  lzt::append_memory_copy(cmd_bundle.list, verification_memory, virtual_address,
-                          size);
+  lzt::append_memory_copy(cmd_bundle.record_list(), verification_memory,
+                          virtual_address, size);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   for (size_t i = 0; i < size; i++) {

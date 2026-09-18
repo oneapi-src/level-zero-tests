@@ -110,8 +110,9 @@ void ImageFormatFixture::run_test(
     lzt::free_memory_with_allocator_selector(inbuff, is_shared_system);
   };
 
-  lzt::append_image_copy_from_mem(cmd_bundle.list, img_in, inbuff, nullptr);
-  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  lzt::append_image_copy_from_mem(cmd_bundle.record_list(), img_in, inbuff,
+                                  nullptr);
+  lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
   lzt::suggest_group_size(kernel, to_u32(image_dims.width), image_dims.height,
                           image_dims.depth, group_size_x, group_size_y,
                           group_size_z);
@@ -133,12 +134,13 @@ void ImageFormatFixture::run_test(
                                  image_dims.height / group_size_y,
                                  image_dims.depth / group_size_z};
 
-  lzt::append_launch_function(cmd_bundle.list, kernel, &group_dems, nullptr, 0,
-                              nullptr);
-  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  lzt::append_image_copy_to_mem(cmd_bundle.list, outbuff, img_out, nullptr);
-  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-  lzt::close_command_list(cmd_bundle.list);
+  lzt::append_launch_function(cmd_bundle.record_list(), kernel, &group_dems,
+                              nullptr, 0, nullptr);
+  lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+  lzt::append_image_copy_to_mem(cmd_bundle.record_list(), outbuff, img_out,
+                                nullptr);
+  lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+  lzt::close_command_list(cmd_bundle.record_list());
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
   buffer_verify_f(*this);

@@ -96,8 +96,8 @@ void KernelArgumentTests::set_image_pixel(ze_image_handle_t image, uint32_t x,
   auto cmd_bundle = lzt::create_command_bundle<Mode>();
   lzt::ImagePNG32Bit temp_png(img_width, img_height);
   temp_png.set_pixel(x, y, val);
-  lzt::append_image_copy_from_mem(cmd_bundle.list, image, temp_png.raw_data(),
-                                  nullptr);
+  lzt::append_image_copy_from_mem(cmd_bundle.record_list(), image,
+                                  temp_png.raw_data(), nullptr);
   lzt::execute_and_sync_command_bundle(cmd_bundle,
                                        std::numeric_limits<uint64_t>::max());
   lzt::reset_command_bundle(cmd_bundle);
@@ -111,8 +111,8 @@ uint32_t KernelArgumentTests::get_image_pixel(ze_image_handle_t image,
 
   auto cmd_bundle = lzt::create_command_bundle<Mode>();
   lzt::ImagePNG32Bit temp_png(img_width, img_height);
-  lzt::append_image_copy_to_mem(cmd_bundle.list, temp_png.raw_data(), image,
-                                nullptr);
+  lzt::append_image_copy_to_mem(cmd_bundle.record_list(), temp_png.raw_data(),
+                                image, nullptr);
   lzt::execute_and_sync_command_bundle(cmd_bundle,
                                        std::numeric_limits<uint64_t>::max());
   lzt::reset_command_bundle(cmd_bundle);

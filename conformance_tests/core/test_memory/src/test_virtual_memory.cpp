@@ -556,12 +556,14 @@ void RunGivenMappedReadWriteMemoryThenFillAndCopyWithMappedVirtualMemory(
 
   int8_t pattern = 9;
   memory = lzt::allocate_shared_memory(test.allocationSize, test.pageSize);
-  lzt::append_memory_fill(bundle.list, test.reservedVirtualMemory, &pattern,
-                          sizeof(pattern), test.allocationSize, nullptr);
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-  lzt::append_memory_copy(bundle.list, memory, test.reservedVirtualMemory,
-                          test.allocationSize, nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::append_memory_fill(bundle.record_list(), test.reservedVirtualMemory,
+                          &pattern, sizeof(pattern), test.allocationSize,
+                          nullptr);
+  lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+  lzt::append_memory_copy(bundle.record_list(), memory,
+                          test.reservedVirtualMemory, test.allocationSize,
+                          nullptr);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   uint8_t *data = reinterpret_cast<uint8_t *>(memory);
   for (size_t i = 0U; i < test.allocationSize; i++) {
@@ -668,12 +670,14 @@ void RunGivenMappedMultiplePhysicalMemoryAcrossAvailableDevicesWhenFillAndCopyWi
 
   int8_t pattern = 9;
   memory = lzt::allocate_shared_memory(totalAllocationSize, test.pageSize);
-  lzt::append_memory_fill(bundle.list, test.reservedVirtualMemory, &pattern,
-                          sizeof(pattern), totalAllocationSize, nullptr);
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-  lzt::append_memory_copy(bundle.list, memory, test.reservedVirtualMemory,
-                          totalAllocationSize, nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::append_memory_fill(bundle.record_list(), test.reservedVirtualMemory,
+                          &pattern, sizeof(pattern), totalAllocationSize,
+                          nullptr);
+  lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+  lzt::append_memory_copy(bundle.record_list(), memory,
+                          test.reservedVirtualMemory, totalAllocationSize,
+                          nullptr);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   uint8_t *data = reinterpret_cast<uint8_t *>(memory);
   for (size_t i = 0U; i < totalAllocationSize; i++) {
@@ -802,20 +806,23 @@ void RunGivenVirtualMemoryMappedToMultipleAllocationsWhenFullAddressUsageInKerne
   thread_group_dimensions.groupCountZ = 1;
 
   uint8_t pattern = 1;
-  lzt::append_memory_fill(bundle.list, test.reservedVirtualMemory, &pattern,
-                          sizeof(pattern), totalAllocationSize, nullptr);
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+  lzt::append_memory_fill(bundle.record_list(), test.reservedVirtualMemory,
+                          &pattern, sizeof(pattern), totalAllocationSize,
+                          nullptr);
+  lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
 
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchKernel(
-      bundle.list, function, &thread_group_dimensions, nullptr, 0, nullptr));
+      bundle.record_list(), function, &thread_group_dimensions, nullptr, 0,
+      nullptr));
 
   EXPECT_ZE_RESULT_SUCCESS(
-      zeCommandListAppendBarrier(bundle.list, nullptr, 0, nullptr));
+      zeCommandListAppendBarrier(bundle.record_list(), nullptr, 0, nullptr));
 
-  lzt::append_memory_copy(bundle.list, memory, test.reservedVirtualMemory,
-                          totalAllocationSize, nullptr);
+  lzt::append_memory_copy(bundle.record_list(), memory,
+                          test.reservedVirtualMemory, totalAllocationSize,
+                          nullptr);
 
-  lzt::close_command_list(bundle.list);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   lzt::validate_data_pattern(memory, totalAllocationSize, -1);
@@ -931,12 +938,13 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
   for (size_t i = 0U; i < devices.size(); i++) {
     uint64_t offsetAddr =
         reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset;
-    lzt::append_memory_fill(bundle.list, reinterpret_cast<void *>(offsetAddr),
-                            &pattern, sizeof(pattern), allocationSize, nullptr);
+    lzt::append_memory_fill(bundle.record_list(),
+                            reinterpret_cast<void *>(offsetAddr), &pattern,
+                            sizeof(pattern), allocationSize, nullptr);
     offset += allocationSize;
   }
 
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+  lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
 
   offset = 0;
   for (size_t i = 0U; i < devices.size(); i++) {
@@ -944,12 +952,12 @@ void dataCheckMemoryReservations(enum MemoryReservationTestType type,
         reinterpret_cast<uint64_t>(reservedVirtualMemory) + offset;
     uint64_t offsetHostAddr = reinterpret_cast<uint64_t>(memory) + offset;
     lzt::append_memory_copy(
-        bundle.list, reinterpret_cast<void *>(offsetHostAddr),
+        bundle.record_list(), reinterpret_cast<void *>(offsetHostAddr),
         reinterpret_cast<void *>(offsetAddr), allocationSize, nullptr);
     offset += allocationSize;
   }
 
-  lzt::close_command_list(bundle.list);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   uint8_t *data = reinterpret_cast<uint8_t *>(memory);
   for (size_t i = 0U; i < allocationSize * devices.size(); i++) {
@@ -1117,12 +1125,12 @@ LZT_TEST_P(
   // GPU copy test with cross check
   int8_t seven = 7;
   auto bundle = lzt::create_command_bundle(device, mode);
-  lzt::append_memory_fill(bundle.list, aux_buffer, &seven, sizeof(seven),
-                          alloc_size, nullptr);
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-  lzt::append_memory_copy(bundle.list, virtual_memory_0, aux_buffer, alloc_size,
-                          nullptr, 0, nullptr);
-  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(bundle.list));
+  lzt::append_memory_fill(bundle.record_list(), aux_buffer, &seven,
+                          sizeof(seven), alloc_size, nullptr);
+  lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+  lzt::append_memory_copy(bundle.record_list(), virtual_memory_0, aux_buffer,
+                          alloc_size, nullptr, 0, nullptr);
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(bundle.record_list()));
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::destroy_command_bundle(bundle);
 
@@ -1235,26 +1243,26 @@ LZT_TEST_P(
   auto bundle = lzt::create_command_bundle(device, mode);
   // Write pattern_0 through virtual_memory_0, then read it back through
   // virtual_memory_1 to confirm both ranges alias the same physical memory.
-  lzt::append_memory_fill(bundle.list, aux_buffer, &pattern_0,
+  lzt::append_memory_fill(bundle.record_list(), aux_buffer, &pattern_0,
                           sizeof(pattern_0), alloc_size, nullptr);
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-  lzt::append_memory_copy(bundle.list, virtual_memory_0, aux_buffer, alloc_size,
-                          nullptr);
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-  lzt::append_memory_copy(bundle.list, verify_buffer_0, virtual_memory_1,
+  lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+  lzt::append_memory_copy(bundle.record_list(), virtual_memory_0, aux_buffer,
                           alloc_size, nullptr);
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
+  lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+  lzt::append_memory_copy(bundle.record_list(), verify_buffer_0,
+                          virtual_memory_1, alloc_size, nullptr);
+  lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
   // Now write pattern_1 through virtual_memory_1 and read it back through
   // virtual_memory_0 to confirm aliasing in the other direction.
-  lzt::append_memory_fill(bundle.list, aux_buffer, &pattern_1,
+  lzt::append_memory_fill(bundle.record_list(), aux_buffer, &pattern_1,
                           sizeof(pattern_1), alloc_size, nullptr);
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-  lzt::append_memory_copy(bundle.list, virtual_memory_1, aux_buffer, alloc_size,
-                          nullptr);
-  lzt::append_barrier(bundle.list, nullptr, 0, nullptr);
-  lzt::append_memory_copy(bundle.list, verify_buffer_1, virtual_memory_0,
+  lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+  lzt::append_memory_copy(bundle.record_list(), virtual_memory_1, aux_buffer,
                           alloc_size, nullptr);
-  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(bundle.list));
+  lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
+  lzt::append_memory_copy(bundle.record_list(), verify_buffer_1,
+                          virtual_memory_0, alloc_size, nullptr);
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(bundle.record_list()));
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::destroy_command_bundle(bundle);
 
@@ -1283,9 +1291,9 @@ LZT_TEST_P(
                           physical_device_memory, 0,
                           ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY);
   auto verify_bundle = lzt::create_command_bundle(device, mode);
-  lzt::append_memory_copy(verify_bundle.list, verify_buffer_0, virtual_memory_2,
-                          alloc_size, nullptr);
-  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(verify_bundle.list));
+  lzt::append_memory_copy(verify_bundle.record_list(), verify_buffer_0,
+                          virtual_memory_2, alloc_size, nullptr);
+  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(verify_bundle.record_list()));
   lzt::execute_and_sync_command_bundle(verify_bundle, UINT64_MAX);
   lzt::destroy_command_bundle(verify_bundle);
   for (size_t i = 0; i < alloc_size; i++) {
@@ -1368,9 +1376,9 @@ LZT_TEST_F(
     }
   }
 }
-
+template <lzt::command_list_mode_t Mode>
 void RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
-    zeVirtualMemoryTests &test, bool is_immediate) {
+    zeVirtualMemoryTests &test) {
   // Query page granularity using the actual allocation size.
   lzt::query_page_size(test.context, test.device, test.allocationSize,
                        &test.pageSize);
@@ -1391,17 +1399,17 @@ void RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnch
                                   &virtualMemory);
   ASSERT_NE(nullptr, virtualMemory);
 
-  auto bundle = lzt::create_command_bundle(test.device, is_immediate);
+  auto bundle = lzt::create_command_bundle<Mode>(test.device);
 
   // Step 1: map virtual -> physical[0..chunkSize) and fill with patternA
   ASSERT_ZE_RESULT_SUCCESS(
       zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory, 0,
                       ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
   const uint8_t patternA = 0xAA;
-  lzt::reset_command_list(bundle.list);
-  lzt::append_memory_fill(bundle.list, virtualMemory, &patternA,
+  lzt::reset_command_list(bundle.record_list());
+  lzt::append_memory_fill(bundle.record_list(), virtualMemory, &patternA,
                           sizeof(patternA), chunkSize, nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
 
@@ -1411,10 +1419,10 @@ void RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnch
       zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory,
                       chunkSize, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
   const uint8_t patternB = 0xBB;
-  lzt::reset_command_list(bundle.list);
-  lzt::append_memory_fill(bundle.list, virtualMemory, &patternB,
+  lzt::reset_command_list(bundle.record_list());
+  lzt::append_memory_fill(bundle.record_list(), virtualMemory, &patternB,
                           sizeof(patternB), chunkSize, nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
 
@@ -1424,10 +1432,10 @@ void RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnch
   ASSERT_ZE_RESULT_SUCCESS(
       zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory, 0,
                       ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
-  lzt::reset_command_list(bundle.list);
-  lzt::append_memory_copy(bundle.list, readbackBuffer, virtualMemory, chunkSize,
-                          nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::reset_command_list(bundle.record_list());
+  lzt::append_memory_copy(bundle.record_list(), readbackBuffer, virtualMemory,
+                          chunkSize, nullptr);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
 
@@ -1445,10 +1453,10 @@ void RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnch
   ASSERT_ZE_RESULT_SUCCESS(
       zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory,
                       chunkSize, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
-  lzt::reset_command_list(bundle.list);
-  lzt::append_memory_copy(bundle.list, readbackBuffer, virtualMemory, chunkSize,
-                          nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::reset_command_list(bundle.record_list());
+  lzt::append_memory_copy(bundle.record_list(), readbackBuffer, virtualMemory,
+                          chunkSize, nullptr);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
 
@@ -1466,10 +1474,10 @@ void RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnch
   ASSERT_ZE_RESULT_SUCCESS(
       zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory, 0,
                       ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
-  lzt::reset_command_list(bundle.list);
-  lzt::append_memory_copy(bundle.list, readbackBuffer, virtualMemory, chunkSize,
-                          nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::reset_command_list(bundle.record_list());
+  lzt::append_memory_copy(bundle.record_list(), readbackBuffer, virtualMemory,
+                          chunkSize, nullptr);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
 
@@ -1492,19 +1500,20 @@ void RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnch
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetRegionUnchanged) {
-  RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
-      *this, false);
+  RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged<
+      lzt::command_list_mode_t::regular>(*this);
 }
 
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenPhysicalMemoryMappedAtOffsetOnImmediateCmdListThenDataWrittenToOffsetAndPreOffsetRegionUnchanged) {
-  RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
-      *this, true);
+  RunGivenPhysicalMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged<
+      lzt::command_list_mode_t::immediate>(*this);
 }
 
+template <lzt::command_list_mode_t Mode>
 void RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
-    zeVirtualMemoryTests &test, bool is_immediate) {
+    zeVirtualMemoryTests &test) {
   // Query page granularity using the actual allocation size.
   lzt::query_page_size(test.context, test.device, test.allocationSize,
                        &test.pageSize);
@@ -1523,7 +1532,7 @@ void RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffset
                                   &virtualMemory);
   ASSERT_NE(nullptr, virtualMemory);
 
-  auto bundle = lzt::create_command_bundle(test.device, is_immediate);
+  auto bundle = lzt::create_command_bundle<Mode>(test.device);
 
   // Step 1: map virtual -> physical[0..chunkSize) and fill with patternA via
   // device
@@ -1531,10 +1540,10 @@ void RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffset
       zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory, 0,
                       ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
   const uint8_t patternA = 0xAA;
-  lzt::reset_command_list(bundle.list);
-  lzt::append_memory_fill(bundle.list, virtualMemory, &patternA,
+  lzt::reset_command_list(bundle.record_list());
+  lzt::append_memory_fill(bundle.record_list(), virtualMemory, &patternA,
                           sizeof(patternA), chunkSize, nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
 
@@ -1544,10 +1553,10 @@ void RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffset
       zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory,
                       chunkSize, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
   const uint8_t patternB = 0xBB;
-  lzt::reset_command_list(bundle.list);
-  lzt::append_memory_fill(bundle.list, virtualMemory, &patternB,
+  lzt::reset_command_list(bundle.record_list());
+  lzt::append_memory_fill(bundle.record_list(), virtualMemory, &patternB,
                           sizeof(patternB), chunkSize, nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
 
@@ -1557,10 +1566,10 @@ void RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffset
   ASSERT_ZE_RESULT_SUCCESS(
       zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory, 0,
                       ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
-  lzt::reset_command_list(bundle.list);
-  lzt::append_memory_copy(bundle.list, readbackBuffer, virtualMemory, chunkSize,
-                          nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::reset_command_list(bundle.record_list());
+  lzt::append_memory_copy(bundle.record_list(), readbackBuffer, virtualMemory,
+                          chunkSize, nullptr);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
 
@@ -1578,10 +1587,10 @@ void RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffset
   ASSERT_ZE_RESULT_SUCCESS(
       zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory,
                       chunkSize, ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
-  lzt::reset_command_list(bundle.list);
-  lzt::append_memory_copy(bundle.list, readbackBuffer, virtualMemory, chunkSize,
-                          nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::reset_command_list(bundle.record_list());
+  lzt::append_memory_copy(bundle.record_list(), readbackBuffer, virtualMemory,
+                          chunkSize, nullptr);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
 
@@ -1599,10 +1608,10 @@ void RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffset
   ASSERT_ZE_RESULT_SUCCESS(
       zeVirtualMemMap(test.context, virtualMemory, chunkSize, physicalMemory, 0,
                       ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE));
-  lzt::reset_command_list(bundle.list);
-  lzt::append_memory_copy(bundle.list, readbackBuffer, virtualMemory, chunkSize,
-                          nullptr);
-  lzt::close_command_list(bundle.list);
+  lzt::reset_command_list(bundle.record_list());
+  lzt::append_memory_copy(bundle.record_list(), readbackBuffer, virtualMemory,
+                          chunkSize, nullptr);
+  lzt::close_command_list(bundle.record_list());
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::virtual_memory_unmap(test.context, virtualMemory, chunkSize);
 
@@ -1625,15 +1634,15 @@ void RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffset
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetRegionUnchanged) {
-  RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
-      *this, false);
+  RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged<
+      lzt::command_list_mode_t::regular>(*this);
 }
 
 LZT_TEST_F(
     zeVirtualMemoryTests,
     GivenPhysicalHostMemoryMappedAtOffsetOnImmediateCmdListThenDataWrittenToOffsetAndPreOffsetRegionUnchanged) {
-  RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged(
-      *this, true);
+  RunGivenPhysicalHostMemoryMappedAtOffsetThenDataWrittenToOffsetAndPreOffsetUnchanged<
+      lzt::command_list_mode_t::immediate>(*this);
 }
 
 } // namespace

@@ -137,7 +137,7 @@ void zeModuleCreateTests::
         mod, global_name.c_str(), nullptr, &global_pointer));
     EXPECT_NE(nullptr, global_pointer);
     void *memory = lzt::allocate_shared_memory(sizeof(expected_value));
-    lzt::append_memory_copy(bundle.list, memory, global_pointer,
+    lzt::append_memory_copy(bundle.record_list(), memory, global_pointer,
                             sizeof(expected_value));
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     typed_global_pointer = static_cast<int *>(memory);
@@ -184,20 +184,20 @@ void zeModuleCreateTests::
     void *memory = lzt::allocate_shared_memory(sizeof(expected_value));
     typed_global_pointer = static_cast<int *>(memory);
     *typed_global_pointer = expected_value;
-    lzt::append_memory_copy(bundle.list, global_pointer, memory,
+    lzt::append_memory_copy(bundle.record_list(), global_pointer, memory,
                             sizeof(expected_value));
     if constexpr (Mode == lzt::command_list_mode_t::regular) {
-      lzt::close_command_list(bundle.list);
+      lzt::close_command_list(bundle.record_list());
     }
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     *typed_global_pointer = ~expected_value;
     if constexpr (Mode == lzt::command_list_mode_t::regular) {
-      lzt::reset_command_list(bundle.list);
+      lzt::reset_command_list(bundle.record_list());
     }
-    lzt::append_memory_copy(bundle.list, memory, global_pointer,
+    lzt::append_memory_copy(bundle.record_list(), memory, global_pointer,
                             sizeof(expected_value));
     if constexpr (Mode == lzt::command_list_mode_t::regular) {
-      lzt::close_command_list(bundle.list);
+      lzt::close_command_list(bundle.record_list());
     }
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     EXPECT_EQ(expected_value, *typed_global_pointer);
@@ -272,7 +272,8 @@ void zeModuleCreateTests::
           mod, global_name.c_str(), nullptr, &global_pointer));
       EXPECT_NE(nullptr, global_pointer);
       void *memory = lzt::allocate_shared_memory(sizeof(i));
-      lzt::append_memory_copy(bundle.list, memory, global_pointer, sizeof(i));
+      lzt::append_memory_copy(bundle.record_list(), memory, global_pointer,
+                              sizeof(i));
       lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
       typed_global_pointer = static_cast<int *>(memory);
       EXPECT_EQ(i, *typed_global_pointer);
@@ -320,18 +321,20 @@ void zeModuleCreateTests::
       void *memory = lzt::allocate_shared_memory(sizeof(i));
       typed_global_pointer = static_cast<int *>(memory);
       *typed_global_pointer = i + 2;
-      lzt::append_memory_copy(bundle.list, global_pointer, memory, sizeof(i));
+      lzt::append_memory_copy(bundle.record_list(), global_pointer, memory,
+                              sizeof(i));
       if constexpr (Mode == lzt::command_list_mode_t::regular) {
-        lzt::close_command_list(bundle.list);
+        lzt::close_command_list(bundle.record_list());
       }
       lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
       if constexpr (Mode == lzt::command_list_mode_t::regular) {
-        lzt::reset_command_list(bundle.list);
+        lzt::reset_command_list(bundle.record_list());
       }
       *typed_global_pointer = 0;
-      lzt::append_memory_copy(bundle.list, memory, global_pointer, sizeof(i));
+      lzt::append_memory_copy(bundle.record_list(), memory, global_pointer,
+                              sizeof(i));
       if constexpr (Mode == lzt::command_list_mode_t::regular) {
-        lzt::close_command_list(bundle.list);
+        lzt::close_command_list(bundle.record_list());
       }
       lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
       EXPECT_EQ(i + 2, *typed_global_pointer);
@@ -377,14 +380,14 @@ void zeModuleCreateTests::
         mod, global_name.c_str(), nullptr, &global_pointer));
     EXPECT_NE(nullptr, global_pointer);
     void *memory = lzt::allocate_shared_memory(sizeof(expected_initial_value));
-    lzt::append_memory_copy(bundle.list, memory, global_pointer,
+    lzt::append_memory_copy(bundle.record_list(), memory, global_pointer,
                             sizeof(expected_initial_value));
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     typed_global_pointer = static_cast<int *>(memory);
     EXPECT_EQ(expected_initial_value, *typed_global_pointer);
     lzt::create_and_execute_function(device, mod, "test", 1U, nullptr, Mode);
-    lzt::reset_command_list(bundle.list);
-    lzt::append_memory_copy(bundle.list, memory, global_pointer,
+    lzt::reset_command_list(bundle.record_list());
+    lzt::append_memory_copy(bundle.record_list(), memory, global_pointer,
                             sizeof(expected_updated_value));
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
     typed_global_pointer = static_cast<int *>(memory);
@@ -577,10 +580,11 @@ void zeModuleCreateTests::
   thread_group_dimensions.groupCountZ = 1;
 
   EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchKernel(
-      bundle.list, function, &thread_group_dimensions, nullptr, 0, nullptr));
+      bundle.record_list(), function, &thread_group_dimensions, nullptr, 0,
+      nullptr));
 
   EXPECT_ZE_RESULT_SUCCESS(
-      zeCommandListAppendBarrier(bundle.list, nullptr, 0, nullptr));
+      zeCommandListAppendBarrier(bundle.record_list(), nullptr, 0, nullptr));
 
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
@@ -738,8 +742,8 @@ void zeModuleCreateTests::
     lzt::set_argument_value(kernel, 1, sizeof(addval), &addval);
 
     ze_group_count_t group_dim = {1, 1, 1};
-    lzt::append_launch_function(bundle.list, kernel, &group_dim, nullptr, 0,
-                                nullptr);
+    lzt::append_launch_function(bundle.record_list(), kernel, &group_dim,
+                                nullptr, 0, nullptr);
 
     lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
@@ -881,12 +885,12 @@ protected:
     auto wait_events_initial = events_host_to_kernel;
     if (type == FUNCTION) {
       EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchKernel(
-          bundle.list, function, &th_group_dim, signal_event, num_wait,
+          bundle.record_list(), function, &th_group_dim, signal_event, num_wait,
           p_wait_events));
     } else if (type == FUNCTION_INDIRECT) {
       ze_group_count_t *tg_dim = static_cast<ze_group_count_t *>(args_buff);
       EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchKernelIndirect(
-          bundle.list, function, tg_dim, signal_event, num_wait,
+          bundle.record_list(), function, tg_dim, signal_event, num_wait,
           p_wait_events));
 
       // Intentionally update args_buff after Launch API
@@ -921,8 +925,8 @@ protected:
           static_cast<ze_group_count_t *>(args_buff);
       auto functions_initial = function_list;
       EXPECT_ZE_RESULT_SUCCESS(zeCommandListAppendLaunchMultipleKernelsIndirect(
-          bundle.list, 2, function_list.data(), num_launch_arg, mult_tg_dim,
-          signal_event, num_wait, p_wait_events));
+          bundle.record_list(), 2, function_list.data(), num_launch_arg,
+          mult_tg_dim, signal_event, num_wait, p_wait_events));
       for (size_t i = 0U; i < function_list.size(); i++) {
         ASSERT_EQ(function_list[i], functions_initial[i]);
       }
@@ -935,7 +939,7 @@ protected:
       EXPECT_EQ(events_host_to_kernel[i], wait_events_initial[i]);
     }
     EXPECT_ZE_RESULT_SUCCESS(
-        zeCommandListAppendBarrier(bundle.list, nullptr, 0, nullptr));
+        zeCommandListAppendBarrier(bundle.record_list(), nullptr, 0, nullptr));
 
     lzt::close_command_bundle(bundle);
     lzt::submit_command_bundle(bundle);
@@ -1407,8 +1411,8 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction() {
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
-  lzt::append_launch_function(bundle.list, kernel, &group_count, nullptr, 0,
-                              nullptr);
+  lzt::append_launch_function(bundle.record_list(), kernel, &group_count,
+                              nullptr, 0, nullptr);
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   // validate
@@ -1559,12 +1563,12 @@ LZT_TEST_P(
   LOG_DEBUG << "[Z] Size: " << group_size_z
             << " Count: " << group_count.groupCountZ;
 
-  lzt::append_memory_copy(bundle.list, buffer_b, buffer_a, size);
-  lzt::append_barrier(bundle.list);
-  lzt::append_launch_function(bundle.list, kernel, &group_count, nullptr, 0,
-                              nullptr);
-  lzt::append_barrier(bundle.list);
-  lzt::append_memory_copy(bundle.list, buffer_a, buffer_b, size);
+  lzt::append_memory_copy(bundle.record_list(), buffer_b, buffer_a, size);
+  lzt::append_barrier(bundle.record_list());
+  lzt::append_launch_function(bundle.record_list(), kernel, &group_count,
+                              nullptr, 0, nullptr);
+  lzt::append_barrier(bundle.record_list());
+  lzt::append_memory_copy(bundle.record_list(), buffer_a, buffer_b, size);
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
 
   // validation
@@ -1733,8 +1737,8 @@ void zeModuleCreateTests::
   }
 
   auto bundle = lzt::create_command_bundle<Mode>();
-  lzt::append_memory_copy(bundle.list, global_pointer, memory_in, data_size,
-                          nullptr);
+  lzt::append_memory_copy(bundle.record_list(), global_pointer, memory_in,
+                          data_size, nullptr);
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   const std::string kernel_name = "test_global_data";
   lzt::create_and_execute_function(device, module, kernel_name, work_group_size,

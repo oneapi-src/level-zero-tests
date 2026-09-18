@@ -759,15 +759,15 @@ LZT_TEST_P(
       }
 
       for (uint32_t i = 0; i < num_buffers; i++) {
-        lzt::append_memory_fill(bundle.list, dev_fill_buf[i], &pattern[i], 1,
-                                size, nullptr);
-        lzt::append_barrier(bundle.list);
-        lzt::append_memory_copy(bundle.list, dev_copy_buf[i], dev_fill_buf[i],
-                                size);
-        lzt::append_barrier(bundle.list);
-        lzt::append_memory_copy(bundle.list, host_verify_buf[i],
+        lzt::append_memory_fill(bundle.record_list(), dev_fill_buf[i],
+                                &pattern[i], 1, size, nullptr);
+        lzt::append_barrier(bundle.record_list());
+        lzt::append_memory_copy(bundle.record_list(), dev_copy_buf[i],
+                                dev_fill_buf[i], size);
+        lzt::append_barrier(bundle.record_list());
+        lzt::append_memory_copy(bundle.record_list(), host_verify_buf[i],
                                 dev_copy_buf[i], size);
-        lzt::append_barrier(bundle.list);
+        lzt::append_barrier(bundle.record_list());
       }
 
       lzt::close_command_bundle(bundle);
@@ -967,9 +967,9 @@ void zeHostSystemMemoryDeviceTests::
   lzt::write_data_pattern(memory_, size_, 1);
   uint8_t *other_system_memory = new uint8_t[size_]();
 
-  lzt::append_memory_copy(cmd_bundle.list, other_system_memory, memory_, size_,
-                          nullptr);
-  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  lzt::append_memory_copy(cmd_bundle.record_list(), other_system_memory,
+                          memory_, size_, nullptr);
+  lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   lzt::validate_data_pattern(other_system_memory, size_, 1);
   lzt::destroy_command_bundle(cmd_bundle);
@@ -1000,8 +1000,8 @@ void zeHostSystemMemoryDeviceTests::
   auto cmd_bundle = lzt::create_command_bundle<Mode>();
   const uint8_t value = 0x55;
   lzt::write_data_pattern(memory_, size_, 1);
-  lzt::append_memory_set(cmd_bundle.list, memory_, &value, size_);
-  lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+  lzt::append_memory_set(cmd_bundle.record_list(), memory_, &value, size_);
+  lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
   for (unsigned int ui = 0; ui < size_; ui++) {
     EXPECT_EQ(value, static_cast<uint8_t *>(memory_)[ui]);

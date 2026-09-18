@@ -97,12 +97,13 @@ LZT_TEST_P(
     case MemoryHint::AdviseSourceToSystem:
     case MemoryHint::AdviseBothToSystem:
       lzt::append_memory_advise(
-          cmd_bundle.list, device, source, buffer_size,
+          cmd_bundle.record_list(), device, source, buffer_size,
           ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
       break;
     case MemoryHint::PrefetchSource:
     case MemoryHint::PrefetchBoth:
-      lzt::append_memory_prefetch(cmd_bundle.list, source, buffer_size);
+      lzt::append_memory_prefetch(cmd_bundle.record_list(), source,
+                                  buffer_size);
       break;
     }
   }
@@ -112,12 +113,13 @@ LZT_TEST_P(
     case MemoryHint::AdviseDestinationToSystem:
     case MemoryHint::AdviseBothToSystem:
       lzt::append_memory_advise(
-          cmd_bundle.list, device, result, buffer_size,
+          cmd_bundle.record_list(), device, result, buffer_size,
           ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION);
       break;
     case MemoryHint::PrefetchDestination:
     case MemoryHint::PrefetchBoth:
-      lzt::append_memory_prefetch(cmd_bundle.list, result, buffer_size);
+      lzt::append_memory_prefetch(cmd_bundle.record_list(), result,
+                                  buffer_size);
       break;
     }
   }
@@ -125,7 +127,7 @@ LZT_TEST_P(
   const uint32_t group_count_x =
       to_u32(buffer_size / (sizeof(int) * group_size));
   ze_group_count_t thread_group_dimensions = {group_count_x, 1, 1};
-  lzt::append_launch_function(cmd_bundle.list, function,
+  lzt::append_launch_function(cmd_bundle.record_list(), function,
                               &thread_group_dimensions, nullptr, 0, nullptr);
   lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 

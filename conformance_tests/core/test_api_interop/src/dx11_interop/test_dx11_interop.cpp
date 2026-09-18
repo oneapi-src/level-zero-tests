@@ -103,7 +103,7 @@ void test_signal_fence(const ComPtr<ID3D11Device5> &dx11_device5,
       .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT,
       .value = wait_value};
   lzt::append_signal_external_semaphore(
-      l0_cmd_bundle.list, 1, &external_semaphore_handle,
+      l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
       &semaphore_signal_params, nullptr, 0, nullptr);
 
   lzt::execute_and_sync_command_bundle(l0_cmd_bundle,
@@ -172,9 +172,10 @@ void test_wait_fence(const ComPtr<ID3D11Device5> &dx11_device5,
       .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
       .value = wait_value};
   lzt::append_wait_external_semaphore(
-      l0_cmd_bundle.list, 1, &external_semaphore_handle, &semaphore_wait_params,
-      l0_after_wait_event, 0, nullptr);
-  lzt::append_wait_on_events(l0_cmd_bundle.list, 1, &l0_after_wait_event);
+      l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
+      &semaphore_wait_params, l0_after_wait_event, 0, nullptr);
+  lzt::append_wait_on_events(l0_cmd_bundle.record_list(), 1,
+                             &l0_after_wait_event);
 
   lzt::execute_and_sync_command_bundle(l0_cmd_bundle,
                                        std::numeric_limits<uint64_t>::max());
@@ -327,10 +328,12 @@ struct DX11InteroperabilityMultiPlanarImageTests
             ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
             ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u);
 
-    lzt::append_image_copy_to_mem(l0_cmd_bundle.list, dst_y_plane_values.data(),
-                                  y_plane_view, nullptr);
-    lzt::append_image_copy_to_mem(
-        l0_cmd_bundle.list, dst_uv_plane_values.data(), uv_plane_view, nullptr);
+    lzt::append_image_copy_to_mem(l0_cmd_bundle.record_list(),
+                                  dst_y_plane_values.data(), y_plane_view,
+                                  nullptr);
+    lzt::append_image_copy_to_mem(l0_cmd_bundle.record_list(),
+                                  dst_uv_plane_values.data(), uv_plane_view,
+                                  nullptr);
     lzt::execute_and_sync_command_bundle(l0_cmd_bundle,
                                          std::numeric_limits<uint64_t>::max());
 
@@ -394,13 +397,13 @@ struct DX11InteroperabilityMultiPlanarImageTests
         .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
         .value = wait_value};
     lzt::append_wait_external_semaphore(
-        l0_cmd_bundle.list, 1, &external_semaphore_handle,
+        l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
         &semaphore_wait_params, l0_after_wait_event, 0, nullptr);
 
-    lzt::append_image_copy_to_mem(l0_cmd_bundle.list, dst_y_plane_values.data(),
-                                  y_plane_view, nullptr, 1,
-                                  &l0_after_wait_event);
-    lzt::append_image_copy_to_mem(l0_cmd_bundle.list,
+    lzt::append_image_copy_to_mem(l0_cmd_bundle.record_list(),
+                                  dst_y_plane_values.data(), y_plane_view,
+                                  nullptr, 1, &l0_after_wait_event);
+    lzt::append_image_copy_to_mem(l0_cmd_bundle.record_list(),
                                   dst_uv_plane_values.data(), uv_plane_view,
                                   nullptr, 1, &l0_after_wait_event);
     lzt::execute_and_sync_command_bundle(l0_cmd_bundle,
@@ -690,8 +693,9 @@ LZT_TEST_P(DX11InteroperabilityImageTests,
           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
           0u, 0u);
 
-  lzt::append_image_copy_to_mem(l0_cmd_bundle.list, dst_image_values.data(),
-                                imported_image, nullptr);
+  lzt::append_image_copy_to_mem(l0_cmd_bundle.record_list(),
+                                dst_image_values.data(), imported_image,
+                                nullptr);
   lzt::execute_and_sync_command_bundle(l0_cmd_bundle,
                                        std::numeric_limits<uint64_t>::max());
 
@@ -755,12 +759,12 @@ LZT_TEST_P(
       .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
       .value = wait_value};
   lzt::append_wait_external_semaphore(
-      l0_cmd_bundle.list, 1, &external_semaphore_handle, &semaphore_wait_params,
-      l0_after_wait_event, 0, nullptr);
+      l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
+      &semaphore_wait_params, l0_after_wait_event, 0, nullptr);
 
-  lzt::append_image_copy_to_mem(l0_cmd_bundle.list, dst_image_values.data(),
-                                imported_image, nullptr, 1,
-                                &l0_after_wait_event);
+  lzt::append_image_copy_to_mem(l0_cmd_bundle.record_list(),
+                                dst_image_values.data(), imported_image,
+                                nullptr, 1, &l0_after_wait_event);
   lzt::execute_and_sync_command_bundle(l0_cmd_bundle,
                                        std::numeric_limits<uint64_t>::max());
 

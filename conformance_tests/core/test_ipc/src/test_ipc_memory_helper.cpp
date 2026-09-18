@@ -214,7 +214,7 @@ static void child_subdevice_access_test_opaque(size_t size,
             ? lzt::create_command_bundle<Mode>(context, sub_device, 0u, ordinal)
             : lzt::create_command_bundle<Mode>(context, sub_device);
 
-    lzt::append_memory_copy(sub_bundle.list, buffer, memory, size);
+    lzt::append_memory_copy(sub_bundle.record_list(), buffer, memory, size);
     lzt::execute_and_sync_command_bundle(sub_bundle,
                                          std::numeric_limits<uint64_t>::max());
 

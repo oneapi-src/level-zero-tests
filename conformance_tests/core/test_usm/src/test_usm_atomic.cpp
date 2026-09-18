@@ -50,13 +50,15 @@ public:
     EXPECT_NE(expected_data, nullptr);
     EXPECT_NE(verify_data, nullptr);
 
-    lzt::append_memory_fill(cmd_bundle.list, static_cast<void *>(input_data),
+    lzt::append_memory_fill(cmd_bundle.record_list(),
+                            static_cast<void *>(input_data),
                             static_cast<const void *>(&input_pattern),
                             sizeof(uint8_t), size * sizeof(int), nullptr);
-    lzt::append_memory_fill(cmd_bundle.list, static_cast<void *>(output_data),
+    lzt::append_memory_fill(cmd_bundle.record_list(),
+                            static_cast<void *>(output_data),
                             static_cast<const void *>(&output_pattern),
                             sizeof(uint8_t), size * sizeof(int), nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
 
     auto module = lzt::create_module(device, "test_usm_atomic.spv");
     auto kernel = lzt::create_function(module, "atomic_copy_kernel");
@@ -71,17 +73,17 @@ public:
     group_count.groupCountY = 1;
     group_count.groupCountZ = 1;
 
-    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
-                                0, nullptr);
+    lzt::append_launch_function(cmd_bundle.record_list(), kernel, &group_count,
+                                nullptr, 0, nullptr);
 
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
 
-    lzt::append_memory_copy(cmd_bundle.list, expected_data, input_data,
+    lzt::append_memory_copy(cmd_bundle.record_list(), expected_data, input_data,
                             size * sizeof(int));
-    lzt::append_memory_copy(cmd_bundle.list, static_cast<void *>(verify_data),
-                            static_cast<void *>(output_data),
-                            size * sizeof(int), nullptr);
-    lzt::close_command_list(cmd_bundle.list);
+    lzt::append_memory_copy(
+        cmd_bundle.record_list(), static_cast<void *>(verify_data),
+        static_cast<void *>(output_data), size * sizeof(int), nullptr);
+    lzt::close_command_list(cmd_bundle.record_list());
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     EXPECT_EQ(0, memcmp(verify_data, expected_data, size * sizeof(int)));

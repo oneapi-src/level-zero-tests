@@ -71,12 +71,12 @@ int main(int argc, char **argv) {
 
   if (is_stress_test) {
     for (int i = 0; i < 10; i++) {
-      lzt::append_launch_function(cmd_bundle.list, kernel, &group_count,
-                                  nullptr, 0, nullptr);
+      lzt::append_launch_function(cmd_bundle.record_list(), kernel,
+                                  &group_count, nullptr, 0, nullptr);
     }
   } else {
-    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
-                                0, nullptr);
+    lzt::append_launch_function(cmd_bundle.record_list(), kernel, &group_count,
+                                nullptr, 0, nullptr);
   }
 
   if (is_stress_test && mode != lzt::command_list_mode_t::immediate) {

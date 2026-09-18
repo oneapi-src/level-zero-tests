@@ -312,28 +312,28 @@ LZT_TEST_P(
         src_offset = 0;
         dst_offset = offset_;
       }
-      lzt::append_memory_copy(dev_instance_[i].cmd_bundle.list,
+      lzt::append_memory_copy(dev_instance_[i].cmd_bundle.record_list(),
                               dev_instance_[i].src_region,
                               initial_pattern_memory, mem_size_ + src_offset);
-      lzt::append_barrier(dev_instance_[i].cmd_bundle.list, nullptr, 0,
+      lzt::append_barrier(dev_instance_[i].cmd_bundle.record_list(), nullptr, 0,
                           nullptr);
-      lzt::append_memory_copy(dev_instance_[i - 1].cmd_bundle.list,
+      lzt::append_memory_copy(dev_instance_[i - 1].cmd_bundle.record_list(),
                               dev_instance_[i - 1].src_region,
                               initial_pattern_memory, mem_size_ + src_offset);
-      lzt::append_barrier(dev_instance_[i - 1].cmd_bundle.list, nullptr, 0,
-                          nullptr);
+      lzt::append_barrier(dev_instance_[i - 1].cmd_bundle.record_list(),
+                          nullptr, 0, nullptr);
       lzt::append_memory_copy(
-          dev_instance_[i].cmd_bundle.list,
+          dev_instance_[i].cmd_bundle.record_list(),
           static_cast<void *>(
               static_cast<uint8_t *>(dev_instance_[i - 1].dst_region) +
               dst_offset),
           static_cast<void *>(
               static_cast<uint8_t *>(dev_instance_[i].src_region) + src_offset),
           mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i].cmd_bundle.list, nullptr, 0,
+      lzt::append_barrier(dev_instance_[i].cmd_bundle.record_list(), nullptr, 0,
                           nullptr);
       lzt::append_memory_copy(
-          dev_instance_[i - 1].cmd_bundle.list,
+          dev_instance_[i - 1].cmd_bundle.record_list(),
           static_cast<void *>(
               static_cast<uint8_t *>(dev_instance_[i].dst_region) + dst_offset),
           static_cast<void *>(
@@ -341,23 +341,23 @@ LZT_TEST_P(
               src_offset),
           mem_size_, nullptr);
 
-      lzt::append_barrier(dev_instance_[i - 1].cmd_bundle.list, nullptr, 0,
-                          nullptr);
+      lzt::append_barrier(dev_instance_[i - 1].cmd_bundle.record_list(),
+                          nullptr, 0, nullptr);
       lzt::append_memory_copy(
-          dev_instance_[i].cmd_bundle.list, verification_memory1,
+          dev_instance_[i].cmd_bundle.record_list(), verification_memory1,
           static_cast<void *>(
               static_cast<uint8_t *>(dev_instance_[i - 1].dst_region) +
               dst_offset),
           mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i].cmd_bundle.list, nullptr, 0,
+      lzt::append_barrier(dev_instance_[i].cmd_bundle.record_list(), nullptr, 0,
                           nullptr);
       lzt::append_memory_copy(
-          dev_instance_[i - 1].cmd_bundle.list, verification_memory2,
+          dev_instance_[i - 1].cmd_bundle.record_list(), verification_memory2,
           static_cast<void *>(
               static_cast<uint8_t *>(dev_instance_[i].dst_region) + dst_offset),
           mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i - 1].cmd_bundle.list, nullptr, 0,
-                          nullptr);
+      lzt::append_barrier(dev_instance_[i - 1].cmd_bundle.record_list(),
+                          nullptr, 0, nullptr);
 
       lzt::execute_and_sync_command_bundle(
           dev_instance_[i - 1].cmd_bundle,
@@ -427,19 +427,22 @@ LZT_TEST_P(
           src_offset = 0;
           dst_offset = offset_;
         }
-        lzt::append_memory_copy(dev_instance_[i].sub_devices[j].cmd_bundle.list,
-                                dev_instance_[i].sub_devices[j].src_region,
-                                initial_pattern_memory, mem_size_ + src_offset);
-        lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
-                            nullptr, 0, nullptr);
         lzt::append_memory_copy(
-            dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
+            dev_instance_[i].sub_devices[j].cmd_bundle.record_list(),
+            dev_instance_[i].sub_devices[j].src_region, initial_pattern_memory,
+            mem_size_ + src_offset);
+        lzt::append_barrier(
+            dev_instance_[i].sub_devices[j].cmd_bundle.record_list(), nullptr,
+            0, nullptr);
+        lzt::append_memory_copy(
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.record_list(),
             dev_instance_[i].sub_devices[j - 1].src_region,
             initial_pattern_memory, mem_size_ + src_offset);
-        lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
-                            nullptr, 0, nullptr);
+        lzt::append_barrier(
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.record_list(),
+            nullptr, 0, nullptr);
         lzt::append_memory_copy(
-            dev_instance_[i].sub_devices[j].cmd_bundle.list,
+            dev_instance_[i].sub_devices[j].cmd_bundle.record_list(),
             static_cast<void *>(
                 static_cast<uint8_t *>(
                     dev_instance_[i].sub_devices[j - 1].dst_region) +
@@ -449,10 +452,11 @@ LZT_TEST_P(
                     dev_instance_[i].sub_devices[j].src_region) +
                 src_offset),
             mem_size_, nullptr);
-        lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
-                            nullptr, 0, nullptr);
+        lzt::append_barrier(
+            dev_instance_[i].sub_devices[j].cmd_bundle.record_list(), nullptr,
+            0, nullptr);
         lzt::append_memory_copy(
-            dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.record_list(),
             static_cast<void *>(
                 static_cast<uint8_t *>(
                     dev_instance_[i].sub_devices[j].dst_region) +
@@ -462,30 +466,33 @@ LZT_TEST_P(
                     dev_instance_[i].sub_devices[j - 1].src_region) +
                 src_offset),
             mem_size_, nullptr);
-        lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
-                            nullptr, 0, nullptr);
+        lzt::append_barrier(
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.record_list(),
+            nullptr, 0, nullptr);
 
         lzt::append_memory_copy(
-            dev_instance_[i].sub_devices[j].cmd_bundle.list,
+            dev_instance_[i].sub_devices[j].cmd_bundle.record_list(),
             verification_memory1,
             static_cast<void *>(
                 static_cast<uint8_t *>(
                     dev_instance_[i].sub_devices[j - 1].dst_region) +
                 dst_offset),
             mem_size_, nullptr);
-        lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
-                            nullptr, 0, nullptr);
+        lzt::append_barrier(
+            dev_instance_[i].sub_devices[j].cmd_bundle.record_list(), nullptr,
+            0, nullptr);
 
         lzt::append_memory_copy(
-            dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.record_list(),
             verification_memory2,
             static_cast<void *>(
                 static_cast<uint8_t *>(
                     dev_instance_[i].sub_devices[j].dst_region) +
                 dst_offset),
             mem_size_, nullptr);
-        lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
-                            nullptr, 0, nullptr);
+        lzt::append_barrier(
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.record_list(),
+            nullptr, 0, nullptr);
         lzt::execute_and_sync_command_bundle(
             dev_instance_[i].sub_devices[j - 1].cmd_bundle,
             std::numeric_limits<uint64_t>::max());
@@ -538,33 +545,34 @@ LZT_TEST_P(
     // Set memory region on device i - 1 and copy to device i
 
     lzt::append_memory_set(
-        dev_instance_[i - 1].cmd_bundle.list,
+        dev_instance_[i - 1].cmd_bundle.record_list(),
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i - 1].src_region) + offset_),
         &value_after, mem_size_);
     if (offset_ > 0) {
-      lzt::append_memory_set(dev_instance_[i - 1].cmd_bundle.list,
+      lzt::append_memory_set(dev_instance_[i - 1].cmd_bundle.record_list(),
                              dev_instance_[i - 1].src_region, &value_before,
                              offset_);
     }
-    lzt::append_barrier(dev_instance_[i - 1].cmd_bundle.list, nullptr, 0,
-                        nullptr);
+    lzt::append_barrier(dev_instance_[i - 1].cmd_bundle.record_list(), nullptr,
+                        0, nullptr);
     lzt::append_memory_copy(
-        dev_instance_[i - 1].cmd_bundle.list, dev_instance_[i].dst_region,
+        dev_instance_[i - 1].cmd_bundle.record_list(),
+        dev_instance_[i].dst_region,
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i - 1].src_region) + offset_),
         mem_size_, nullptr);
     lzt::execute_and_sync_command_bundle(dev_instance_[i - 1].cmd_bundle,
                                          std::numeric_limits<uint64_t>::max());
-    lzt::reset_command_list(dev_instance_[i - 1].cmd_bundle.list);
+    lzt::reset_command_list(dev_instance_[i - 1].cmd_bundle.record_list());
 
     // Copy memory region from device i to shared mem, and verify it is
     // correct
-    lzt::append_memory_copy(dev_instance_[i].cmd_bundle.list, shr_mem,
+    lzt::append_memory_copy(dev_instance_[i].cmd_bundle.record_list(), shr_mem,
                             dev_instance_[i].dst_region, mem_size_, nullptr);
     lzt::execute_and_sync_command_bundle(dev_instance_[i].cmd_bundle,
                                          std::numeric_limits<uint64_t>::max());
-    lzt::reset_command_list(dev_instance_[i].cmd_bundle.list);
+    lzt::reset_command_list(dev_instance_[i].cmd_bundle.record_list());
 
     for (uint32_t j = 0; j < mem_size_; j++) {
       ASSERT_EQ(shr_mem[j], value_after)
@@ -597,7 +605,7 @@ LZT_TEST_P(
       // Set memory region on device i - 1 and copy to device i
 
       lzt::append_memory_set(
-          dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
+          dev_instance_[i].sub_devices[j - 1].cmd_bundle.record_list(),
           static_cast<void *>(
               static_cast<uint8_t *>(
                   dev_instance_[i].sub_devices[j - 1].src_region) +
@@ -605,14 +613,15 @@ LZT_TEST_P(
           &value_after, mem_size_);
       if (offset_ > 0) {
         lzt::append_memory_set(
-            dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
+            dev_instance_[i].sub_devices[j - 1].cmd_bundle.record_list(),
             dev_instance_[i].sub_devices[j - 1].src_region, &value_before,
             offset_);
       }
-      lzt::append_barrier(dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
-                          nullptr, 0, nullptr);
+      lzt::append_barrier(
+          dev_instance_[i].sub_devices[j - 1].cmd_bundle.record_list(), nullptr,
+          0, nullptr);
       lzt::append_memory_copy(
-          dev_instance_[i].sub_devices[j - 1].cmd_bundle.list,
+          dev_instance_[i].sub_devices[j - 1].cmd_bundle.record_list(),
           dev_instance_[i].sub_devices[j].dst_region,
           static_cast<void *>(
               static_cast<uint8_t *>(
@@ -623,17 +632,18 @@ LZT_TEST_P(
           dev_instance_[i].sub_devices[j - 1].cmd_bundle,
           std::numeric_limits<uint64_t>::max());
       lzt::reset_command_list(
-          dev_instance_[i].sub_devices[j - 1].cmd_bundle.list);
+          dev_instance_[i].sub_devices[j - 1].cmd_bundle.record_list());
 
       // Copy memory region from device i to shared mem, and verify it is
       // correct
       lzt::append_memory_copy(
-          dev_instance_[i].sub_devices[j].cmd_bundle.list, shr_mem,
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list(), shr_mem,
           dev_instance_[i].sub_devices[j].dst_region, mem_size_, nullptr);
       lzt::execute_and_sync_command_bundle(
           dev_instance_[i].sub_devices[j].cmd_bundle,
           std::numeric_limits<uint64_t>::max());
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_bundle.list);
+      lzt::reset_command_list(
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list());
 
       for (uint32_t k = 0; k < mem_size_; k++) {
         ASSERT_EQ(shr_mem[k], value_after)
@@ -715,15 +725,15 @@ LZT_TEST_P(
           continue;
         }
         test_count++;
-        lzt::append_memory_copy(ptr_dev_src->cmd_bundle.list,
+        lzt::append_memory_copy(ptr_dev_src->cmd_bundle.record_list(),
                                 ptr_dev_src->src_region, initial_pattern_memory,
                                 mem_size_ + src_offset);
         lzt::execute_and_sync_command_bundle(
             ptr_dev_src->cmd_bundle, std::numeric_limits<uint64_t>::max());
-        lzt::reset_command_list(ptr_dev_src->cmd_bundle.list);
+        lzt::reset_command_list(ptr_dev_src->cmd_bundle.record_list());
 
         lzt::append_memory_copy_region(
-            ptr_dev_src->cmd_bundle.list,
+            ptr_dev_src->cmd_bundle.record_list(),
             static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
             &dest_region, columns, columns * rows,
             static_cast<uint8_t *>(ptr_dev_src->src_region) + src_offset,
@@ -731,15 +741,15 @@ LZT_TEST_P(
 
         lzt::execute_and_sync_command_bundle(
             ptr_dev_src->cmd_bundle, std::numeric_limits<uint64_t>::max());
-        lzt::reset_command_list(ptr_dev_src->cmd_bundle.list);
+        lzt::reset_command_list(ptr_dev_src->cmd_bundle.record_list());
 
         lzt::append_memory_copy(
-            ptr_dev_dst->cmd_bundle.list, verification_memory,
+            ptr_dev_dst->cmd_bundle.record_list(), verification_memory,
             static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
             mem_size_);
         lzt::execute_and_sync_command_bundle(
             ptr_dev_dst->cmd_bundle, std::numeric_limits<uint64_t>::max());
-        lzt::reset_command_list(ptr_dev_dst->cmd_bundle.list);
+        lzt::reset_command_list(ptr_dev_dst->cmd_bundle.record_list());
 
         for (uint32_t z = 0U; z < depth; z++) {
           for (uint32_t y = 0U; y < height; y++) {
@@ -845,14 +855,14 @@ LZT_TEST_P(
 
           test_count++;
           lzt::append_memory_copy(
-              ptr_dev_src->cmd_bundle.list, ptr_dev_src->src_region,
+              ptr_dev_src->cmd_bundle.record_list(), ptr_dev_src->src_region,
               initial_pattern_memory, mem_size_ + src_offset);
           lzt::execute_and_sync_command_bundle(
               ptr_dev_src->cmd_bundle, std::numeric_limits<uint64_t>::max());
-          lzt::reset_command_list(ptr_dev_src->cmd_bundle.list);
+          lzt::reset_command_list(ptr_dev_src->cmd_bundle.record_list());
 
           lzt::append_memory_copy_region(
-              ptr_dev_src->cmd_bundle.list,
+              ptr_dev_src->cmd_bundle.record_list(),
               static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
               &dest_region, columns, columns * rows,
               static_cast<uint8_t *>(ptr_dev_src->src_region) + src_offset,
@@ -860,15 +870,15 @@ LZT_TEST_P(
 
           lzt::execute_and_sync_command_bundle(
               ptr_dev_src->cmd_bundle, std::numeric_limits<uint64_t>::max());
-          lzt::reset_command_list(ptr_dev_src->cmd_bundle.list);
+          lzt::reset_command_list(ptr_dev_src->cmd_bundle.record_list());
 
           lzt::append_memory_copy(
-              ptr_dev_dst->cmd_bundle.list, verification_memory,
+              ptr_dev_dst->cmd_bundle.record_list(), verification_memory,
               static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
               mem_size_);
           lzt::execute_and_sync_command_bundle(
               ptr_dev_dst->cmd_bundle, std::numeric_limits<uint64_t>::max());
-          lzt::reset_command_list(ptr_dev_dst->cmd_bundle.list);
+          lzt::reset_command_list(ptr_dev_dst->cmd_bundle.record_list());
 
           for (uint32_t z = 0U; z < depth; z++) {
             for (uint32_t y = 0U; y < height; y++) {
@@ -978,14 +988,14 @@ LZT_TEST_P(
 
             test_count++;
             lzt::append_memory_copy(
-                ptr_dev_src->cmd_bundle.list, ptr_dev_src->src_region,
+                ptr_dev_src->cmd_bundle.record_list(), ptr_dev_src->src_region,
                 initial_pattern_memory, mem_size_ + src_offset);
             lzt::execute_and_sync_command_bundle(
                 ptr_dev_src->cmd_bundle, std::numeric_limits<uint64_t>::max());
-            lzt::reset_command_list(ptr_dev_src->cmd_bundle.list);
+            lzt::reset_command_list(ptr_dev_src->cmd_bundle.record_list());
 
             lzt::append_memory_copy_region(
-                ptr_dev_src->cmd_bundle.list,
+                ptr_dev_src->cmd_bundle.record_list(),
                 static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
                 &dest_region, columns, columns * rows,
                 static_cast<uint8_t *>(ptr_dev_src->src_region) + src_offset,
@@ -993,15 +1003,15 @@ LZT_TEST_P(
 
             lzt::execute_and_sync_command_bundle(
                 ptr_dev_src->cmd_bundle, std::numeric_limits<uint64_t>::max());
-            lzt::reset_command_list(ptr_dev_src->cmd_bundle.list);
+            lzt::reset_command_list(ptr_dev_src->cmd_bundle.record_list());
 
             lzt::append_memory_copy(
-                ptr_dev_dst->cmd_bundle.list, verification_memory,
+                ptr_dev_dst->cmd_bundle.record_list(), verification_memory,
                 static_cast<uint8_t *>(ptr_dev_dst->dst_region) + dst_offset,
                 mem_size_);
             lzt::execute_and_sync_command_bundle(
                 ptr_dev_dst->cmd_bundle, std::numeric_limits<uint64_t>::max());
-            lzt::reset_command_list(ptr_dev_dst->cmd_bundle.list);
+            lzt::reset_command_list(ptr_dev_dst->cmd_bundle.record_list());
 
             for (uint32_t z = 0U; z < depth; z++) {
               for (uint32_t y = 0U; y < height; y++) {
@@ -1063,19 +1073,20 @@ LZT_TEST_P(
     uint8_t value_after = lzt::generate_value<uint8_t>() & 0x7f;
 
     lzt::append_memory_set(
-        dev_instance_[i].cmd_bundle.list,
+        dev_instance_[i].cmd_bundle.record_list(),
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
         &value_after, mem_size_);
     if (offset_ > 0) {
-      lzt::append_memory_set(dev_instance_[i].cmd_bundle.list,
+      lzt::append_memory_set(dev_instance_[i].cmd_bundle.record_list(),
                              dev_instance_[i].src_region, &value_before,
                              offset_);
     }
-    lzt::append_barrier(dev_instance_[i].cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(dev_instance_[i].cmd_bundle.record_list(), nullptr, 0,
+                        nullptr);
     lzt::execute_and_sync_command_bundle(dev_instance_[i].cmd_bundle,
                                          std::numeric_limits<uint64_t>::max());
-    lzt::reset_command_list(dev_instance_[i].cmd_bundle.list);
+    lzt::reset_command_list(dev_instance_[i].cmd_bundle.record_list());
 
     // device (i - 1) will modify memory allocated for device i
     lzt::create_and_execute_function(
@@ -1086,13 +1097,13 @@ LZT_TEST_P(
 
     // copy memory to shared region and verify it is correct
     lzt::append_memory_copy(
-        dev_instance_[i].cmd_bundle.list, shr_mem,
+        dev_instance_[i].cmd_bundle.record_list(), shr_mem,
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
         mem_size_, nullptr);
     lzt::execute_and_sync_command_bundle(dev_instance_[i].cmd_bundle,
                                          std::numeric_limits<uint64_t>::max());
-    lzt::reset_command_list(dev_instance_[i].cmd_bundle.list);
+    lzt::reset_command_list(dev_instance_[i].cmd_bundle.record_list());
     ASSERT_EQ(shr_mem[0], value_after + 1)
         << "Memory Copied from Device did not match.";
 
@@ -1134,22 +1145,24 @@ LZT_TEST_P(
       uint8_t value_after = lzt::generate_value<uint8_t>() & 0x7f;
 
       lzt::append_memory_set(
-          dev_instance_[i].sub_devices[j].cmd_bundle.list,
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list(),
           static_cast<void *>(static_cast<uint8_t *>(
                                   dev_instance_[i].sub_devices[j].src_region) +
                               offset_),
           &value_after, mem_size_);
       if (offset_ > 0) {
-        lzt::append_memory_set(dev_instance_[i].sub_devices[j].cmd_bundle.list,
-                               dev_instance_[i].sub_devices[j].src_region,
-                               &value_before, offset_);
+        lzt::append_memory_set(
+            dev_instance_[i].sub_devices[j].cmd_bundle.record_list(),
+            dev_instance_[i].sub_devices[j].src_region, &value_before, offset_);
       }
-      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
-                          nullptr, 0, nullptr);
+      lzt::append_barrier(
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list(), nullptr, 0,
+          nullptr);
       lzt::execute_and_sync_command_bundle(
           dev_instance_[i].sub_devices[j].cmd_bundle,
           std::numeric_limits<uint64_t>::max());
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_bundle.list);
+      lzt::reset_command_list(
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list());
 
       // device (i - 1) will modify memory allocated for device i
       lzt::create_and_execute_function(
@@ -1161,17 +1174,19 @@ LZT_TEST_P(
 
       // copy memory to shared region and verify it is correct
       lzt::append_memory_copy(
-          dev_instance_[i].sub_devices[j].cmd_bundle.list, shr_mem,
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list(), shr_mem,
           static_cast<void *>(static_cast<uint8_t *>(
                                   dev_instance_[i].sub_devices[j].src_region) +
                               offset_),
           mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
-                          nullptr, 0, nullptr);
+      lzt::append_barrier(
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list(), nullptr, 0,
+          nullptr);
       lzt::execute_and_sync_command_bundle(
           dev_instance_[i].sub_devices[j].cmd_bundle,
           std::numeric_limits<uint64_t>::max());
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_bundle.list);
+      lzt::reset_command_list(
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list());
       ASSERT_EQ(shr_mem[0], value_after + 1)
           << "Memory Copied from SubDevice did not match.";
       lzt::destroy_module(module);
@@ -1208,19 +1223,20 @@ LZT_TEST_P(
     uint8_t value_after = lzt::generate_value<uint8_t>() & 0x7f;
 
     lzt::append_memory_set(
-        dev_instance_[i].cmd_bundle.list,
+        dev_instance_[i].cmd_bundle.record_list(),
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
         &value_after, mem_size_);
     if (offset_ > 0) {
-      lzt::append_memory_set(dev_instance_[i].cmd_bundle.list,
+      lzt::append_memory_set(dev_instance_[i].cmd_bundle.record_list(),
                              dev_instance_[i].src_region, &value_before,
                              offset_);
     }
-    lzt::append_barrier(dev_instance_[i].cmd_bundle.list, nullptr, 0, nullptr);
+    lzt::append_barrier(dev_instance_[i].cmd_bundle.record_list(), nullptr, 0,
+                        nullptr);
     lzt::execute_and_sync_command_bundle(dev_instance_[i].cmd_bundle,
                                          std::numeric_limits<uint64_t>::max());
-    lzt::reset_command_list(dev_instance_[i].cmd_bundle.list);
+    lzt::reset_command_list(dev_instance_[i].cmd_bundle.record_list());
 
     lzt::FunctionArg arg;
     std::vector<lzt::FunctionArg> args;
@@ -1239,13 +1255,13 @@ LZT_TEST_P(
 
     // copy memory to shared region and verify it is correct
     lzt::append_memory_copy(
-        dev_instance_[i].cmd_bundle.list, shr_mem,
+        dev_instance_[i].cmd_bundle.record_list(), shr_mem,
         static_cast<void *>(
             static_cast<uint8_t *>(dev_instance_[i].src_region) + offset_),
         mem_size_, nullptr);
     lzt::execute_and_sync_command_bundle(dev_instance_[i].cmd_bundle,
                                          std::numeric_limits<uint64_t>::max());
-    lzt::reset_command_list(dev_instance_[i].cmd_bundle.list);
+    lzt::reset_command_list(dev_instance_[i].cmd_bundle.record_list());
     ASSERT_EQ(shr_mem[0], value_after + 1)
         << "Memory Copied from Device did not match.";
 
@@ -1287,22 +1303,24 @@ LZT_TEST_P(
       uint8_t value_after = lzt::generate_value<uint8_t>() & 0x7f;
 
       lzt::append_memory_set(
-          dev_instance_[i].sub_devices[j].cmd_bundle.list,
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list(),
           static_cast<void *>(static_cast<uint8_t *>(
                                   dev_instance_[i].sub_devices[j].src_region) +
                               offset_),
           &value_after, mem_size_);
       if (offset_ > 0) {
-        lzt::append_memory_set(dev_instance_[i].sub_devices[j].cmd_bundle.list,
-                               dev_instance_[i].sub_devices[j].src_region,
-                               &value_before, offset_);
+        lzt::append_memory_set(
+            dev_instance_[i].sub_devices[j].cmd_bundle.record_list(),
+            dev_instance_[i].sub_devices[j].src_region, &value_before, offset_);
       }
-      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
-                          nullptr, 0, nullptr);
+      lzt::append_barrier(
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list(), nullptr, 0,
+          nullptr);
       lzt::execute_and_sync_command_bundle(
           dev_instance_[i].sub_devices[j].cmd_bundle,
           std::numeric_limits<uint64_t>::max());
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_bundle.list);
+      lzt::reset_command_list(
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list());
 
       lzt::FunctionArg arg;
       std::vector<lzt::FunctionArg> args;
@@ -1321,17 +1339,19 @@ LZT_TEST_P(
 
       // copy memory to shared region and verify it is correct
       lzt::append_memory_copy(
-          dev_instance_[i].sub_devices[j].cmd_bundle.list, shr_mem,
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list(), shr_mem,
           static_cast<void *>(static_cast<uint8_t *>(
                                   dev_instance_[i].sub_devices[j].src_region) +
                               offset_),
           mem_size_, nullptr);
-      lzt::append_barrier(dev_instance_[i].sub_devices[j].cmd_bundle.list,
-                          nullptr, 0, nullptr);
+      lzt::append_barrier(
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list(), nullptr, 0,
+          nullptr);
       lzt::execute_and_sync_command_bundle(
           dev_instance_[i].sub_devices[j].cmd_bundle,
           std::numeric_limits<uint64_t>::max());
-      lzt::reset_command_list(dev_instance_[i].sub_devices[j].cmd_bundle.list);
+      lzt::reset_command_list(
+          dev_instance_[i].sub_devices[j].cmd_bundle.record_list());
       ASSERT_EQ(shr_mem[0], value_after + 1)
           << "Memory Copied from SubDevice did not match.";
       lzt::destroy_module(module);

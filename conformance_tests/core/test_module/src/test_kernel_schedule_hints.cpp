@@ -70,8 +70,8 @@ void RunGivenKernelScheduleHintWhenRunningKernelTest(
     group_count.groupCountX = 1;
     group_count.groupCountY = 1;
     group_count.groupCountZ = 1;
-    lzt::append_launch_function(cmd_bundle.list, kernel, &group_count, nullptr,
-                                0, nullptr);
+    lzt::append_launch_function(cmd_bundle.record_list(), kernel, &group_count,
+                                nullptr, 0, nullptr);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     lzt::destroy_command_bundle(cmd_bundle);

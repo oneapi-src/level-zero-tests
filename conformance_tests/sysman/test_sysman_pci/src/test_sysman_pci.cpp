@@ -183,8 +183,9 @@ LZT_TEST_F(PCI_TEST,
       EXPECT_LE(pci_stats_initial.packetCounter, UINT64_MAX);
     }
     EXPECT_LE(pci_stats_initial.timestamp, UINT64_MAX);
-    lzt::zeCommandBundle cmd_bundle =
-        lzt::create_command_bundle(alloc_device, false);
+    auto cmd_bundle =
+        lzt::create_command_bundle<lzt::command_list_mode_t::regular>(
+            alloc_device);
     const size_t size = 4096;
     std::vector<uint8_t> host_memory1(size), host_memory2(size, 0);
     void *device_memory =
@@ -193,13 +194,14 @@ LZT_TEST_F(PCI_TEST,
     lzt::make_memory_resident(alloc_device, device_memory,
                               lzt::size_in_bytes(host_memory1));
     lzt::write_data_pattern(host_memory1.data(), size, 1);
-    lzt::append_memory_copy(cmd_bundle.list, device_memory, host_memory1.data(),
+    lzt::append_memory_copy(cmd_bundle.record_list(), device_memory,
+                            host_memory1.data(),
                             lzt::size_in_bytes(host_memory1), nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::append_memory_copy(cmd_bundle.list, host_memory2.data(), device_memory,
-                            lzt::size_in_bytes(host_memory2), nullptr);
-    lzt::append_barrier(cmd_bundle.list, nullptr, 0, nullptr);
-    lzt::close_command_list(cmd_bundle.list);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
+    lzt::append_memory_copy(cmd_bundle.record_list(), host_memory2.data(),
+                            device_memory, lzt::size_in_bytes(host_memory2),
+                            nullptr);
+    lzt::append_barrier(cmd_bundle.record_list(), nullptr, 0, nullptr);
     lzt::execute_and_sync_command_bundle(cmd_bundle, UINT64_MAX);
 
     lzt::validate_data_pattern(host_memory2.data(), size, 1);
