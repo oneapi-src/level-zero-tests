@@ -75,6 +75,15 @@ LZT_TEST_F(
 #endif
 }
 
+LZT_TEST_F(
+    DX12InteroperabilityTests,
+    GivenDX12SharedFenceWhenImportingExternalSemaphoreByNameWithNonAsciiCharactersThenIsSuccess) {
+#ifndef __linux__
+  test_import_fence(dx12_device, l0_device,
+                    L"DX12Fence\u00e9\u4e2d\U0001f600NamedImportTest");
+#endif
+}
+
 #ifndef __linux__
 void test_signal_fence(const ComPtr<ID3D12Device> &dx12_device,
                        ze_device_handle_t l0_device,

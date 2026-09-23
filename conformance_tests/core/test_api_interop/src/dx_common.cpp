@@ -21,13 +21,13 @@ std::string wide_to_multibyte(LPCWSTR wide) {
   }
 
   int size =
-      WideCharToMultiByte(CP_ACP, 0, wide, -1, nullptr, 0, nullptr, nullptr);
+      WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
   if (size <= 1) {
     return {};
   }
 
   std::string result(size - 1, '\0');
-  WideCharToMultiByte(CP_ACP, 0, wide, -1, result.data(), size, nullptr,
+  WideCharToMultiByte(CP_UTF8, 0, wide, -1, result.data(), size, nullptr,
                       nullptr);
   return result;
 }
