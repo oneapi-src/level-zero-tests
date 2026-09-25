@@ -97,12 +97,17 @@ bool verify_external_memory_type_flag_support(
 
 bool verify_external_memory_import_type_flag_support(
     ze_device_handle_t device,
-    ze_external_memory_type_flag_t external_memory_type_flag) {
+    ze_external_memory_type_flag_t external_memory_type_flag,
+    memory_type_t memory_type) {
   auto external_memory_properties = lzt::get_external_memory_properties(device);
-  if (!(external_memory_properties.memoryAllocationImportTypes &
-        to_u32(external_memory_type_flag))) {
-    LOG_WARNING << "Device does not support importing memory flag type: "
-                << external_memory_type_flag;
+  const bool is_image = memory_type > memory_type_t::device;
+  const auto import_types =
+      is_image ? external_memory_properties.imageImportTypes
+               : external_memory_properties.memoryAllocationImportTypes;
+  if (!(import_types & to_u32(external_memory_type_flag))) {
+    LOG_WARNING << "Device does not support importing "
+                << (is_image ? "image" : "memory")
+                << " flag type: " << external_memory_type_flag;
     return false;
   }
   return true;
@@ -481,14 +486,18 @@ void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInSameThreadTest(
         lzt::command_list_mode_t mode, memory_type_t memory_type) {
   auto driver = lzt::get_default_driver();
-  auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
 
   if (!verify_external_memory_type_flag_support(
           device, ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF)) {
     GTEST_SKIP();
   }
+  if (!verify_external_memory_import_type_flag_support(
+          device, ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, memory_type)) {
+    GTEST_SKIP();
+  }
 
+  auto context = lzt::create_context(driver);
   size_t size = 1024;
   uint8_t pattern = 0xAB;
   void *exported_memory = nullptr;
@@ -502,13 +511,6 @@ void zeDeviceGetExternalMemoryProperties::
   EXPECT_NE(fd, 0);
 
   /* Import exported Memory As DMA_BUF*/
-  auto external_memory_import_properties =
-      lzt::get_external_memory_properties(device);
-  if (!(external_memory_import_properties.memoryAllocationImportTypes &
-        ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF)) {
-    LOG_WARNING << "Device does not support importing DMA_BUF";
-    GTEST_SKIP();
-  }
   auto import_cmd_bundle = lzt::create_command_bundle(
       context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
@@ -551,16 +553,14 @@ void zeDeviceGetExternalMemoryProperties::
 
 void memory_import_thread(ThreadArgs *args) {
   auto driver = lzt::get_default_driver();
-  auto context = lzt::create_context(driver);
   auto devices = lzt::get_ze_devices(driver);
   auto device = devices[0];
 
-  auto external_memory_properties = lzt::get_external_memory_properties(device);
-  if (!(external_memory_properties.memoryAllocationImportTypes &
-        ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF)) {
-    LOG_WARNING << "Device does not support importing DMA_BUF";
+  if (!verify_external_memory_import_type_flag_support(
+          device, ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, args->memory_type)) {
     GTEST_SKIP();
   }
+  auto context = lzt::create_context(driver);
   auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, args->mode);
@@ -602,14 +602,18 @@ void zeDeviceGetExternalMemoryProperties::
     RunGivenValidDeviceWhenExportingAndImportingMemoryAsDMABufInMultiThreadTest(
         lzt::command_list_mode_t mode, memory_type_t memory_type) {
   auto driver = lzt::get_default_driver();
-  auto context = lzt::create_context(driver);
   auto device = lzt::get_default_device(driver);
 
   if (!verify_external_memory_type_flag_support(
           device, ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF)) {
     GTEST_SKIP();
   }
+  if (!verify_external_memory_import_type_flag_support(
+          device, ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, memory_type)) {
+    GTEST_SKIP();
+  }
 
+  auto context = lzt::create_context(driver);
   size_t size = 1024;
   uint8_t pattern = 0xAB;
   void *exported_memory = nullptr;
@@ -689,16 +693,14 @@ void zeDeviceGetExternalMemoryProperties::
                                                memory_type_t memory_type,
                                                cache_bias_t cache_bias) {
   auto driver = lzt::get_default_driver();
-  auto context = lzt::create_context(driver);
   auto devices = lzt::get_ze_devices(driver);
   auto device = devices[0];
 
-  auto external_memory_properties = lzt::get_external_memory_properties(device);
-  if (!(external_memory_properties.memoryAllocationImportTypes &
-        ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF)) {
-    LOG_WARNING << "Device does not support importing DMA_BUF";
+  if (!verify_external_memory_import_type_flag_support(
+          device, ZE_EXTERNAL_MEMORY_TYPE_FLAG_DMA_BUF, memory_type)) {
     GTEST_SKIP();
   }
+  auto context = lzt::create_context(driver);
   auto cmd_bundle = lzt::create_command_bundle(
       context, device, 0u, ZE_COMMAND_QUEUE_MODE_DEFAULT,
       ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u, 0u, mode);
@@ -1007,7 +1009,7 @@ void zeDeviceGetExternalMemoryProperties::
     GTEST_SKIP();
   }
   if (!verify_external_memory_import_type_flag_support(
-          device, external_memory_type_flag)) {
+          device, external_memory_type_flag, memory_type)) {
     GTEST_SKIP();
   }
 
