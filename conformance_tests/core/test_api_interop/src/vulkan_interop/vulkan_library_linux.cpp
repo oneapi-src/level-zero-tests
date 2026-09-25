@@ -32,10 +32,10 @@ bool load_platform_functions(VkInstance instance) {
 
 PlatformHandle get_semaphore_platform_handle(VkDevice device,
                                              VkSemaphore semaphore) {
-  const VkSemaphoreGetFdInfoKHR get_fd_info = {
-      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR,
-      .semaphore = semaphore,
-      .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR};
+  VkSemaphoreGetFdInfoKHR get_fd_info = {};
+  get_fd_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR;
+  get_fd_info.semaphore = semaphore;
+  get_fd_info.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
 
   int fd = -1;
   VK_CHECK(vkGetSemaphoreFdKHR(device, &get_fd_info, &fd));

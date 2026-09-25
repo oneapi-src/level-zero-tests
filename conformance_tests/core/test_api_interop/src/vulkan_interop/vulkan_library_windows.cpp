@@ -34,10 +34,12 @@ bool load_platform_functions(VkInstance instance) {
 
 PlatformHandle get_semaphore_platform_handle(VkDevice device,
                                              VkSemaphore semaphore) {
-  const VkSemaphoreGetWin32HandleInfoKHR get_win32_handle_info = {
-      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR,
-      .semaphore = semaphore,
-      .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT_KHR};
+  VkSemaphoreGetWin32HandleInfoKHR get_win32_handle_info = {};
+  get_win32_handle_info.sType =
+      VK_STRUCTURE_TYPE_SEMAPHORE_GET_WIN32_HANDLE_INFO_KHR;
+  get_win32_handle_info.semaphore = semaphore;
+  get_win32_handle_info.handleType =
+      VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT_KHR;
 
   void *handle = nullptr;
   VK_CHECK(

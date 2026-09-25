@@ -58,19 +58,20 @@ void wait_for_fence(const ComPtr<ID3D11Fence> &fence, uint64_t wait_value) {
 ComPtr<ID3D11Texture2D> create_texture_2d(const ComPtr<ID3D11Device> &device,
                                           DXGI_FORMAT format, UINT width,
                                           UINT height, bool exportable) {
-  const D3D11_TEXTURE2D_DESC desc = {
-      .Width = width,
-      .Height = height,
-      .MipLevels = 1,
-      .ArraySize = 1,
-      .Format = format,
-      .SampleDesc = {.Count = 1, .Quality = 0},
-      .Usage = exportable ? D3D11_USAGE_DEFAULT : D3D11_USAGE_STAGING,
-      .BindFlags = exportable ? D3D11_BIND_SHADER_RESOURCE : 0u,
-      .CPUAccessFlags = exportable ? 0u : D3D11_CPU_ACCESS_WRITE,
-      .MiscFlags = exportable ? (D3D11_RESOURCE_MISC_SHARED_NTHANDLE |
+  D3D11_TEXTURE2D_DESC desc = {};
+  desc.Width = width;
+  desc.Height = height;
+  desc.MipLevels = 1;
+  desc.ArraySize = 1;
+  desc.Format = format;
+  desc.SampleDesc.Count = 1;
+  desc.SampleDesc.Quality = 0;
+  desc.Usage = exportable ? D3D11_USAGE_DEFAULT : D3D11_USAGE_STAGING;
+  desc.BindFlags = exportable ? D3D11_BIND_SHADER_RESOURCE : 0u;
+  desc.CPUAccessFlags = exportable ? 0u : D3D11_CPU_ACCESS_WRITE;
+  desc.MiscFlags = exportable ? (D3D11_RESOURCE_MISC_SHARED_NTHANDLE |
                                  D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX)
-                              : 0u};
+                              : 0u;
 
   ComPtr<ID3D11Texture2D> texture;
   if (HRESULT hr = device->CreateTexture2D(&desc, nullptr, &texture);

@@ -13,28 +13,34 @@
 namespace dx12 {
 
 D3D12_RESOURCE_DESC get_buffer_desc(size_t memory_size) {
-  return {.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
-          .Alignment = 0,
-          .Width = memory_size,
-          .Height = 1,
-          .DepthOrArraySize = 1,
-          .MipLevels = 1,
-          .Format = DXGI_FORMAT_UNKNOWN,
-          .SampleDesc = {.Count = 1, .Quality = 0},
-          .Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR};
+  D3D12_RESOURCE_DESC desc = {};
+  desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+  desc.Alignment = 0;
+  desc.Width = memory_size;
+  desc.Height = 1;
+  desc.DepthOrArraySize = 1;
+  desc.MipLevels = 1;
+  desc.Format = DXGI_FORMAT_UNKNOWN;
+  desc.SampleDesc.Count = 1;
+  desc.SampleDesc.Quality = 0;
+  desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+  return desc;
 }
 
 D3D12_RESOURCE_DESC get_texture_2d_desc(DXGI_FORMAT format, UINT64 width,
                                         UINT height) {
-  return {.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-          .Alignment = 0,
-          .Width = width,
-          .Height = height,
-          .DepthOrArraySize = 1,
-          .MipLevels = 1,
-          .Format = format,
-          .SampleDesc = {.Count = 1, .Quality = 0},
-          .Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN};
+  D3D12_RESOURCE_DESC desc = {};
+  desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+  desc.Alignment = 0;
+  desc.Width = width;
+  desc.Height = height;
+  desc.DepthOrArraySize = 1;
+  desc.MipLevels = 1;
+  desc.Format = format;
+  desc.SampleDesc.Count = 1;
+  desc.SampleDesc.Quality = 0;
+  desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+  return desc;
 }
 
 ComPtr<ID3D12Fence> create_fence(const ComPtr<ID3D12Device> &device,
@@ -54,11 +60,11 @@ ComPtr<ID3D12Fence> create_fence(const ComPtr<ID3D12Device> &device,
 
 ComPtr<ID3D12Heap> create_heap(const ComPtr<ID3D12Device> &device, size_t size,
                                size_t alignment, bool exportable) {
-  const D3D12_HEAP_DESC heap_desc = {
-      .SizeInBytes = size,
-      .Properties = {.Type = D3D12_HEAP_TYPE_DEFAULT},
-      .Alignment = alignment,
-      .Flags = exportable ? D3D12_HEAP_FLAG_SHARED : D3D12_HEAP_FLAG_NONE};
+  D3D12_HEAP_DESC heap_desc = {};
+  heap_desc.SizeInBytes = size;
+  heap_desc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+  heap_desc.Alignment = alignment;
+  heap_desc.Flags = exportable ? D3D12_HEAP_FLAG_SHARED : D3D12_HEAP_FLAG_NONE;
 
   ComPtr<ID3D12Heap> heap;
   if (HRESULT hr = device->CreateHeap(&heap_desc, IID_PPV_ARGS(&heap));
@@ -128,8 +134,10 @@ create_placed_texture_2d(const ComPtr<ID3D12Device> &device,
 ComPtr<ID3D12Resource> create_committed_resource(
     const ComPtr<ID3D12Device> &device, D3D12_HEAP_TYPE heap_type,
     D3D12_RESOURCE_STATES state, size_t size, bool exportable) {
-  const D3D12_HEAP_PROPERTIES heap_props = {
-      .Type = heap_type, .CreationNodeMask = 1, .VisibleNodeMask = 1};
+  D3D12_HEAP_PROPERTIES heap_props = {};
+  heap_props.Type = heap_type;
+  heap_props.CreationNodeMask = 1;
+  heap_props.VisibleNodeMask = 1;
 
   const D3D12_RESOURCE_DESC desc = get_buffer_desc(size);
 
@@ -151,9 +159,10 @@ ComPtr<ID3D12Resource>
 create_committed_texture_2d(const ComPtr<ID3D12Device> &device,
                             DXGI_FORMAT format, UINT64 width, UINT height,
                             bool exportable) {
-  const D3D12_HEAP_PROPERTIES heap_props = {.Type = D3D12_HEAP_TYPE_DEFAULT,
-                                            .CreationNodeMask = 1,
-                                            .VisibleNodeMask = 1};
+  D3D12_HEAP_PROPERTIES heap_props = {};
+  heap_props.Type = D3D12_HEAP_TYPE_DEFAULT;
+  heap_props.CreationNodeMask = 1;
+  heap_props.VisibleNodeMask = 1;
 
   const D3D12_RESOURCE_DESC desc = get_texture_2d_desc(format, width, height);
 
@@ -190,8 +199,8 @@ HANDLE create_shared_handle(const ComPtr<ID3D12Device> &device,
 CommandBundle create_command_bundle(const ComPtr<ID3D12Device> &device) {
   CommandBundle bundle;
 
-  const D3D12_COMMAND_QUEUE_DESC cmdq_desc = {
-      .Type = D3D12_COMMAND_LIST_TYPE_DIRECT};
+  D3D12_COMMAND_QUEUE_DESC cmdq_desc = {};
+  cmdq_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
   if (HRESULT hr = device->CreateCommandQueue(&cmdq_desc,
                                               IID_PPV_ARGS(&bundle.cmd_queue));
       FAILED(hr)) {
@@ -252,7 +261,9 @@ void execute_and_sync_command_bundle(const ComPtr<ID3D12Device> &device,
 
 UINT get_format_plane_count(const ComPtr<ID3D12Device> &device,
                             DXGI_FORMAT format) {
-  D3D12_FEATURE_DATA_FORMAT_INFO info{.Format = format, .PlaneCount = 0};
+  D3D12_FEATURE_DATA_FORMAT_INFO info = {};
+  info.Format = format;
+  info.PlaneCount = 0;
   if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_INFO, &info,
                                          sizeof(info)))) {
     return 1; // unsupported/unknown -> treat as single plane

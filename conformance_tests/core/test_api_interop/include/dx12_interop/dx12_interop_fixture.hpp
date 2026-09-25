@@ -47,10 +47,10 @@ struct DX12InteroperabilityTests : ::testing::Test {
 
   void *import_memory(HANDLE shared_handle,
                       ze_external_memory_type_flags_t type, size_t size) const {
-    ze_external_memory_import_win32_handle_t import_win32_handle = {
-        .stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_WIN32,
-        .flags = type,
-        .handle = shared_handle};
+    ze_external_memory_import_win32_handle_t import_win32_handle = {};
+    import_win32_handle.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_WIN32;
+    import_win32_handle.flags = type;
+    import_win32_handle.handle = shared_handle;
 
     void *imported_memory =
         lzt::allocate_device_memory(size, 0, 0, &import_win32_handle, 0,

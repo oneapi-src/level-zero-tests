@@ -10,7 +10,6 @@
 #define level_zero_tests_UTILS_STRING_HPP
 
 #include <algorithm>
-#include <bit>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -99,7 +98,7 @@ ze_image_type_t to_image_type(const std::string type);
 // matching single-flag to_string overload for each set bit.
 template <typename T> std::string flags_to_string(uint32_t flags) {
   std::vector<std::string> output;
-  for (int i = 0; i < std::bit_width(flags); ++i) {
+  for (int i = 0; i < 32 && (flags >> i) != 0; ++i) {
     const uint32_t mask = uint32_t{1} << i;
     const uint32_t flag = flags & mask;
     if (flag != 0) {

@@ -6,7 +6,7 @@ We encourage anyone who wants to contribute to submit
 
 ## C++ Coding Standards
 
-* C++20 — maximum supported standard
+* C++17 — maximum supported standard
 * Avoid C Arrays, replace with `std::array<>` / `std::vector<>`
 * Avoid "magic numbers"
 * Avoid C-style memory allocations in favor of C++
@@ -16,7 +16,6 @@ We encourage anyone who wants to contribute to submit
 * Prefer `enum class` over unscoped enums
 * Use `= default` / `= delete` instead of hand-written or private special members
 * Prefer `"\n"` over `std::endl` unless a flush is actually required
-* `std::span<T>` instead of a raw pointer plus length pair
 * `std::string_view` for non-owning, read-only string parameters
 * `std::optional<T>` instead of sentinel values or out-parameters signalling absence
 * Use `const` for locals, `const&` parameters, `const auto&` loop variables, and

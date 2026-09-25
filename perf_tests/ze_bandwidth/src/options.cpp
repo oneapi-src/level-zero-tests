@@ -190,7 +190,7 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
     }
 
     const std::string prefix = std::string(option) + "=";
-    if (argument.starts_with(prefix)) {
+    if (argument.compare(0, prefix.size(), prefix) == 0) {
       value = argument.substr(prefix.size());
       if (value.empty()) {
         std::cout << usage_str;
@@ -291,9 +291,9 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
                  test == "host_to_all_kernel" || test == "host_to_all_bidir" ||
                  test == "host_to_all_bidir_kernel") {
         run_all_host = true;
-        all_host_source_is_host = test.starts_with("host_to_all");
+        all_host_source_is_host = (test.rfind("host_to_all", 0) == 0);
         all_host_bidirectional = (test.find("_bidir") != std::string::npos);
-        all_host_use_kernel = test.ends_with("_kernel");
+        all_host_use_kernel = (test.find("_kernel") != std::string::npos);
       } else if (test == "all_to_host_bidir_kernel") {
         std::cerr << "all_to_host_bidir_kernel was removed: the split "
                      "direction kernel is symmetric, so it measured exactly "

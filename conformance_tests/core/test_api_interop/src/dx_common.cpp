@@ -52,15 +52,15 @@ std::string hr_to_string(HRESULT result) {
 ze_external_semaphore_ext_handle_t
 import_fence(ze_device_handle_t l0_device, HANDLE shared_handle,
              ze_external_semaphore_ext_flags_t type) {
-  ze_external_semaphore_win32_ext_desc_t external_semaphore_win32_desc = {
-      .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WIN32_EXT_DESC,
-      .handle = shared_handle,
-  };
+  ze_external_semaphore_win32_ext_desc_t external_semaphore_win32_desc = {};
+  external_semaphore_win32_desc.stype =
+      ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WIN32_EXT_DESC;
+  external_semaphore_win32_desc.handle = shared_handle;
 
-  ze_external_semaphore_ext_desc_t external_semaphore_desc = {
-      .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_EXT_DESC,
-      .pNext = &external_semaphore_win32_desc,
-      .flags = type};
+  ze_external_semaphore_ext_desc_t external_semaphore_desc = {};
+  external_semaphore_desc.stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_EXT_DESC;
+  external_semaphore_desc.pNext = &external_semaphore_win32_desc;
+  external_semaphore_desc.flags = type;
 
   return lzt::import_external_semaphore(l0_device, &external_semaphore_desc);
 }
@@ -70,15 +70,15 @@ import_fence_by_name(ze_device_handle_t l0_device, LPCWSTR name,
                      ze_external_semaphore_ext_flags_t type) {
   std::string multibyte_name = wide_to_multibyte(name);
 
-  ze_external_semaphore_win32_ext_desc_t external_semaphore_win32_desc = {
-      .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WIN32_EXT_DESC,
-      .name = multibyte_name.c_str(),
-  };
+  ze_external_semaphore_win32_ext_desc_t external_semaphore_win32_desc = {};
+  external_semaphore_win32_desc.stype =
+      ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WIN32_EXT_DESC;
+  external_semaphore_win32_desc.name = multibyte_name.c_str();
 
-  ze_external_semaphore_ext_desc_t external_semaphore_desc = {
-      .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_EXT_DESC,
-      .pNext = &external_semaphore_win32_desc,
-      .flags = type};
+  ze_external_semaphore_ext_desc_t external_semaphore_desc = {};
+  external_semaphore_desc.stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_EXT_DESC;
+  external_semaphore_desc.pNext = &external_semaphore_win32_desc;
+  external_semaphore_desc.flags = type;
 
   return lzt::import_external_semaphore(l0_device, &external_semaphore_desc);
 }
@@ -87,18 +87,19 @@ ze_image_handle_t import_image(HANDLE shared_handle,
                                ze_external_memory_type_flags_t type,
                                uint64_t width, uint32_t height,
                                DXGI_FORMAT format) {
-  const ze_external_memory_import_win32_handle_t import_handle = {
-      .stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_WIN32,
-      .flags = type,
-      .handle = shared_handle};
+  ze_external_memory_import_win32_handle_t import_handle = {};
+  import_handle.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_WIN32;
+  import_handle.flags = type;
+  import_handle.handle = shared_handle;
 
-  const ze_image_desc_t image_desc = {.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC,
-                                      .pNext = &import_handle,
-                                      .type = ZE_IMAGE_TYPE_2D,
-                                      .format = dx::to_ze_image_format(format),
-                                      .width = width,
-                                      .height = height,
-                                      .depth = 1};
+  ze_image_desc_t image_desc = {};
+  image_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+  image_desc.pNext = &import_handle;
+  image_desc.type = ZE_IMAGE_TYPE_2D;
+  image_desc.format = dx::to_ze_image_format(format);
+  image_desc.width = width;
+  image_desc.height = height;
+  image_desc.depth = 1;
 
   return lzt::create_ze_image(image_desc);
 }
@@ -107,16 +108,18 @@ ze_image_handle_t create_plane_view(ze_device_handle_t l0_device,
                                     ze_image_handle_t image, uint32_t index,
                                     ze_image_format_layout_t layout,
                                     uint64_t width, uint32_t height) {
-  const ze_image_view_planar_ext_desc_t plane_ext_desc = {
-      .stype = ZE_STRUCTURE_TYPE_IMAGE_VIEW_PLANAR_EXT_DESC,
-      .planeIndex = index};
-  const ze_image_desc_t desc = {.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC,
-                                .pNext = &plane_ext_desc,
-                                .type = ZE_IMAGE_TYPE_2D,
-                                .format = {.layout = layout},
-                                .width = width,
-                                .height = height,
-                                .depth = 1};
+  ze_image_view_planar_ext_desc_t plane_ext_desc = {};
+  plane_ext_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_VIEW_PLANAR_EXT_DESC;
+  plane_ext_desc.planeIndex = index;
+
+  ze_image_desc_t desc = {};
+  desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+  desc.pNext = &plane_ext_desc;
+  desc.type = ZE_IMAGE_TYPE_2D;
+  desc.format.layout = layout;
+  desc.width = width;
+  desc.height = height;
+  desc.depth = 1;
 
   return lzt::create_ze_image_view_ext(l0_device, &desc, image);
 }

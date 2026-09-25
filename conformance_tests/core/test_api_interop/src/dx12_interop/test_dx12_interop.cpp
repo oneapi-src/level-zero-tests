@@ -11,8 +11,6 @@
 #include "utils/utils.hpp"
 #include "random/random.hpp"
 
-#include <span>
-
 #ifdef __linux__
 struct DX12InteroperabilityTests : ::testing::Test {
   void SetUp() override { GTEST_SKIP() << "Not supported on Linux"; }
@@ -109,9 +107,10 @@ void test_signal_fence(const ComPtr<ID3D12Device> &dx12_device,
           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
           0u, 0u);
 
-  ze_external_semaphore_signal_params_ext_t semaphore_signal_params = {
-      .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT,
-      .value = wait_value};
+  ze_external_semaphore_signal_params_ext_t semaphore_signal_params = {};
+  semaphore_signal_params.stype =
+      ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT;
+  semaphore_signal_params.value = wait_value;
   lzt::append_signal_external_semaphore(
       l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
       &semaphore_signal_params, nullptr, 0, nullptr);
@@ -182,9 +181,10 @@ void test_wait_fence(const ComPtr<ID3D12Device> &dx12_device,
           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
           0u, 0u);
 
-  ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {
-      .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
-      .value = wait_value};
+  ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {};
+  semaphore_wait_params.stype =
+      ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT;
+  semaphore_wait_params.value = wait_value;
   lzt::append_wait_external_semaphore(
       l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
       &semaphore_wait_params, l0_after_wait_event, 0, nullptr);
@@ -259,12 +259,12 @@ void test_import_memory(const ComPtr<ID3D12Device> &dx12_device,
   dx12_cmd_bundle.cmd_list->CopyBufferRegion(
       dx12_resource.Get(), 0, staging_buffer.Get(), 0, memory_size);
 
-  const D3D12_RESOURCE_BARRIER barrier = {
-      .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-      .Transition = {.pResource = dx12_resource.Get(),
-                     .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-                     .StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
-                     .StateAfter = D3D12_RESOURCE_STATE_COMMON}};
+  D3D12_RESOURCE_BARRIER barrier = {};
+  barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+  barrier.Transition.pResource = dx12_resource.Get();
+  barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+  barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+  barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
   dx12_cmd_bundle.cmd_list->ResourceBarrier(1, &barrier);
 
   dx12_cmd_bundle.cmd_list->Close();
@@ -390,12 +390,12 @@ void test_import_memory_with_semaphore(
   dx12_cmd_bundle.cmd_list->CopyBufferRegion(
       dx12_resource.Get(), 0, staging_buffer.Get(), 0, memory_size);
 
-  const D3D12_RESOURCE_BARRIER barrier = {
-      .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-      .Transition = {.pResource = dx12_resource.Get(),
-                     .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-                     .StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
-                     .StateAfter = D3D12_RESOURCE_STATE_COMMON}};
+  D3D12_RESOURCE_BARRIER barrier = {};
+  barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+  barrier.Transition.pResource = dx12_resource.Get();
+  barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+  barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+  barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
   dx12_cmd_bundle.cmd_list->ResourceBarrier(1, &barrier);
   dx12_cmd_bundle.cmd_list->Close();
 
@@ -414,9 +414,10 @@ void test_import_memory_with_semaphore(
           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
           0u, 0u);
 
-  ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {
-      .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
-      .value = wait_value};
+  ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {};
+  semaphore_wait_params.stype =
+      ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT;
+  semaphore_wait_params.value = wait_value;
   lzt::append_wait_external_semaphore(
       l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
       &semaphore_wait_params, l0_after_wait_event, 0, nullptr);
@@ -575,12 +576,12 @@ void test_pingpong_with_semaphore(const ComPtr<ID3D12Device> &dx12_device,
     if (resource_state == to) {
       return;
     }
-    const D3D12_RESOURCE_BARRIER barrier = {
-        .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-        .Transition = {.pResource = dx12_resource.Get(),
-                       .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-                       .StateBefore = resource_state,
-                       .StateAfter = to}};
+    D3D12_RESOURCE_BARRIER barrier = {};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Transition.pResource = dx12_resource.Get();
+    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    barrier.Transition.StateBefore = resource_state;
+    barrier.Transition.StateAfter = to;
     dx12_cmd_bundle.cmd_list->ResourceBarrier(1, &barrier);
     resource_state = to;
   };
@@ -592,8 +593,7 @@ void test_pingpong_with_semaphore(const ComPtr<ID3D12Device> &dx12_device,
     // DX produces frame `frame` into the shared resource.
     void *mapped_ptr = nullptr;
     ASSERT_EQ(upload_buffer->Map(0, nullptr, &mapped_ptr), S_OK);
-    std::span<uint32_t> upload_values(reinterpret_cast<uint32_t *>(mapped_ptr),
-                                      element_count);
+    uint32_t *upload_values = static_cast<uint32_t *>(mapped_ptr);
     for (uint32_t i = 0; i < element_count; ++i) {
       upload_values[i] = frame;
     }
@@ -619,9 +619,10 @@ void test_pingpong_with_semaphore(const ComPtr<ID3D12Device> &dx12_device,
     // L0 consumes behind the shared fence, then signals back.
     lzt::event_host_reset(l0_after_wait_event);
 
-    ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {
-        .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
-        .value = dx_produced_value};
+    ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {};
+    semaphore_wait_params.stype =
+        ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT;
+    semaphore_wait_params.value = dx_produced_value;
     lzt::append_wait_external_semaphore(
         l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
         &semaphore_wait_params, l0_after_wait_event, 0, nullptr);
@@ -636,9 +637,10 @@ void test_pingpong_with_semaphore(const ComPtr<ID3D12Device> &dx12_device,
                               &l0_after_wait_event);
     }
 
-    ze_external_semaphore_signal_params_ext_t semaphore_signal_params = {
-        .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT,
-        .value = l0_consumed_value};
+    ze_external_semaphore_signal_params_ext_t semaphore_signal_params = {};
+    semaphore_signal_params.stype =
+        ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT;
+    semaphore_signal_params.value = l0_consumed_value;
     lzt::append_signal_external_semaphore(
         l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
         &semaphore_signal_params, nullptr, 0, nullptr);
@@ -647,8 +649,8 @@ void test_pingpong_with_semaphore(const ComPtr<ID3D12Device> &dx12_device,
                                          std::numeric_limits<uint64_t>::max());
 
     if (work_op == L0WorkOp::memory_copy) {
-      std::span<const uint32_t> copied_values(
-          reinterpret_cast<const uint32_t *>(l0_host_memory), element_count);
+      const uint32_t *copied_values =
+          static_cast<const uint32_t *>(l0_host_memory);
       for (uint32_t i = 0; i < element_count; ++i) {
         ASSERT_EQ(copied_values[i], frame)
             << " frame = " << frame << ", index = " << i;
@@ -676,8 +678,8 @@ void test_pingpong_with_semaphore(const ComPtr<ID3D12Device> &dx12_device,
 
     void *readback_ptr = nullptr;
     ASSERT_EQ(readback_buffer->Map(0, nullptr, &readback_ptr), S_OK);
-    std::span<const uint32_t> readback_values(
-        reinterpret_cast<const uint32_t *>(readback_ptr), element_count);
+    const uint32_t *readback_values =
+        static_cast<const uint32_t *>(readback_ptr);
     for (uint32_t i = 0; i < element_count; ++i) {
       ASSERT_EQ(readback_values[i], expected_value)
           << " frame = " << frame << ", index = " << i;
@@ -783,45 +785,47 @@ struct DX12IteroperabilityMultiPlanarImageTests
       const ComPtr<ID3D12GraphicsCommandList> &dx12_cmd_list,
       const ComPtr<ID3D12Resource> &texture,
       const ComPtr<ID3D12Resource> &staging_buffer,
-      std::span<const D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints,
-      std::span<const UINT> num_rows, std::span<const size_t> row_size,
-      std::span<const std::byte> y_plane_bytes,
-      std::span<const std::byte> uv_plane_bytes) {
+      const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> &footprints,
+      const std::vector<UINT> &num_rows, const std::vector<UINT64> &row_size,
+      const void *y_plane_bytes, const void *uv_plane_bytes) {
     void *mapped_ptr = nullptr;
     staging_buffer->Map(0, nullptr, &mapped_ptr);
     // Copy Y plane
     for (UINT row = 0; row < num_rows[0]; ++row) {
       std::memcpy(static_cast<uint8_t *>(mapped_ptr) + footprints[0].Offset +
                       footprints[0].Footprint.RowPitch * row,
-                  y_plane_bytes.data() + row_size[0] * row, row_size[0]);
+                  static_cast<const uint8_t *>(y_plane_bytes) +
+                      row_size[0] * row,
+                  row_size[0]);
     }
     // Copy UV plane
     for (UINT row = 0; row < num_rows[1]; ++row) {
       std::memcpy(static_cast<uint8_t *>(mapped_ptr) + footprints[1].Offset +
                       footprints[1].Footprint.RowPitch * row,
-                  uv_plane_bytes.data() + row_size[1] * row, row_size[1]);
+                  static_cast<const uint8_t *>(uv_plane_bytes) +
+                      row_size[1] * row,
+                  row_size[1]);
     }
     staging_buffer->Unmap(0, nullptr);
 
     for (UINT p = 0; p < 2; ++p) {
-      D3D12_TEXTURE_COPY_LOCATION dst = {
-          .pResource = texture.Get(),
-          .Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
-          .SubresourceIndex = p};
-      D3D12_TEXTURE_COPY_LOCATION src = {
-          .pResource = staging_buffer.Get(),
-          .Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
-          .PlacedFootprint = footprints[p]};
+      D3D12_TEXTURE_COPY_LOCATION dst = {};
+      dst.pResource = texture.Get();
+      dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+      dst.SubresourceIndex = p;
+      D3D12_TEXTURE_COPY_LOCATION src = {};
+      src.pResource = staging_buffer.Get();
+      src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+      src.PlacedFootprint = footprints[p];
       dx12_cmd_list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
     }
 
-    const D3D12_RESOURCE_BARRIER barrier = {
-        .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, .Transition = {
-          .pResource = texture.Get(),
-          .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-          .StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
-          .StateAfter = D3D12_RESOURCE_STATE_COMMON
-        }};
+    D3D12_RESOURCE_BARRIER barrier = {};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Transition.pResource = texture.Get();
+    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
     dx12_cmd_list->ResourceBarrier(1, &barrier);
   }
 #endif
@@ -873,10 +877,9 @@ LZT_TEST_F(
   auto src_y_plane_values = lzt::generate_vector<uint8_t>(y_plane_size, 0);
   auto src_uv_plane_values = lzt::generate_vector<uint8_t>(uv_plane_size, 0);
 
-  record_fill_multiplanar_image(dx12_cmd_bundle.cmd_list, texture,
-                                staging_buffer, footprints, num_rows, row_size,
-                                as_bytes(std::span(src_y_plane_values)),
-                                as_bytes(std::span(src_uv_plane_values)));
+  record_fill_multiplanar_image(
+      dx12_cmd_bundle.cmd_list, texture, staging_buffer, footprints, num_rows,
+      row_size, src_y_plane_values.data(), src_uv_plane_values.data());
 
   dx12_cmd_bundle.cmd_list->Close();
   dx12::execute_and_sync_command_bundle(dx12_device, dx12_cmd_bundle);
@@ -973,10 +976,9 @@ LZT_TEST_F(
     v &= p010_mask;
   }
 
-  record_fill_multiplanar_image(dx12_cmd_bundle.cmd_list, texture,
-                                staging_buffer, footprints, num_rows, row_size,
-                                std::as_bytes(std::span(src_y_plane_values)),
-                                std::as_bytes(std::span(src_uv_plane_values)));
+  record_fill_multiplanar_image(
+      dx12_cmd_bundle.cmd_list, texture, staging_buffer, footprints, num_rows,
+      row_size, src_y_plane_values.data(), src_uv_plane_values.data());
 
   dx12_cmd_bundle.cmd_list->Close();
   dx12::execute_and_sync_command_bundle(dx12_device, dx12_cmd_bundle);
@@ -1034,7 +1036,7 @@ struct DX12InteroperabilityImageTests
                          const ComPtr<ID3D12Resource> &staging_buffer,
                          const D3D12_PLACED_SUBRESOURCE_FOOTPRINT &footprint,
                          UINT num_rows, size_t row_size,
-                         std::span<const uint8_t> bytes) {
+                         const std::vector<uint8_t> &bytes) {
     void *mapped_ptr = nullptr;
     staging_buffer->Map(0, nullptr, &mapped_ptr);
     for (UINT row = 0; row < num_rows; ++row) {
@@ -1045,23 +1047,22 @@ struct DX12InteroperabilityImageTests
     }
     staging_buffer->Unmap(0, nullptr);
 
-    D3D12_TEXTURE_COPY_LOCATION dst = {
-        .pResource = texture.Get(),
-        .Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
-        .SubresourceIndex = 0};
-    D3D12_TEXTURE_COPY_LOCATION src = {
-        .pResource = staging_buffer.Get(),
-        .Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
-        .PlacedFootprint = footprint};
+    D3D12_TEXTURE_COPY_LOCATION dst = {};
+    dst.pResource = texture.Get();
+    dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    dst.SubresourceIndex = 0;
+    D3D12_TEXTURE_COPY_LOCATION src = {};
+    src.pResource = staging_buffer.Get();
+    src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    src.PlacedFootprint = footprint;
     dx12_cmd_list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 
-    const D3D12_RESOURCE_BARRIER barrier = {
-        .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, .Transition = {
-          .pResource = texture.Get(),
-          .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-          .StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
-          .StateAfter = D3D12_RESOURCE_STATE_COMMON
-        }};
+    D3D12_RESOURCE_BARRIER barrier = {};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Transition.pResource = texture.Get();
+    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
     dx12_cmd_list->ResourceBarrier(1, &barrier);
   }
 #endif
@@ -1201,9 +1202,10 @@ LZT_TEST_P(
           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
           0u, 0u);
 
-  ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {
-      .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
-      .value = wait_value};
+  ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {};
+  semaphore_wait_params.stype =
+      ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT;
+  semaphore_wait_params.value = wait_value;
   lzt::append_wait_external_semaphore(
       l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
       &semaphore_wait_params, l0_after_wait_event, 0, nullptr);

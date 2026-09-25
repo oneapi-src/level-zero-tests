@@ -324,9 +324,10 @@ VkDevice create_device(VkPhysicalDevice physical_device,
       get_platform_external_memory_extension_name(),
       get_platform_external_semaphore_extension_name()};
 
-  const VkPhysicalDeviceTimelineSemaphoreFeatures timeline_features = {
-      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
-      .timelineSemaphore = VK_TRUE};
+  VkPhysicalDeviceTimelineSemaphoreFeatures timeline_features = {};
+  timeline_features.sType =
+      VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+  timeline_features.timelineSemaphore = VK_TRUE;
 
   VkDeviceCreateInfo device_create_info = {};
   device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

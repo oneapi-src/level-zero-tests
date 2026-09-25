@@ -9,6 +9,7 @@
 #include "utils/utils_command_bundle.hpp"
 
 #include <cstdlib>
+#include <type_traits>
 #include <utility>
 
 namespace level_zero_tests {
@@ -48,19 +49,21 @@ command_bundle_t<Mode> to_typed(const command_bundle &b) {
   return t;
 }
 
+template <command_list_mode_t Mode>
+using mode_tag = std::integral_constant<command_list_mode_t, Mode>;
+
 template <typename F>
 decltype(auto) dispatch_mode(command_list_mode_t mode, F &&f) {
   switch (mode) {
   case command_list_mode_t::regular:
-    return f.template operator()<command_list_mode_t::regular>();
+    return f(mode_tag<command_list_mode_t::regular>{});
   case command_list_mode_t::immediate:
-    return f.template operator()<command_list_mode_t::immediate>();
+    return f(mode_tag<command_list_mode_t::immediate>{});
   case command_list_mode_t::immediate_append_regular:
-    return f
-        .template operator()<command_list_mode_t::immediate_append_regular>();
+    return f(mode_tag<command_list_mode_t::immediate_append_regular>{});
   case command_list_mode_t::immediate_append_regular_with_params:
-    return f.template
-    operator()<command_list_mode_t::immediate_append_regular_with_params>();
+    return f(
+        mode_tag<command_list_mode_t::immediate_append_regular_with_params>{});
   }
   std::abort();
 }
@@ -68,14 +71,16 @@ decltype(auto) dispatch_mode(command_list_mode_t mode, F &&f) {
 } // namespace
 
 command_bundle create_command_bundle(command_list_mode_t mode) {
-  return dispatch_mode(mode, [&]<command_list_mode_t M>() {
+  return dispatch_mode(mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     return to_runtime(create_command_bundle<M>());
   });
 }
 
 command_bundle create_command_bundle(ze_device_handle_t device,
                                      command_list_mode_t mode) {
-  return dispatch_mode(mode, [&]<command_list_mode_t M>() {
+  return dispatch_mode(mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     return to_runtime(create_command_bundle<M>(device));
   });
 }
@@ -83,7 +88,8 @@ command_bundle create_command_bundle(ze_device_handle_t device,
 command_bundle create_command_bundle(ze_device_handle_t device,
                                      ze_command_list_flags_t list_flags,
                                      command_list_mode_t mode) {
-  return dispatch_mode(mode, [&]<command_list_mode_t M>() {
+  return dispatch_mode(mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     return to_runtime(create_command_bundle<M>(device, list_flags));
   });
 }
@@ -91,7 +97,8 @@ command_bundle create_command_bundle(ze_device_handle_t device,
 command_bundle create_command_bundle(ze_context_handle_t context,
                                      ze_device_handle_t device,
                                      command_list_mode_t mode) {
-  return dispatch_mode(mode, [&]<command_list_mode_t M>() {
+  return dispatch_mode(mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     return to_runtime(create_command_bundle<M>(context, device));
   });
 }
@@ -100,7 +107,8 @@ command_bundle create_command_bundle(ze_context_handle_t context,
                                      ze_device_handle_t device,
                                      ze_command_list_flags_t list_flags,
                                      command_list_mode_t mode) {
-  return dispatch_mode(mode, [&]<command_list_mode_t M>() {
+  return dispatch_mode(mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     return to_runtime(create_command_bundle<M>(context, device, list_flags));
   });
 }
@@ -110,7 +118,8 @@ command_bundle create_command_bundle(ze_context_handle_t context,
                                      ze_command_list_flags_t list_flags,
                                      uint32_t ordinal,
                                      command_list_mode_t mode) {
-  return dispatch_mode(mode, [&]<command_list_mode_t M>() {
+  return dispatch_mode(mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     return to_runtime(
         create_command_bundle<M>(context, device, list_flags, ordinal));
   });
@@ -123,7 +132,8 @@ command_bundle create_command_bundle(ze_device_handle_t device,
                                      ze_command_list_flags_t list_flags,
                                      uint32_t ordinal,
                                      command_list_mode_t mode) {
-  return dispatch_mode(mode, [&]<command_list_mode_t M>() {
+  return dispatch_mode(mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     return to_runtime(create_command_bundle<M>(device, queue_flags, queue_mode,
                                                priority, list_flags, ordinal));
   });
@@ -134,7 +144,8 @@ command_bundle create_command_bundle(
     ze_command_queue_flags_t queue_flags, ze_command_queue_mode_t queue_mode,
     ze_command_queue_priority_t priority, ze_command_list_flags_t list_flags,
     uint32_t ordinal, uint32_t index, command_list_mode_t mode) {
-  return dispatch_mode(mode, [&]<command_list_mode_t M>() {
+  return dispatch_mode(mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     return to_runtime(create_command_bundle<M>(context, device, queue_flags,
                                                queue_mode, priority, list_flags,
                                                ordinal, index));
@@ -142,28 +153,32 @@ command_bundle create_command_bundle(
 }
 
 void close_command_bundle(command_bundle &bundle) {
-  dispatch_mode(bundle.mode, [&]<command_list_mode_t M>() {
+  dispatch_mode(bundle.mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     auto typed = to_typed<M>(bundle);
     close_command_bundle<M>(typed);
   });
 }
 
 void submit_command_bundle(command_bundle &bundle) {
-  dispatch_mode(bundle.mode, [&]<command_list_mode_t M>() {
+  dispatch_mode(bundle.mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     auto typed = to_typed<M>(bundle);
     submit_command_bundle<M>(typed);
   });
 }
 
 void sync_command_bundle(command_bundle &bundle, uint64_t timeout) {
-  dispatch_mode(bundle.mode, [&]<command_list_mode_t M>() {
+  dispatch_mode(bundle.mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     auto typed = to_typed<M>(bundle);
     sync_command_bundle<M>(typed, timeout);
   });
 }
 
 void reset_command_bundle(command_bundle &bundle) {
-  dispatch_mode(bundle.mode, [&]<command_list_mode_t M>() {
+  dispatch_mode(bundle.mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     auto typed = to_typed<M>(bundle);
     reset_command_bundle<M>(typed);
   });
@@ -176,7 +191,8 @@ void execute_and_sync_command_bundle(command_bundle bundle, uint64_t timeout) {
 }
 
 void destroy_command_bundle(command_bundle bundle) {
-  dispatch_mode(bundle.mode, [&]<command_list_mode_t M>() {
+  dispatch_mode(bundle.mode, [&](auto tag) {
+    constexpr auto M = decltype(tag)::value;
     destroy_command_bundle<M>(to_typed<M>(bundle));
   });
 }

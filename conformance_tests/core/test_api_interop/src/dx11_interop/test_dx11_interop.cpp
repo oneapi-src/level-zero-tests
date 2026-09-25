@@ -11,8 +11,6 @@
 #include "utils/utils.hpp"
 #include "random/random.hpp"
 
-#include <span>
-
 #ifdef __linux__
 struct DX11InteroperabilityTests : ::testing::Test {
   void SetUp() override { GTEST_SKIP() << "Not supported on Linux"; }
@@ -99,9 +97,10 @@ void test_signal_fence(const ComPtr<ID3D11Device5> &dx11_device5,
           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
           0u, 0u);
 
-  ze_external_semaphore_signal_params_ext_t semaphore_signal_params = {
-      .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT,
-      .value = wait_value};
+  ze_external_semaphore_signal_params_ext_t semaphore_signal_params = {};
+  semaphore_signal_params.stype =
+      ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT;
+  semaphore_signal_params.value = wait_value;
   lzt::append_signal_external_semaphore(
       l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
       &semaphore_signal_params, nullptr, 0, nullptr);
@@ -168,9 +167,10 @@ void test_wait_fence(const ComPtr<ID3D11Device5> &dx11_device5,
           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
           0u, 0u);
 
-  ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {
-      .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
-      .value = wait_value};
+  ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {};
+  semaphore_wait_params.stype =
+      ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT;
+  semaphore_wait_params.value = wait_value;
   lzt::append_wait_external_semaphore(
       l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
       &semaphore_wait_params, l0_after_wait_event, 0, nullptr);
@@ -228,9 +228,8 @@ struct DX11InteroperabilityMultiPlanarImageTests
 #ifndef __linux__
   void upload_planar_texture(const ComPtr<ID3D11Texture2D> &shared_texture,
                              DXGI_FORMAT format, UINT width, UINT height,
-                             std::span<const std::byte> plane0_bytes,
-                             size_t plane0_row_size, UINT plane0_rows,
-                             std::span<const std::byte> plane1_bytes,
+                             const void *plane0_bytes, size_t plane0_row_size,
+                             UINT plane0_rows, const void *plane1_bytes,
                              size_t plane1_row_size, UINT plane1_rows) {
     auto staging = dx11::create_texture_2d(dx11_device, format, width, height);
 
@@ -245,14 +244,18 @@ struct DX11InteroperabilityMultiPlanarImageTests
 
     for (UINT row = 0; row < plane0_rows; ++row) {
       std::memcpy(static_cast<uint8_t *>(mapped.pData) + mapped.RowPitch * row,
-                  plane0_bytes.data() + plane0_row_size * row, plane0_row_size);
+                  static_cast<const uint8_t *>(plane0_bytes) +
+                      plane0_row_size * row,
+                  plane0_row_size);
     }
 
     size_t uv_plane_offset = static_cast<size_t>(mapped.RowPitch) * (height);
     for (UINT row = 0; row < plane1_rows; ++row) {
       std::memcpy(static_cast<uint8_t *>(mapped.pData) + uv_plane_offset +
                       mapped.RowPitch * row,
-                  plane1_bytes.data() + plane1_row_size * row, plane1_row_size);
+                  static_cast<const uint8_t *>(plane1_bytes) +
+                      plane1_row_size * row,
+                  plane1_row_size);
     }
 
     dx11_device_context->Unmap(staging.Get(), 0);
@@ -292,9 +295,9 @@ struct DX11InteroperabilityMultiPlanarImageTests
 
   template <typename T>
   void import_planar_image_test(DXGI_FORMAT format, UINT width, UINT height,
-                                std::span<const std::byte> plane0_bytes,
+                                const void *plane0_bytes,
                                 size_t plane0_row_size, UINT plane0_rows,
-                                std::span<const std::byte> plane1_bytes,
+                                const void *plane1_bytes,
                                 size_t plane1_row_size, UINT plane1_rows,
                                 std::vector<T> &dst_y_plane_values,
                                 std::vector<T> &dst_uv_plane_values) {
@@ -346,9 +349,8 @@ struct DX11InteroperabilityMultiPlanarImageTests
 
   template <typename T>
   void import_planar_image_with_semaphore_test(
-      DXGI_FORMAT format, UINT width, UINT height,
-      std::span<const std::byte> plane0_bytes, size_t plane0_row_size,
-      UINT plane0_rows, std::span<const std::byte> plane1_bytes,
+      DXGI_FORMAT format, UINT width, UINT height, const void *plane0_bytes,
+      size_t plane0_row_size, UINT plane0_rows, const void *plane1_bytes,
       size_t plane1_row_size, UINT plane1_rows,
       std::vector<T> &dst_y_plane_values, std::vector<T> &dst_uv_plane_values) {
     auto fence = dx11::create_fence(dx11_device5, true);
@@ -393,9 +395,10 @@ struct DX11InteroperabilityMultiPlanarImageTests
             ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
             ZE_COMMAND_QUEUE_PRIORITY_NORMAL, 0u, 0u);
 
-    ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {
-        .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
-        .value = wait_value};
+    ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {};
+    semaphore_wait_params.stype =
+        ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT;
+    semaphore_wait_params.value = wait_value;
     lzt::append_wait_external_semaphore(
         l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
         &semaphore_wait_params, l0_after_wait_event, 0, nullptr);
@@ -438,10 +441,9 @@ LZT_TEST_F(
   std::vector<uint8_t> dst_y_plane_values(y_plane_size);
   std::vector<uint8_t> dst_uv_plane_values(uv_plane_size);
 
-  import_planar_image_test(
-      format, width, height, as_bytes(std::span(src_y_plane_values)), width,
-      height, as_bytes(std::span(src_uv_plane_values)), width, height / 2,
-      dst_y_plane_values, dst_uv_plane_values);
+  import_planar_image_test(format, width, height, src_y_plane_values.data(),
+                           width, height, src_uv_plane_values.data(), width,
+                           height / 2, dst_y_plane_values, dst_uv_plane_values);
 
   EXPECT_EQ(dst_y_plane_values, src_y_plane_values);
   EXPECT_EQ(dst_uv_plane_values, src_uv_plane_values);
@@ -465,9 +467,9 @@ LZT_TEST_F(
   std::vector<uint8_t> dst_uv_plane_values(uv_plane_size);
 
   import_planar_image_with_semaphore_test(
-      format, width, height, as_bytes(std::span(src_y_plane_values)), width,
-      height, as_bytes(std::span(src_uv_plane_values)), width, height / 2,
-      dst_y_plane_values, dst_uv_plane_values);
+      format, width, height, src_y_plane_values.data(), width, height,
+      src_uv_plane_values.data(), width, height / 2, dst_y_plane_values,
+      dst_uv_plane_values);
 
   EXPECT_EQ(dst_y_plane_values, src_y_plane_values);
   EXPECT_EQ(dst_uv_plane_values, src_uv_plane_values);
@@ -504,10 +506,10 @@ LZT_TEST_F(
   std::vector<uint16_t> dst_y_plane_values(y_plane_size);
   std::vector<uint16_t> dst_uv_plane_values(uv_plane_size);
 
-  import_planar_image_test(
-      format, width, height, as_bytes(std::span(src_y_plane_values)),
-      y_row_size, height, as_bytes(std::span(src_uv_plane_values)), uv_row_size,
-      height / 2, dst_y_plane_values, dst_uv_plane_values);
+  import_planar_image_test(format, width, height, src_y_plane_values.data(),
+                           y_row_size, height, src_uv_plane_values.data(),
+                           uv_row_size, height / 2, dst_y_plane_values,
+                           dst_uv_plane_values);
 
   // Mask out the reserved low 6 bits before comparing.
   for (auto &v : dst_y_plane_values) {
@@ -553,9 +555,9 @@ LZT_TEST_F(
   std::vector<uint16_t> dst_uv_plane_values(uv_plane_size);
 
   import_planar_image_with_semaphore_test(
-      format, width, height, as_bytes(std::span(src_y_plane_values)),
-      y_row_size, height, as_bytes(std::span(src_uv_plane_values)), uv_row_size,
-      height / 2, dst_y_plane_values, dst_uv_plane_values);
+      format, width, height, src_y_plane_values.data(), y_row_size, height,
+      src_uv_plane_values.data(), uv_row_size, height / 2, dst_y_plane_values,
+      dst_uv_plane_values);
 
   // Mask out the reserved low 6 bits before comparing.
   for (auto &v : dst_y_plane_values) {
@@ -625,7 +627,7 @@ struct DX11InteroperabilityImageTests
 
   void upload_texture(const ComPtr<ID3D11Texture2D> &shared_texture,
                       DXGI_FORMAT format, UINT width, UINT height,
-                      std::span<const std::byte> bytes, size_t row_size) {
+                      const void *bytes, size_t row_size) {
     auto staging = dx11::create_texture_2d(dx11_device, format, width, height);
 
     D3D11_MAPPED_SUBRESOURCE mapped = {};
@@ -638,7 +640,8 @@ struct DX11InteroperabilityImageTests
     }
     for (UINT row = 0; row < height; ++row) {
       std::memcpy(static_cast<uint8_t *>(mapped.pData) + mapped.RowPitch * row,
-                  bytes.data() + row_size * row, row_size);
+                  static_cast<const uint8_t *>(bytes) + row_size * row,
+                  row_size);
     }
     dx11_device_context->Unmap(staging.Get(), 0);
 
@@ -672,8 +675,8 @@ LZT_TEST_P(DX11InteroperabilityImageTests,
 
   auto shared_texture =
       dx11::create_texture_2d(dx11_device, format, width, height, true);
-  upload_texture(shared_texture, format, width, height,
-                 std::as_bytes(std::span(src_image_values)), row_size);
+  upload_texture(shared_texture, format, width, height, src_image_values.data(),
+                 row_size);
 
   auto wait_fence = dx11::create_fence(dx11_device5, false);
   dx11_device_context4->Signal(wait_fence.Get(), 1);
@@ -734,8 +737,8 @@ LZT_TEST_P(
   ze_event_desc_t l0_event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC};
   auto l0_after_wait_event = lzt::create_event(l0_event_pool, l0_event_desc);
 
-  upload_texture(shared_texture, format, width, height,
-                 std::as_bytes(std::span(src_image_values)), row_size);
+  upload_texture(shared_texture, format, width, height, src_image_values.data(),
+                 row_size);
 
   uint64_t wait_value = 1;
 
@@ -755,9 +758,10 @@ LZT_TEST_P(
           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
           0u, 0u);
 
-  ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {
-      .stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT,
-      .value = wait_value};
+  ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {};
+  semaphore_wait_params.stype =
+      ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT;
+  semaphore_wait_params.value = wait_value;
   lzt::append_wait_external_semaphore(
       l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
       &semaphore_wait_params, l0_after_wait_event, 0, nullptr);
