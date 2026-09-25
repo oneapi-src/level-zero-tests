@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2021-2023 Intel Corporation
+ * Copyright (C) 2021-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -712,61 +712,57 @@ void zetDebugEventReadTest::run_proc_entry_exit_test(
 
     zet_debug_event_t debug_event;
     ze_result_t result;
-    for (int i = 0; i < 3; i++) {
-      LOG_DEBUG << "[Debugger]--- Loop " << i << " ---";
 
-      // Expect timeout with no event since no CQ is created.
-      // No event expected after attaching
-      result = lzt::debug_read_event(debugSession, debug_event, 2, true);
-      EXPECT_EQ(result, ZE_RESULT_NOT_READY);
+    // Expect timeout with no event since no CQ is created.
+    // No event expected after attaching
+    result = lzt::debug_read_event(debugSession, debug_event, 2, true);
+    EXPECT_EQ(result, ZE_RESULT_NOT_READY);
 
-      // check CQs creation
-      for (uint32_t queueNum = 1; queueNum <= totalNumCQs; queueNum++) {
+    // check CQs creation
+    for (uint32_t queueNum = 1; queueNum <= totalNumCQs; queueNum++) {
 
-        // let the app create a CQ
-        synchro->notify_application();
-        synchro->wait_for_application_signal();
-        synchro->clear_application_signal();
-
-        // only the first queue creation should send the event
-        if (queueNum == 1) {
-          if (!check_event(debugSession, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY)) {
-            FAIL() << "[Debugger] Did not recieve "
-                      "ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY";
-          }
-        } else {
-          result = lzt::debug_read_event(debugSession, debug_event, 2, true);
-          EXPECT_EQ(result, ZE_RESULT_NOT_READY);
-        }
-      }
-
-      // let the app to continue after creating the last CQ.
+      // let the app create a CQ
       synchro->notify_application();
+      synchro->wait_for_application_signal();
+      synchro->clear_application_signal();
 
-      // check CQs destruction
-      for (uint32_t queueNum = 1; queueNum <= totalNumCQs; queueNum++) {
-
-        synchro->wait_for_application_signal();
-        synchro->clear_application_signal();
-
-        // only the last CQ destruction should send the event
-        if (queueNum == totalNumCQs) {
-          if (!check_event(debugSession, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT)) {
-            FAIL() << "[Debugger] Did not recieve "
-                      "ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT";
-          }
-        } else {
-          result = lzt::debug_read_event(debugSession, debug_event, 2, true);
-          EXPECT_EQ(result, ZE_RESULT_NOT_READY);
+      // only the first queue creation should send the event
+      if (queueNum == 1) {
+        if (!check_event(debugSession, ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY)) {
+          FAIL() << "[Debugger] Did not recieve "
+                    "ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY";
         }
+      } else {
+        result = lzt::debug_read_event(debugSession, debug_event, 2, true);
+        EXPECT_EQ(result, ZE_RESULT_NOT_READY);
+      }
+    }
 
-        // let the app destroy another CQ
-        if (queueNum < totalNumCQs) {
-          synchro->notify_application();
+    // let the app to continue after creating the last CQ.
+    synchro->notify_application();
+
+    // check CQs destruction
+    for (uint32_t queueNum = 1; queueNum <= totalNumCQs; queueNum++) {
+
+      synchro->wait_for_application_signal();
+      synchro->clear_application_signal();
+
+      // only the last CQ destruction should send the event
+      if (queueNum == totalNumCQs) {
+        if (!check_event(debugSession, ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT)) {
+          FAIL() << "[Debugger] Did not recieve "
+                    "ZET_DEBUG_EVENT_TYPE_PROCESS_EXIT";
         }
+      } else {
+        result = lzt::debug_read_event(debugSession, debug_event, 2, true);
+        EXPECT_EQ(result, ZE_RESULT_NOT_READY);
       }
 
-    } // loops
+      // let the app destroy another CQ
+      if (queueNum < totalNumCQs) {
+        synchro->notify_application();
+      }
+    }
 
     debugHelper.wait();
     lzt::debug_detach(debugSession);

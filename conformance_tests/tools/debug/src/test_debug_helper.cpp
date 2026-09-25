@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2022-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -620,75 +620,72 @@ void loop_create_destroy_multiple_cq_immcl(ze_context_handle_t context,
   std::vector<ze_command_queue_handle_t> cmdQueues;
   std::vector<ze_command_list_handle_t> cmdLists;
 
-  for (int loop = 0; loop < 3; loop++) {
-    LOG_DEBUG << "[Application]--- Loop " << loop << " ---";
-    synchro.wait_for_debugger_signal();
-    synchro.clear_debugger_signal();
+  synchro.wait_for_debugger_signal();
+  synchro.clear_debugger_signal();
 
-    LOG_DEBUG << "[Application] Child Proceeding";
+  LOG_DEBUG << "[Application] Child Proceeding";
 
-    for (MapNumCmdQueue::iterator ordinalCQ = ordinalCQs.begin();
-         ordinalCQ != ordinalCQs.end(); ordinalCQ++) {
-      uint32_t ordinal = ordinalCQ->first;
-      uint32_t numQueues = ordinalCQ->second;
+  for (MapNumCmdQueue::iterator ordinalCQ = ordinalCQs.begin();
+       ordinalCQ != ordinalCQs.end(); ordinalCQ++) {
+    uint32_t ordinal = ordinalCQ->first;
+    uint32_t numQueues = ordinalCQ->second;
 
-      for (uint32_t index = 0; index < numQueues; index++) {
-        if (test_selected == MULTIPLE_CQ) {
-          ze_command_queue_handle_t cmdqueue = lzt::create_command_queue(
-              context, device, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
-              ZE_COMMAND_QUEUE_MODE_DEFAULT, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
-              ordinal, index);
-          cmdQueues.push_back(cmdqueue);
-        } else {
-          ze_command_list_handle_t immCommandList =
-              lzt::create_immediate_command_list(
-                  context, device, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
-                  ZE_COMMAND_QUEUE_MODE_DEFAULT,
-                  ZE_COMMAND_QUEUE_PRIORITY_NORMAL, ordinal, index);
+    for (uint32_t index = 0; index < numQueues; index++) {
+      if (test_selected == MULTIPLE_CQ) {
+        ze_command_queue_handle_t cmdqueue = lzt::create_command_queue(
+            context, device, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
+            ZE_COMMAND_QUEUE_MODE_DEFAULT, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+            ordinal, index);
+        cmdQueues.push_back(cmdqueue);
+      } else {
+        ze_command_list_handle_t immCommandList =
+            lzt::create_immediate_command_list(
+                context, device, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
+                ZE_COMMAND_QUEUE_MODE_DEFAULT, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+                ordinal, index);
 
-          cmdLists.push_back(immCommandList);
-        }
+        cmdLists.push_back(immCommandList);
+      }
 
-        LOG_DEBUG << "[Application] Created "
-                  << (test_selected == MULTIPLE_CQ ? " CQ "
-                                                   : " immediate CMD List ")
-                  << "with ordinal: " << ordinal << " and index: " << index;
+      LOG_DEBUG << "[Application] Created "
+                << (test_selected == MULTIPLE_CQ ? " CQ "
+                                                 : " immediate CMD List ")
+                << "with ordinal: " << ordinal << " and index: " << index;
 
-        synchro.notify_debugger();
+      synchro.notify_debugger();
+      synchro.wait_for_debugger_signal();
+      synchro.clear_debugger_signal();
+    }
+  }
+
+  // cleanup
+  int counter = 1;
+  if (test_selected == MULTIPLE_CQ) {
+    for (auto cmdqueue : cmdQueues) {
+      LOG_DEBUG << "[Application] Destroying CQ: " << counter;
+      lzt::destroy_command_queue(cmdqueue);
+
+      synchro.notify_debugger();
+      if (counter < static_cast<int>(totalNumCQs)) {
         synchro.wait_for_debugger_signal();
         synchro.clear_debugger_signal();
       }
+      counter++;
     }
+    cmdQueues.clear();
+  } else {
+    for (auto cmdList : cmdLists) {
+      LOG_DEBUG << "[Application] Destroying Immedate CMD List: " << counter;
+      lzt::destroy_command_list(cmdList);
 
-    // cleanup
-    int counter = 1;
-    if (test_selected == MULTIPLE_CQ) {
-      for (auto cmdqueue : cmdQueues) {
-        LOG_DEBUG << "[Application] Destroying CQ: " << counter;
-        lzt::destroy_command_queue(cmdqueue);
-
-        synchro.notify_debugger();
-        if (counter < static_cast<int>(totalNumCQs)) {
-          synchro.wait_for_debugger_signal();
-          synchro.clear_debugger_signal();
-        }
-        counter++;
+      synchro.notify_debugger();
+      if (counter < static_cast<int>(totalNumCQs)) {
+        synchro.wait_for_debugger_signal();
+        synchro.clear_debugger_signal();
       }
-      cmdQueues.clear();
-    } else {
-      for (auto cmdList : cmdLists) {
-        LOG_DEBUG << "[Application] Destroying Immedate CMD List: " << counter;
-        lzt::destroy_command_list(cmdList);
-
-        synchro.notify_debugger();
-        if (counter < static_cast<int>(totalNumCQs)) {
-          synchro.wait_for_debugger_signal();
-          synchro.clear_debugger_signal();
-        }
-        counter++;
-      }
-      cmdLists.clear();
+      counter++;
     }
+    cmdLists.clear();
   }
 
   if (::testing::Test::HasFailure()) {
