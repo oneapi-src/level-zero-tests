@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -116,6 +116,13 @@ first compute engine in the device.
 
   --regular_cmdlist           use regular command list instead of immediate
 
+  --remote_wait               for unidirectional tests, append a wait on each copy's
+                              completion event, and an event reset, to engine 0 of the
+                              remote device. On some platforms this keeps the remote device
+                              out of a low power state that limits the transfer. Timing
+                              includes the extra submission, wait, reset and synchronization.
+                              Not supported with --ipc, -b or parallel tests. Default: Not set.
+
   --version                   display version
   -h, --help                  display help message
 )HELP";
@@ -223,12 +230,14 @@ public:
   void perform_copy(peer_test_t test_type,
                     ze_command_list_handle_t command_list,
                     ze_command_queue_handle_t command_queue, void *dst_buffer,
-                    void *src_buffer, size_t buffer_size);
+                    void *src_buffer, size_t buffer_size,
+                    ze_command_list_handle_t remote_command_list = nullptr,
+                    ze_command_queue_handle_t remote_command_queue = nullptr);
 
-  void perform_copy_immediate(peer_test_t test_type,
-                              ze_command_list_handle_t command_list,
-                              void *dst_buffer, void *src_buffer,
-                              size_t buffer_size);
+  void perform_copy_immediate(
+      peer_test_t test_type, ze_command_list_handle_t command_list,
+      void *dst_buffer, void *src_buffer, size_t buffer_size,
+      ze_command_list_handle_t remote_command_list = nullptr);
 
   void bidirectional_perform_copy(uint32_t dst_device_id,
                                   uint32_t src_device_id, uint32_t queue_index,
@@ -321,6 +330,9 @@ public:
   ze_event_pool_handle_t event_pool = {};
   ze_event_handle_t event = {};
 
+  ze_event_pool_handle_t remote_wait_event_pool = {};
+  ze_event_handle_t remote_wait_event = {};
+
   static bool use_queue_in_destination;
   static bool run_continuously;
   static bool bidirectional;
@@ -330,6 +342,7 @@ public:
   static bool parallel_copy_to_pair_targets;
   static bool parallel_divide_buffers;
   static bool use_immediate_cmdlist;
+  static bool remote_wait;
 
   static uint32_t number_iterations;
   uint32_t warm_up_iterations = number_iterations / 5;
