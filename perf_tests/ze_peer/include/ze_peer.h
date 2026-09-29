@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <utility>
+#include <optional>
 #include "common.hpp"
 #include "ze_app.hpp"
 #include <unistd.h>
@@ -39,9 +40,11 @@ typedef enum _peer_test_t {
   PEER_TEST_MAX
 } peer_test_t;
 
+using ze_peer_engine_t =
+    std::pair<ze_command_queue_handle_t, ze_command_list_handle_t>;
+
 typedef struct _ze_peer_device_t {
-  std::vector<std::pair<ze_command_queue_handle_t, ze_command_list_handle_t>>
-      engines;
+  std::vector<ze_peer_engine_t> engines;
 } ze_peer_device_t;
 
 // clang-format off
@@ -231,13 +234,13 @@ public:
                     ze_command_list_handle_t command_list,
                     ze_command_queue_handle_t command_queue, void *dst_buffer,
                     void *src_buffer, size_t buffer_size,
-                    ze_command_list_handle_t remote_command_list = nullptr,
-                    ze_command_queue_handle_t remote_command_queue = nullptr);
+                    std::optional<ze_peer_engine_t> remote_engine = {});
 
-  void perform_copy_immediate(
-      peer_test_t test_type, ze_command_list_handle_t command_list,
-      void *dst_buffer, void *src_buffer, size_t buffer_size,
-      ze_command_list_handle_t remote_command_list = nullptr);
+  void
+  perform_copy_immediate(peer_test_t test_type,
+                         ze_command_list_handle_t command_list,
+                         void *dst_buffer, void *src_buffer, size_t buffer_size,
+                         std::optional<ze_peer_engine_t> remote_engine = {});
 
   void bidirectional_perform_copy(uint32_t dst_device_id,
                                   uint32_t src_device_id, uint32_t queue_index,

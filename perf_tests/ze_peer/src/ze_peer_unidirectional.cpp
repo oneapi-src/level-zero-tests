@@ -12,36 +12,34 @@ void ZePeer::perform_copy(peer_test_t test_type,
                           ze_command_queue_handle_t command_queue,
                           void *dst_buffer, void *src_buffer,
                           size_t buffer_size,
-                          ze_command_list_handle_t remote_command_list,
-                          ze_command_queue_handle_t remote_command_queue) {
-  const bool use_remote_wait = remote_command_list != nullptr;
+                          std::optional<ze_peer_engine_t> remote_engine) {
   const ze_event_handle_t signal_event =
-      use_remote_wait ? remote_wait_event : nullptr;
+      remote_engine ? remote_wait_event : nullptr;
 
   SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(command_list, dst_buffer,
                                                      src_buffer, buffer_size,
                                                      signal_event, 0, nullptr));
   SUCCESS_OR_TERMINATE(zeCommandListClose(command_list));
-  if (use_remote_wait) {
-    SUCCESS_OR_TERMINATE(zeCommandListAppendWaitOnEvents(remote_command_list, 1,
-                                                         &remote_wait_event));
-    SUCCESS_OR_TERMINATE(
-        zeCommandListAppendEventReset(remote_command_list, remote_wait_event));
-    SUCCESS_OR_TERMINATE(zeCommandListClose(remote_command_list));
+  if (remote_engine) {
+    SUCCESS_OR_TERMINATE(zeCommandListAppendWaitOnEvents(
+        remote_engine->second, 1, &remote_wait_event));
+    SUCCESS_OR_TERMINATE(zeCommandListAppendEventReset(remote_engine->second,
+                                                       remote_wait_event));
+    SUCCESS_OR_TERMINATE(zeCommandListClose(remote_engine->second));
   }
 
   const auto execute_and_synchronize = [&]() {
     SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
         command_queue, 1, &command_list, nullptr));
-    if (use_remote_wait) {
+    if (remote_engine) {
       SUCCESS_OR_TERMINATE(zeCommandQueueExecuteCommandLists(
-          remote_command_queue, 1, &remote_command_list, nullptr));
+          remote_engine->first, 1, &remote_engine->second, nullptr));
     }
     SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(
         command_queue, std::numeric_limits<uint64_t>::max()));
-    if (use_remote_wait) {
+    if (remote_engine) {
       SUCCESS_OR_TERMINATE(zeCommandQueueSynchronize(
-          remote_command_queue, std::numeric_limits<uint64_t>::max()));
+          remote_engine->first, std::numeric_limits<uint64_t>::max()));
     }
   };
 
@@ -63,34 +61,33 @@ void ZePeer::perform_copy(peer_test_t test_type,
   } while (run_continuously);
 
   SUCCESS_OR_TERMINATE(zeCommandListReset(command_list));
-  if (use_remote_wait) {
-    SUCCESS_OR_TERMINATE(zeCommandListReset(remote_command_list));
+  if (remote_engine) {
+    SUCCESS_OR_TERMINATE(zeCommandListReset(remote_engine->second));
   }
 }
 
 void ZePeer::perform_copy_immediate(
     peer_test_t test_type, ze_command_list_handle_t command_list,
     void *dst_buffer, void *src_buffer, size_t buffer_size,
-    ze_command_list_handle_t remote_command_list) {
-  const bool use_remote_wait = remote_command_list != nullptr;
+    std::optional<ze_peer_engine_t> remote_engine) {
   const ze_event_handle_t signal_event =
-      use_remote_wait ? remote_wait_event : nullptr;
+      remote_engine ? remote_wait_event : nullptr;
 
   const auto copy_and_synchronize = [&]() {
     SUCCESS_OR_TERMINATE(
         zeCommandListAppendMemoryCopy(command_list, dst_buffer, src_buffer,
                                       buffer_size, signal_event, 0, nullptr));
-    if (use_remote_wait) {
+    if (remote_engine) {
       SUCCESS_OR_TERMINATE(zeCommandListAppendWaitOnEvents(
-          remote_command_list, 1, &remote_wait_event));
-      SUCCESS_OR_TERMINATE(zeCommandListAppendEventReset(remote_command_list,
+          remote_engine->second, 1, &remote_wait_event));
+      SUCCESS_OR_TERMINATE(zeCommandListAppendEventReset(remote_engine->second,
                                                          remote_wait_event));
     }
     SUCCESS_OR_TERMINATE(zeCommandListHostSynchronize(
         command_list, std::numeric_limits<uint64_t>::max()));
-    if (use_remote_wait) {
+    if (remote_engine) {
       SUCCESS_OR_TERMINATE(zeCommandListHostSynchronize(
-          remote_command_list, std::numeric_limits<uint64_t>::max()));
+          remote_engine->second, std::numeric_limits<uint64_t>::max()));
     }
   };
 
@@ -142,20 +139,18 @@ void ZePeer::bandwidth_latency(peer_test_t test_type,
   initialize_buffers(remote_device_ids, local_device_ids, ze_host_buffer,
                      buffer_size);
 
-  ze_command_queue_handle_t remote_command_queue = nullptr;
-  ze_command_list_handle_t remote_command_list = nullptr;
-  if (ZePeer::remote_wait) {
-    // Engine 0 always exists; the power effect of a wait is device specific.
-    remote_command_queue = ze_peer_devices[remote_device_id].engines[0].first;
-    remote_command_list = ze_peer_devices[remote_device_id].engines[0].second;
-  }
+  // Engine 0 always exists; the power effect of a wait is device specific.
+  const std::optional<ze_peer_engine_t> remote_engine =
+      ZePeer::remote_wait
+          ? std::make_optional(ze_peer_devices[remote_device_id].engines[0])
+          : std::nullopt;
 
   if (ZePeer::use_immediate_cmdlist) {
     perform_copy_immediate(test_type, command_list, dst_buffer, src_buffer,
-                           buffer_size, remote_command_list);
+                           buffer_size, remote_engine);
   } else {
     perform_copy(test_type, command_list, command_queue, dst_buffer, src_buffer,
-                 buffer_size, remote_command_list, remote_command_queue);
+                 buffer_size, remote_engine);
   }
 
   if (validate_results) {
