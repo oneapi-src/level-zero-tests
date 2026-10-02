@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -394,6 +394,55 @@ LZT_TEST(
   b2a = lzt::can_access_peer(devices[1], devices[0]);
 
   EXPECT_EQ(a2b, b2a);
+}
+
+LZT_TEST(zeDeviceCanAccessPeerTests,
+         GivenSameRootDeviceWhenCheckingPeerAccessThenTrueIsReturned) {
+  auto devices = lzt::get_ze_devices();
+  ASSERT_GT(devices.size(), 0);
+
+  for (auto device : devices) {
+    EXPECT_TRUE(lzt::can_access_peer(device, device));
+  }
+}
+
+LZT_TEST(zeDeviceCanAccessPeerTests,
+         GivenSameSubDeviceWhenCheckingPeerAccessThenTrueIsReturned) {
+  bool sub_device_found = false;
+  for (auto device : lzt::get_ze_devices()) {
+    for (auto sub_device : lzt::get_ze_sub_devices(device)) {
+      sub_device_found = true;
+      EXPECT_TRUE(lzt::can_access_peer(sub_device, sub_device));
+    }
+  }
+
+  if (!sub_device_found) {
+    GTEST_SKIP() << "No sub-devices found";
+  }
+}
+
+LZT_TEST(
+    zeDeviceCanAccessPeerTests,
+    GivenMultipleSubDevicesWithSameParentWhenCheckingPeerAccessThenTrueIsReturned) {
+  bool multiple_sub_devices_found = false;
+  for (auto device : lzt::get_ze_devices()) {
+    auto sub_devices = lzt::get_ze_sub_devices(device);
+    if (sub_devices.size() < 2) {
+      continue;
+    }
+    multiple_sub_devices_found = true;
+
+    for (auto sub_device : sub_devices) {
+      EXPECT_EQ(lzt::get_root_device(sub_device), device);
+      for (auto peer_sub_device : sub_devices) {
+        EXPECT_TRUE(lzt::can_access_peer(sub_device, peer_sub_device));
+      }
+    }
+  }
+
+  if (!multiple_sub_devices_found) {
+    GTEST_SKIP() << "No device with multiple sub-devices found";
+  }
 }
 
 LZT_TEST(
