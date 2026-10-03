@@ -63,6 +63,13 @@ first compute engine in the device.
   --ipc                       perform a copy between two devices, specified by options -s and -d,
                               with each device being managed by a separate process.
 
+  --remote_wait               for unidirectional tests, append a wait on each copy's
+                              completion event, and an event reset, to engine 0 of the
+                              remote device. On some platforms this keeps the remote device
+                              out of a low power state that limits the transfer. Timing
+                              includes the extra submission, wait, reset and synchronization.
+                              Not supported with --ipc, -b or parallel tests. Default: Not set.
+
   --version                   display version
   -h, --help                  display help message
   ```
@@ -122,6 +129,17 @@ Run BW test, for only 256 MB
 Run latency tests, for 64B, between devices 1 and 3 (assuming the system has such devices).
 ```
 ./ze_peer -t latency -z 64 -s 1 -d 3
+```
+
+Run BW test for 256 MB with the remote device waiting on each copy's completion event.
+In a unidirectional test only the local device submits work, so the remote device can stay
+in a low power state for the whole run. On some platforms the transfer rate depends on that
+state, so results can vary with the remote device's recent activity. With `--remote_wait` the
+remote device has a wait pending on each copy, similar to a framework that orders cross-device
+work with events. Results include that extra work, so compare them with other `--remote_wait`
+runs rather than with the default mode.
+```
+./ze_peer -t transfer_bw -z 268435456 -s 0 -d 1 --remote_wait
 ```
 
 Run parallel_single_target test, between devices 0 and 1, using engines 2 and 3, for a size of
