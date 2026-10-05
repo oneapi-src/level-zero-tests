@@ -19,8 +19,7 @@ namespace {
 LZT_TEST(
     SysmanInitTests,
     GivenZesInitAndZeInitWithSysmanEnabledWhenSysmanApiIsCalledWithZesDeviceThenSuccessIsReturned) {
-  static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
-  putenv(sys_env);
+  lzt::putenv("ZES_ENABLE_SYSMAN", "1");
 
   ASSERT_ZE_RESULT_SUCCESS(zesInit(0));
   ASSERT_ZE_RESULT_SUCCESS(zeInit(0));

@@ -24,12 +24,10 @@ int main(int argc, char **argv) {
   LOG_TRACE << "Sysman initialized";
   return RUN_ALL_TESTS();
 #else  // USE_ZESINIT
-  static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
-  putenv(sys_env);
-  static char device_hierachy_env[] = "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE";
-  putenv(device_hierachy_env);
-  auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
-  if (is_sysman_enabled == nullptr) {
+  level_zero_tests::putenv("ZES_ENABLE_SYSMAN", "1");
+  level_zero_tests::putenv("ZE_FLAT_DEVICE_HIERARCHY", "COMPOSITE");
+  const auto is_sysman_enabled = level_zero_tests::getenv("ZES_ENABLE_SYSMAN");
+  if (!is_sysman_enabled) {
     LOG_INFO << "Sysman is not Enabled";
     exit(0);
   } else {

@@ -173,13 +173,13 @@ LZT_TEST_F(
 LZT_TEST_F(
     FIRMWARE_TEST,
     GivenValidFirmwareHandleWhenFlashingFirmwareThenExpectFirmwareFlashingSuccess) {
-  auto fwDirEnv = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
-  if (nullptr == fwDirEnv) {
+  const auto fwDirEnv = lzt::getenv("ZE_LZT_FIRMWARE_DIRECTORY");
+  if (!fwDirEnv) {
     LOG_INFO << "Skipping test as ZE_LZT_FIRMWARE_DIRECTORY  not set";
     GTEST_SKIP();
   }
   std::vector<char> testFwImage;
-  std::string fwDir(fwDirEnv);
+  std::string fwDir(*fwDirEnv);
   for (auto device : devices) {
     uint32_t count = 0;
     count = lzt::get_firmware_handle_count(device);
@@ -278,13 +278,13 @@ void track_firmware_flash(zes_firmware_handle_t firmware_handle) {
 LZT_TEST_F(
     FIRMWARE_TEST,
     GivenValidFirmwareHandleWhenFlashingFirmwareThenExpectFlashProgressGetsUpdated) {
-  auto fw_dir_env = getenv("ZE_LZT_FIRMWARE_DIRECTORY");
-  if (nullptr == fw_dir_env) {
+  const auto fw_dir_env = lzt::getenv("ZE_LZT_FIRMWARE_DIRECTORY");
+  if (!fw_dir_env) {
     LOG_INFO << "Skipping test as ZE_LZT_FIRMWARE_DIRECTORY  not set";
     GTEST_SKIP();
   }
 
-  std::string fw_dir(fw_dir_env);
+  std::string fw_dir(*fw_dir_env);
   for (auto device : devices) {
     uint32_t count = 0;
     count = lzt::get_firmware_handle_count(device);

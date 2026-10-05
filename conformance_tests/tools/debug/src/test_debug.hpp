@@ -155,10 +155,10 @@ protected:
             << "Device does not support subdevices, skipping subdevice test";
       }
     }
-    auto one_module_event_per_kernel_string =
-        getenv("LZT_DEBUG_ONE_MODULE_EVENT_PER_KERNEL");
+    const auto one_module_event_per_kernel_string =
+        lzt::getenv("LZT_DEBUG_ONE_MODULE_EVENT_PER_KERNEL");
     if (one_module_event_per_kernel_string) {
-      auto temp = std::stoi(one_module_event_per_kernel_string);
+      auto temp = std::stoi(*one_module_event_per_kernel_string);
       if (temp == 1) {
         one_event_per_kernel = true;
       } else if (temp == 0) {

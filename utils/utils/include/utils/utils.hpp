@@ -18,32 +18,17 @@
 #include <map>
 #include <optional>
 #include <string>
-#include <boost/filesystem/path.hpp>
 
 #include <level_zero/zet_api.h>
 #include <level_zero/zes_api.h>
 
 #include "utils/utils_type_convert.hpp"
 #include "utils/utils_string.hpp"
+#include "utils/utils_system.hpp"
 #include "utils/utils_gtest_helper.hpp"
 #include "utils/utils_command_bundle.hpp"
 
 namespace level_zero_tests {
-
-uint64_t total_available_host_memory();
-uint32_t get_process_id();
-
-namespace detail {
-uint64_t get_page_size();
-}
-
-template <typename T = uint64_t> [[nodiscard]] inline T get_page_size() {
-  static_assert(std::is_integral_v<T> && !std::is_same_v<T, bool>,
-                "get_page_size<T>() requires an integral T");
-  const uint64_t page_size = detail::get_page_size();
-  assert(page_size <= to_u64(std::numeric_limits<T>::max()));
-  return static_cast<T>(page_size);
-}
 
 constexpr uint64_t nanosPerSecond = 1000000000;
 constexpr uint64_t ns_in_five_ms = 5000000;
@@ -138,16 +123,6 @@ void create_and_execute_function(ze_device_handle_t device,
 
 extern std::unique_ptr<std::map<std::string, std::vector<uint8_t>>>
     binary_file_map;
-
-// Returns the current environment as "KEY=VALUE" entries, with overrides
-// replacing any inherited entry of the same name. Appending instead of
-// replacing would leave duplicate keys, and getenv() reports the first one.
-std::vector<std::string>
-child_environment(const std::map<std::string, std::string> &overrides);
-
-boost::filesystem::path
-find_helper_executable(const boost::filesystem::path &name,
-                       const std::vector<boost::filesystem::path> &directories);
 
 } // namespace level_zero_tests
 

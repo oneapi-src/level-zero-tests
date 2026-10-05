@@ -23,10 +23,10 @@ ze_kernel_handle_t get_matrix_multiplication_kernel(
     ze_device_handle_t device, ze_group_count_t *tg, void **a_buffer,
     void **b_buffer, void **c_buffer, uint32_t dimensions = 1024) {
 
-  const char *dimensions_test_environment_variable =
-      std::getenv("LZT_METRICS_MATRIX_MULTIPLICATION_DIMENSIONS");
-  if (dimensions_test_environment_variable != nullptr) {
-    dimensions = to_u32(dimensions_test_environment_variable);
+  const auto dimensions_test_environment_variable =
+      lzt::getenv("LZT_METRICS_MATRIX_MULTIPLICATION_DIMENSIONS");
+  if (dimensions_test_environment_variable) {
+    dimensions = to_u32(dimensions_test_environment_variable->c_str());
     LOG_INFO
         << "overriding the matrix multiplication dimension as "
            "LZT_METRICS_MATRIX_MULTIPLICATION_DIMENSIONS is used with value of "
@@ -333,12 +333,12 @@ void metric_run_ip_sampling_with_validation(
         LOG_WARNING << "elapsed time for workload completion is too short";
       }
 
-      const char *sleep_in_buffer_overflow_test_environment_variable =
-          std::getenv("LZT_METRICS_BUFFER_OVERFLOW_SLEEP_MS");
+      const auto sleep_in_buffer_overflow_test_environment_variable =
+          lzt::getenv("LZT_METRICS_BUFFER_OVERFLOW_SLEEP_MS");
 
-      if (sleep_in_buffer_overflow_test_environment_variable != nullptr) {
+      if (sleep_in_buffer_overflow_test_environment_variable) {
         uint32_t value =
-            to_u32(sleep_in_buffer_overflow_test_environment_variable);
+            to_u32(sleep_in_buffer_overflow_test_environment_variable->c_str());
         std::this_thread::sleep_for(std::chrono::milliseconds(value));
       }
 

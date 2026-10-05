@@ -19,8 +19,6 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  char *val = getenv("ZE_ENABLE_PCI_ID_DEVICE_ORDER");
-
   for (auto driver : lzt::get_all_driver_handles()) {
     auto devices = lzt::get_devices(driver);
     EXPECT_FALSE(devices.empty());

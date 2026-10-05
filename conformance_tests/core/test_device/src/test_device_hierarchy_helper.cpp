@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  char *device_hierarchy = getenv("ZE_FLAT_DEVICE_HIERARCHY");
+  const auto device_hierarchy = lzt::getenv("ZE_FLAT_DEVICE_HIERARCHY");
 
   for (auto driver : lzt::get_all_driver_handles()) {
     auto devices = lzt::get_devices(driver);
@@ -29,11 +29,11 @@ int main(int argc, char **argv) {
         auto device_props = lzt::get_device_properties(device);
         auto sub_device_count = lzt::get_sub_device_count(device);
         auto root_device = lzt::get_root_device(device);
-        if (strcmp(device_hierarchy, "FLAT") == 0) {
+        if (device_hierarchy == "FLAT") {
           EXPECT_FALSE(device_props.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE);
           EXPECT_EQ(sub_device_count, 0u);
           EXPECT_EQ(root_device, nullptr);
-        } else if (strcmp(device_hierarchy, "COMBINED") == 0) {
+        } else if (device_hierarchy == "COMBINED") {
           if (root_device) {
             EXPECT_GT(lzt::get_sub_device_count(root_device), 0u);
             auto sub_devices = lzt::get_ze_sub_devices(root_device);
@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
               EXPECT_EQ(root_device, root_device_handle);
             }
           }
-        } else if (strcmp(device_hierarchy, "COMPOSITE") == 0) {
+        } else if (device_hierarchy == "COMPOSITE") {
           if (sub_device_count > 0) {
             auto sub_devices = lzt::get_ze_sub_devices(device);
             for (auto sub_device : sub_devices) {

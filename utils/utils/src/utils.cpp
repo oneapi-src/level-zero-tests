@@ -19,56 +19,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#include <boost/process.hpp>
-
 namespace level_zero_tests {
-
-#if defined(unix) || defined(__unix__) || defined(__unix)
-
-#include <unistd.h>
-
-uint64_t total_available_host_memory() {
-  const uint64_t page_count = to_u64(sysconf(_SC_AVPHYS_PAGES));
-  const uint64_t page_size = to_u64(sysconf(_SC_PAGE_SIZE));
-  return page_count * page_size;
-}
-
-uint32_t get_process_id() { return to_u32(getpid()); }
-
-namespace detail {
-uint64_t get_page_size() { return to_u64(sysconf(_SC_PAGE_SIZE)); }
-} // namespace detail
-
-#endif
-
-#if defined(_WIN64) || defined(_WIN32)
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#include <Sysinfoapi.h>
-
-uint64_t total_available_host_memory() {
-  MEMORYSTATUSEX stat;
-  stat.dwLength = sizeof(stat);
-  GlobalMemoryStatusEx(&stat);
-
-  return stat.ullAvailPhys;
-}
-
-namespace detail {
-uint64_t get_page_size() {
-  SYSTEM_INFO si;
-  GetSystemInfo(&si);
-  const long page_size = si.dwPageSize;
-  return page_size;
-}
-} // namespace detail
-
-uint32_t get_process_id() { return to_u32(GetCurrentProcessId()); }
-
-#endif
 
 uint32_t get_zes_driver_handle_count() {
   uint32_t count = 0;
@@ -103,9 +54,9 @@ zes_driver_handle_t get_default_zes_driver() {
   if (driver)
     return driver;
 
-  char *user_driver_index = getenv("LZT_DEFAULT_DRIVER_IDX");
-  if (user_driver_index != nullptr) {
-    default_idx = static_cast<uint32_t>(std::stoul(user_driver_index));
+  const auto user_driver_index = getenv("LZT_DEFAULT_DRIVER_IDX");
+  if (user_driver_index) {
+    default_idx = static_cast<uint32_t>(std::stoul(*user_driver_index));
   }
 
   std::vector<zes_driver_handle_t> drivers =
@@ -157,9 +108,9 @@ ze_driver_handle_t get_default_driver() {
   if (driver)
     return driver;
 
-  char *user_driver_index = getenv("LZT_DEFAULT_DRIVER_IDX");
-  if (user_driver_index != nullptr) {
-    default_idx = static_cast<uint32_t>(std::stoul(user_driver_index));
+  const auto user_driver_index = getenv("LZT_DEFAULT_DRIVER_IDX");
+  if (user_driver_index) {
+    default_idx = static_cast<uint32_t>(std::stoul(*user_driver_index));
   }
 
   std::vector<ze_driver_handle_t> drivers =
@@ -223,15 +174,14 @@ ze_device_handle_t get_default_device(ze_driver_handle_t driver) {
 
   static ze_device_handle_t device = nullptr;
   uint32_t default_idx = 0U;
-  char *default_name = nullptr;
   if (device)
     return device;
 
-  char *user_device_index = getenv("LZT_DEFAULT_DEVICE_IDX");
-  if (user_device_index != nullptr) {
-    default_idx = static_cast<uint32_t>(std::stoul(user_device_index));
+  const auto user_device_index = getenv("LZT_DEFAULT_DEVICE_IDX");
+  if (user_device_index) {
+    default_idx = static_cast<uint32_t>(std::stoul(*user_device_index));
   }
-  default_name = getenv("LZT_DEFAULT_DEVICE_NAME");
+  const auto default_name = getenv("LZT_DEFAULT_DEVICE_NAME");
 
   std::vector<ze_device_handle_t> devices =
       level_zero_tests::get_ze_devices(driver);
@@ -239,19 +189,19 @@ ze_device_handle_t get_default_device(ze_driver_handle_t driver) {
     throw std::runtime_error("zeDeviceGet failed: " + to_string(result));
   }
 
-  if (default_name != nullptr) {
-    LOG_INFO << "Default Device to use has NAME:" << default_name;
+  if (default_name) {
+    LOG_INFO << "Default Device to use has NAME:" << *default_name;
     for (auto d : devices) {
       ze_device_properties_t device_props =
           level_zero_tests::get_device_properties(d);
       LOG_TRACE << "Device Name :" << device_props.name;
-      if (strcmp(default_name, device_props.name) == 0) {
+      if (*default_name == device_props.name) {
         device = d;
         break;
       }
     }
     if (!device) {
-      LOG_ERROR << "Default Device name " << default_name
+      LOG_ERROR << "Default Device name " << *default_name
                 << " invalid on this machine.";
       throw std::runtime_error("Get Default Device failed");
     }
@@ -654,50 +604,6 @@ void create_and_execute_function(ze_device_handle_t device,
 
   destroy_function(function);
   destroy_command_bundle(cmd_bundle);
-}
-
-std::vector<std::string>
-child_environment(const std::map<std::string, std::string> &overrides) {
-  namespace bp = boost::process::v2;
-
-  // environment::key comparison follows the platform's rules, so the overrides
-  // also match case-insensitively on Windows.
-  std::vector<bp::environment::key> overridden_keys;
-  overridden_keys.reserve(overrides.size());
-  for (const auto &override_entry : overrides) {
-    overridden_keys.emplace_back(override_entry.first);
-  }
-
-  std::vector<std::string> environment;
-  for (auto entry : bp::environment::current()) {
-    const auto overridden =
-        std::any_of(overridden_keys.begin(), overridden_keys.end(),
-                    [&entry](const bp::environment::key &key) {
-                      return entry.key().compare(key.native_view()) == 0;
-                    });
-    if (!overridden) {
-      environment.push_back(entry.string());
-    }
-  }
-  for (const auto &override_entry : overrides) {
-    environment.push_back(override_entry.first + "=" + override_entry.second);
-  }
-  return environment;
-}
-
-boost::filesystem::path find_helper_executable(
-    const boost::filesystem::path &name,
-    const std::vector<boost::filesystem::path> &directories) {
-  for (const auto &directory : directories) {
-    const auto environment = child_environment({{"PATH", directory.string()}});
-    auto executable =
-        boost::process::v2::environment::find_executable(name, environment);
-    if (!executable.empty()) {
-      return executable;
-    }
-  }
-  throw std::runtime_error("Could not find helper executable: " +
-                           name.string());
 }
 
 } // namespace level_zero_tests

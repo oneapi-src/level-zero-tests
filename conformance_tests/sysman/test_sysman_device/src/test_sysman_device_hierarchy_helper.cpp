@@ -22,14 +22,11 @@ namespace lzt = level_zero_tests;
 
 void get_sysman_devices(const std::string set_device_hierarchy,
                         std::vector<DEVICE_HANDLE_TYPE> &devices) {
-  std::string env_str = "ZE_FLAT_DEVICE_HIERARCHY=" + set_device_hierarchy;
-  char *sys_env = &env_str[0];
-  putenv(sys_env);
-  char *get_device_hierarchy = getenv("ZE_FLAT_DEVICE_HIERARCHY");
-  EXPECT_NE(get_device_hierarchy, nullptr);
-  LOG_INFO << "Child Process : Device Hierarchy = " << get_device_hierarchy
-      ? get_device_hierarchy
-      : "NULL";
+  lzt::putenv("ZE_FLAT_DEVICE_HIERARCHY", set_device_hierarchy);
+  const auto get_device_hierarchy = lzt::getenv("ZE_FLAT_DEVICE_HIERARCHY");
+  EXPECT_TRUE(get_device_hierarchy.has_value());
+  LOG_INFO << "Child Process : Device Hierarchy = "
+           << get_device_hierarchy.value_or("NULL");
   devices = GET_DEVICE_FN();
 }
 
@@ -67,14 +64,13 @@ int main() {
   }
   LOG_INFO << "Child Process : Sysman initialized";
 #else  // USE_ZESINIT
-  static char sys_env[] = "ZES_ENABLE_SYSMAN=1";
-  putenv(sys_env);
-  auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
-  if (is_sysman_enabled == nullptr) {
+  lzt::putenv("ZES_ENABLE_SYSMAN", "1");
+  const auto is_sysman_enabled = lzt::getenv("ZES_ENABLE_SYSMAN");
+  if (!is_sysman_enabled) {
     LOG_INFO << "Child Process : Sysman is not Enabled";
     exit(1);
   } else {
-    auto is_sysman_enabled_int = atoi(is_sysman_enabled);
+    auto is_sysman_enabled_int = atoi(is_sysman_enabled->c_str());
     if (is_sysman_enabled_int == 1) {
       ze_result_t result = zeInit(0);
       if (result) {

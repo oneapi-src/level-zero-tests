@@ -19,11 +19,10 @@ namespace {
 LZT_TEST(
     SysmanInitTests,
     GivenZeInitWithSysmanDisabledWhenZesInitIsCalledThenSuccessIsReturned) {
-  auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
+  const auto is_sysman_enabled = level_zero_tests::getenv("ZES_ENABLE_SYSMAN");
   // Disabling enable_sysman env if it's defaultly enabled
-  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
-    char disable_sysman_env[] = "ZES_ENABLE_SYSMAN=0";
-    putenv(disable_sysman_env);
+  if (is_sysman_enabled == "1") {
+    level_zero_tests::putenv("ZES_ENABLE_SYSMAN", "0");
   }
   ASSERT_ZE_RESULT_SUCCESS(zeInit(0));
   uint32_t ze_driver_count = 0;
@@ -33,9 +32,8 @@ LZT_TEST(
   EXPECT_GT(ze_driver_count, 0);
   EXPECT_ZE_RESULT_SUCCESS(zesDriverGet(&zes_driver_count, nullptr));
   EXPECT_GT(zes_driver_count, 0);
-  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
-    char enable_sysman_env[] = "ZES_ENABLE_SYSMAN=1";
-    putenv(enable_sysman_env);
+  if (is_sysman_enabled == "1") {
+    level_zero_tests::putenv("ZES_ENABLE_SYSMAN", "1");
   }
 }
 

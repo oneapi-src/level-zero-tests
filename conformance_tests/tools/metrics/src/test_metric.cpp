@@ -2038,11 +2038,11 @@ LZT_TEST_F(
           FAIL() << "zeEventQueryStatus() FAILED with " << eventResult;
         }
 
-        const char *value_string =
-            std::getenv("LZT_METRIC_READ_DATA_MAX_DURATION_MS");
+        const auto value_string =
+            lzt::getenv("LZT_METRIC_READ_DATA_MAX_DURATION_MS");
         uint32_t max_wait_time_in_milliseconds = 10;
-        if (value_string != nullptr) {
-          uint32_t value = to_u32(value_string);
+        if (value_string) {
+          uint32_t value = to_u32(value_string->c_str());
           max_wait_time_in_milliseconds =
               value != 0 ? value : max_wait_time_in_milliseconds;
           max_wait_time_in_milliseconds =

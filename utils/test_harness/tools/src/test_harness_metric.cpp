@@ -277,11 +277,11 @@ bool optimize_metric_group_info_list(
 
   const char *specificMetricGroupName = nullptr;
 
-  const char *metricGroupNameEnvironmentVariable =
-      std::getenv("LZT_METRIC_GROUPS_TEST_SPECIFIC");
+  const auto metricGroupNameEnvironmentVariable =
+      lzt::getenv("LZT_METRIC_GROUPS_TEST_SPECIFIC");
 
-  if (metricGroupNameEnvironmentVariable != nullptr) {
-    specificMetricGroupName = metricGroupNameEnvironmentVariable;
+  if (metricGroupNameEnvironmentVariable) {
+    specificMetricGroupName = metricGroupNameEnvironmentVariable->c_str();
     LOG_INFO << "Specific group name set by LZT_METRIC_GROUPS_TEST_SPECIFIC = "
              << specificMetricGroupName;
   } else if (metricGroupName != nullptr) {
@@ -306,9 +306,9 @@ bool optimize_metric_group_info_list(
   optimizedList.reserve(metricGroupInfoList.size());
 
   // allow PERCENTAGE environment variable to override argument argument
-  const char *valueString = std::getenv("LZT_METRIC_GROUPS_TEST_PERCENTAGE");
-  if (valueString != nullptr) {
-    uint32_t value = to_u32(valueString);
+  const auto valueString = lzt::getenv("LZT_METRIC_GROUPS_TEST_PERCENTAGE");
+  if (valueString) {
+    uint32_t value = to_u32(valueString->c_str());
     percentOfMetricGroupForTest =
         value != 0 ? value : percentOfMetricGroupForTest;
     percentOfMetricGroupForTest = std::min(percentOfMetricGroupForTest, 100u);
@@ -1886,10 +1886,10 @@ ze_kernel_handle_t get_matrix_multiplication_kernel(
     void **b_buffer, void **c_buffer, ze_module_handle_t *module_out,
     uint32_t dimensions = 1024) {
 
-  const char *dimensions_test_environment_variable =
-      std::getenv("LZT_METRICS_MATRIX_MULTIPLICATION_DIMENSIONS");
-  if (dimensions_test_environment_variable != nullptr) {
-    dimensions = to_u32(dimensions_test_environment_variable);
+  const auto dimensions_test_environment_variable =
+      lzt::getenv("LZT_METRICS_MATRIX_MULTIPLICATION_DIMENSIONS");
+  if (dimensions_test_environment_variable) {
+    dimensions = to_u32(dimensions_test_environment_variable->c_str());
     LOG_INFO
         << "Overriding the matrix multiplication dimension as "
            "LZT_METRICS_MATRIX_MULTIPLICATION_DIMENSIONS is used with value of "

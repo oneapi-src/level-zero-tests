@@ -19,8 +19,7 @@ zeDevice *zeDevice::instance_ = nullptr;
 std::once_flag zeDevice::instance;
 
 void initialize_core() {
-  static char device_hierachy_env[] = "ZE_FLAT_DEVICE_HIERARCHY=COMPOSITE";
-  putenv(device_hierachy_env);
+  putenv("ZE_FLAT_DEVICE_HIERARCHY", "COMPOSITE");
   EXPECT_ZE_RESULT_SUCCESS(zeInit(0));
 }
 

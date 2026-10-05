@@ -575,18 +575,70 @@ bool contains(const std::vector<std::string> &environment,
 class scoped_environment_variable {
 public:
   scoped_environment_variable(const char *key, const char *value) : key_(key) {
-    bp::environment::set(key_, value);
+    level_zero_tests::putenv(key_, value);
   }
   scoped_environment_variable(const scoped_environment_variable &) = delete;
   scoped_environment_variable &
   operator=(const scoped_environment_variable &) = delete;
-  ~scoped_environment_variable() { bp::environment::unset(key_); }
+  ~scoped_environment_variable() { level_zero_tests::clearenv(key_); }
 
 private:
   const char *key_;
 };
 
 } // namespace
+
+LZT_TEST(SystemEnvironment, GetenvReturnsValueSetByPutenv) {
+  level_zero_tests::putenv(test_var, "value");
+
+  EXPECT_EQ(std::optional<std::string>("value"),
+            level_zero_tests::getenv(test_var));
+
+  level_zero_tests::clearenv(test_var);
+}
+
+LZT_TEST(SystemEnvironment, PutenvOverwritesExistingValue) {
+  level_zero_tests::putenv(test_var, "first");
+  level_zero_tests::putenv(test_var, "second");
+
+  EXPECT_EQ(std::optional<std::string>("second"),
+            level_zero_tests::getenv(test_var));
+
+  level_zero_tests::clearenv(test_var);
+}
+
+LZT_TEST(SystemEnvironment, GetenvOfEmptyValueReturnsNullopt) {
+  level_zero_tests::putenv(test_var, "");
+
+  EXPECT_EQ(std::nullopt, level_zero_tests::getenv(test_var));
+
+  level_zero_tests::clearenv(test_var);
+}
+
+LZT_TEST(SystemEnvironment, ClearenvRemovesVariable) {
+  level_zero_tests::putenv(test_var, "value");
+
+  level_zero_tests::clearenv(test_var);
+
+  EXPECT_EQ(std::nullopt, level_zero_tests::getenv(test_var));
+  EXPECT_EQ(nullptr, std::getenv(test_var));
+}
+
+LZT_TEST(SystemEnvironment, ClearenvOfUnsetVariableSucceeds) {
+  level_zero_tests::clearenv(test_var);
+
+  EXPECT_NO_THROW(level_zero_tests::clearenv(test_var));
+}
+
+LZT_TEST(SystemEnvironment, PutenvIsVisibleToStdGetenv) {
+  level_zero_tests::putenv(test_var, "value");
+
+  const char *value = std::getenv(test_var);
+  ASSERT_NE(nullptr, value);
+  EXPECT_STREQ("value", value);
+
+  level_zero_tests::clearenv(test_var);
+}
 
 LZT_TEST(ChildEnvironment, OverrideReplacesInheritedEntry) {
   const scoped_environment_variable inherited(test_var, "inherited");
@@ -603,7 +655,7 @@ LZT_TEST(ChildEnvironment, OverrideReplacesInheritedEntry) {
 }
 
 LZT_TEST(ChildEnvironment, OverrideOfUnsetVariableIsAdded) {
-  bp::environment::unset(test_var);
+  level_zero_tests::clearenv(test_var);
 
   const auto environment =
       level_zero_tests::child_environment({{test_var, "added"}});
@@ -628,7 +680,7 @@ namespace fs = boost::filesystem;
 class HelperExecutable : public ::testing::Test {
 protected:
   void SetUp() override {
-    original_path = bp::environment::get("PATH");
+    original_path = level_zero_tests::getenv("PATH");
     directory =
         fs::temp_directory_path() / fs::unique_path("lzt helper-%%%%-%%%%");
     fs::create_directories(directory / "first");
@@ -639,11 +691,15 @@ protected:
   }
 
   void TearDown() override {
-    bp::environment::set("PATH", original_path);
+    if (original_path) {
+      level_zero_tests::putenv("PATH", *original_path);
+    } else {
+      level_zero_tests::clearenv("PATH");
+    }
     fs::remove_all(directory);
   }
 
-  bp::environment::value original_path;
+  std::optional<std::string> original_path;
   fs::path directory;
   fs::path filename;
 };
@@ -674,12 +730,11 @@ LZT_TEST_F(HelperExecutable, SearchesDirectoriesInOrder) {
 }
 
 LZT_TEST_F(HelperExecutable, DoesNotSearchInheritedPathOrModifyIt) {
-  bp::environment::set("PATH", (directory / "second").native());
+  level_zero_tests::putenv("PATH", (directory / "second").string());
   EXPECT_THROW(level_zero_tests::find_helper_executable("lookup_helper",
                                                         {directory / "first"}),
                std::runtime_error);
-  EXPECT_EQ((directory / "second").string(),
-            bp::environment::get("PATH").string());
+  EXPECT_EQ((directory / "second").string(), level_zero_tests::getenv("PATH"));
 }
 
 LZT_TEST_F(HelperExecutable, RejectsEmptySearchDirectories) {

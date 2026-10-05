@@ -18,7 +18,9 @@ if(NOT BUILD_ZE_PERF_TESTS_ONLY)
     "include/utils/utils.hpp"
     "include/utils/utils_command_bundle.hpp"
     "include/utils/utils_process.hpp"
+    "include/utils/utils_system.hpp"
     "src/utils_process.cpp"
+    "src/utils_system.cpp"
     "src/utils.cpp"
     "src/utils_command_bundle.cpp"
   )

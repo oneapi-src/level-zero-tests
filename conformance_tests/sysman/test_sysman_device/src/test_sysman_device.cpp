@@ -133,48 +133,42 @@ static void run_child_process(const std::string &device_hierarchy) {
 LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenHierarchyModeCombindedAndSysmanEnableEnvDisabledThenUUIDFromCoreAndSysmanMatches) {
-  auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
+  const auto is_sysman_enabled = lzt::getenv("ZES_ENABLE_SYSMAN");
   // Disabling enable_sysman env if it's defaultly enabled
-  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
-    char disable_sysman_env[] = "ZES_ENABLE_SYSMAN=0";
-    putenv(disable_sysman_env);
+  if (is_sysman_enabled == "1") {
+    lzt::putenv("ZES_ENABLE_SYSMAN", "0");
   }
   run_child_process("COMBINED");
-  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
-    char enable_sysman_env[] = "ZES_ENABLE_SYSMAN=1";
-    putenv(enable_sysman_env);
+  if (is_sysman_enabled == "1") {
+    lzt::putenv("ZES_ENABLE_SYSMAN", "1");
   }
 }
 
 LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenHierarchyModeCompositeAndSysmanEnableEnvDisabledThenUUIDFromCoreAndSysmanMatches) {
-  auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
+  const auto is_sysman_enabled = lzt::getenv("ZES_ENABLE_SYSMAN");
   // Disabling enable_sysman env if it's defaultly enabled
-  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
-    char disable_sysman_env[] = "ZES_ENABLE_SYSMAN=0";
-    putenv(disable_sysman_env);
+  if (is_sysman_enabled == "1") {
+    lzt::putenv("ZES_ENABLE_SYSMAN", "0");
   }
   run_child_process("COMPOSITE");
-  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
-    char enable_sysman_env[] = "ZES_ENABLE_SYSMAN=1";
-    putenv(enable_sysman_env);
+  if (is_sysman_enabled == "1") {
+    lzt::putenv("ZES_ENABLE_SYSMAN", "1");
   }
 }
 
 LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenHierarchyModeFlatAndSysmanEnableEnvDisabledThenUUIDFromCoreAndSysmanMatches) {
-  auto is_sysman_enabled = getenv("ZES_ENABLE_SYSMAN");
+  const auto is_sysman_enabled = lzt::getenv("ZES_ENABLE_SYSMAN");
   // Disabling enable_sysman env if it's defaultly enabled
-  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
-    char disable_sysman_env[] = "ZES_ENABLE_SYSMAN=0";
-    putenv(disable_sysman_env);
+  if (is_sysman_enabled == "1") {
+    lzt::putenv("ZES_ENABLE_SYSMAN", "0");
   }
   run_child_process("FLAT");
-  if (is_sysman_enabled != nullptr && strcmp(is_sysman_enabled, "1") == 0) {
-    char enable_sysman_env[] = "ZES_ENABLE_SYSMAN=1";
-    putenv(enable_sysman_env);
+  if (is_sysman_enabled == "1") {
+    lzt::putenv("ZES_ENABLE_SYSMAN", "1");
   }
 }
 #endif // USE_ZESINIT
@@ -800,10 +794,10 @@ LZT_TEST_F(
   std::vector<float> c;
   std::vector<float> c_cpu;
   c_cpu = perform_matrix_multiplication_on_cpu(a, b, n);
-  const char *valueString = std::getenv("LZT_SYSMAN_DEVICE_TEST_ITERATIONS");
+  const auto valueString = lzt::getenv("LZT_SYSMAN_DEVICE_TEST_ITERATIONS");
   uint32_t number_iterations = 2;
-  if (valueString != nullptr) {
-    uint32_t _value = to_u32(valueString);
+  if (valueString) {
+    uint32_t _value = to_u32(valueString->c_str());
     number_iterations = std::min(_value, 300U);
     if (number_iterations != _value) {
       LOG_WARNING << "Number of iterations is capped at 300\n";

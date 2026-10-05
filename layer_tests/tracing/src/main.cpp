@@ -13,8 +13,7 @@
 
 int main(int argc, char **argv) {
 #ifndef USE_RUNTIME_TRACING
-  static char tracing_env[] = "ZE_ENABLE_TRACING_LAYER=1";
-  putenv(tracing_env);
+  level_zero_tests::putenv("ZE_ENABLE_TRACING_LAYER", "1");
 #endif
   ::testing::InitGoogleMock(&argc, argv);
   std::vector<std::string> command_line(argv + 1, argv + argc);

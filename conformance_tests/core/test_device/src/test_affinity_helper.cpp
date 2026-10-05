@@ -50,15 +50,11 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  char *val = getenv("ZE_AFFINITY_MASK");
-  char *device_hierarchy = getenv("ZE_FLAT_DEVICE_HIERARCHY");
+  const auto device_hierarchy = lzt::getenv("ZE_FLAT_DEVICE_HIERARCHY");
   bool test_device_count = false;
 
-  if (device_hierarchy) {
-    if (strcmp(device_hierarchy, "FLAT") == 0 ||
-        strcmp(device_hierarchy, "COMBINED") == 0) {
-      test_device_count = true;
-    }
+  if (device_hierarchy == "FLAT" || device_hierarchy == "COMBINED") {
+    test_device_count = true;
   }
 
   for (auto driver : lzt::get_all_driver_handles()) {

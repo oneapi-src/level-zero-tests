@@ -1120,8 +1120,7 @@ void multidevice_resource_stress_test(ze_context_handle_t &context,
 
 int main(int argc, char **argv) {
 
-  static char enable_debug[] = "ZET_ENABLE_PROGRAM_DEBUGGING=1";
-  putenv(enable_debug);
+  lzt::putenv("ZET_ENABLE_PROGRAM_DEBUGGING", "1");
 
   debug_options options;
   try {

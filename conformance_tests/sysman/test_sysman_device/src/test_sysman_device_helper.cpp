@@ -79,9 +79,9 @@ bool compare_core_and_sysman_uuid(std::vector<device_uuid> core_uuids,
 
 int main(int argc, char **argv) {
 
-  const char *device_hierarchy = getenv("ZE_FLAT_DEVICE_HIERARCHY");
-  EXPECT_NE(device_hierarchy, nullptr);
-  device_hierarchy = device_hierarchy ? device_hierarchy : "NULL";
+  const auto device_hierarchy_env = lzt::getenv("ZE_FLAT_DEVICE_HIERARCHY");
+  EXPECT_TRUE(device_hierarchy_env.has_value());
+  const std::string device_hierarchy = device_hierarchy_env.value_or("NULL");
   LOG_INFO << "Device Hierarchy : " << device_hierarchy;
 
   auto driver = lzt::zeDevice::get_instance()->get_driver();
@@ -114,13 +114,13 @@ int main(int argc, char **argv) {
   std::vector<device_uuid> sysman_device_uuids{};
   std::vector<device_uuid> ze_device_uuids{};
 
-  if (strcmp(device_hierarchy, "FLAT") != 0) { // composite or combined mode
+  if (device_hierarchy != "FLAT") { // composite or combined mode
     for (const auto &sysman_device : sysman_devices) {
       sysman_device_uuids.push_back(get_sysman_device_uuid(sysman_device));
     }
 
     for (const auto &ze_device : ze_devices) {
-      auto ze_root_uuid = get_ze_root_uuid(ze_device, device_hierarchy);
+      auto ze_root_uuid = get_ze_root_uuid(ze_device, device_hierarchy.c_str());
       if (std::find(ze_device_uuids.begin(), ze_device_uuids.end(),
                     ze_root_uuid) == ze_device_uuids.end()) {
         ze_device_uuids.push_back(ze_root_uuid);

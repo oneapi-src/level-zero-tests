@@ -56,37 +56,38 @@ protected:
 
   void initialize_limits_from_env_variables() {
 
-    const char *metric_group_handles_limit_value_string =
-        std::getenv("LZT_METRIC_GROUP_HANDLES_LIMIT");
-    if (metric_group_handles_limit_value_string != nullptr) {
+    const auto metric_group_handles_limit_value_string =
+        lzt::getenv("LZT_METRIC_GROUP_HANDLES_LIMIT");
+    if (metric_group_handles_limit_value_string) {
       LOG_DEBUG << "metric_group_handles_limit_value_string "
-                << metric_group_handles_limit_value_string;
+                << *metric_group_handles_limit_value_string;
       metric_group_handles_limit =
-          to_u32(metric_group_handles_limit_value_string);
+          to_u32(metric_group_handles_limit_value_string->c_str());
     }
 
-    const char *metric_handles_limit_value_string =
-        std::getenv("LZT_METRIC_HANDLES_LIMIT");
-    if (metric_handles_limit_value_string != nullptr) {
+    const auto metric_handles_limit_value_string =
+        lzt::getenv("LZT_METRIC_HANDLES_LIMIT");
+    if (metric_handles_limit_value_string) {
       LOG_DEBUG << "metric_handles_limit_value_string "
-                << metric_handles_limit_value_string;
-      metric_handles_limit = to_u32(metric_handles_limit_value_string);
+                << *metric_handles_limit_value_string;
+      metric_handles_limit = to_u32(metric_handles_limit_value_string->c_str());
     }
 
-    const char *info_limit_value_string =
-        std::getenv("LZT_METRIC_PROGRAMMABLE_PARAM_INFO_LIMIT");
-    if (info_limit_value_string != nullptr) {
-      LOG_DEBUG << "info_limit_value_string " << info_limit_value_string;
-      metric_programmable_param_info_limit = to_u32(info_limit_value_string);
+    const auto info_limit_value_string =
+        lzt::getenv("LZT_METRIC_PROGRAMMABLE_PARAM_INFO_LIMIT");
+    if (info_limit_value_string) {
+      LOG_DEBUG << "info_limit_value_string " << *info_limit_value_string;
+      metric_programmable_param_info_limit =
+          to_u32(info_limit_value_string->c_str());
     }
 
-    const char *metric_programmable_limit_value_string =
-        std::getenv("LZT_METRIC_PROGRAMMABLE_LIMIT");
-    if (metric_programmable_limit_value_string != nullptr) {
+    const auto metric_programmable_limit_value_string =
+        lzt::getenv("LZT_METRIC_PROGRAMMABLE_LIMIT");
+    if (metric_programmable_limit_value_string) {
       LOG_DEBUG << "metric_programmable_limit_value_string "
-                << metric_programmable_limit_value_string;
+                << *metric_programmable_limit_value_string;
       metric_programmable_handles_limit =
-          to_u32(metric_programmable_limit_value_string);
+          to_u32(metric_programmable_limit_value_string->c_str());
     }
 
     LOG_DEBUG << "initialize from environment variable "

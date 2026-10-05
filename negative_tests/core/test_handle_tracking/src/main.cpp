@@ -11,10 +11,8 @@
 #include "utils/utils.hpp"
 
 int main(int argc, char **argv) {
-  static char val_env[] = "ZE_ENABLE_VALIDATION_LAYER=1";
-  putenv(val_env);
-  static char handle_env[] = "ZE_ENABLE_HANDLE_LIFETIME=1";
-  putenv(handle_env);
+  level_zero_tests::putenv("ZE_ENABLE_VALIDATION_LAYER", "1");
+  level_zero_tests::putenv("ZE_ENABLE_HANDLE_LIFETIME", "1");
 
   ::testing::InitGoogleMock(&argc, argv);
   std::vector<std::string> command_line(argv + 1, argv + argc);

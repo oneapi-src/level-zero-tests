@@ -11,8 +11,7 @@
 #include "utils/utils.hpp"
 
 int main(int argc, char **argv) {
-  static char pin_env[] = "ZET_ENABLE_PROGRAM_INSTRUMENTATION=1";
-  putenv(pin_env);
+  level_zero_tests::putenv("ZET_ENABLE_PROGRAM_INSTRUMENTATION", "1");
   ::testing::InitGoogleMock(&argc, argv);
   std::vector<std::string> command_line(argv + 1, argv + argc);
   level_zero_tests::init_logging(command_line);
