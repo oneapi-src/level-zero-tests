@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2020-2023 Intel Corporation
+ * Copyright (C) 2020-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -26,6 +26,14 @@ constexpr size_t num_processes = 8;
 
 void RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
     lzt::command_list_mode_t mode, int is_stress_test) {
+
+  if (is_stress_test) {
+    auto device_0 = lzt::get_devices(lzt::get_default_driver())[0];
+    if (lzt::get_ze_sub_device_count(device_0) == 0) {
+      LOG_WARNING << "Test not executed due to not enough sub devices";
+      GTEST_SKIP();
+    }
+  }
 
   std::array<int, num_processes> process_results;
   boost::asio::io_context io_ctx;

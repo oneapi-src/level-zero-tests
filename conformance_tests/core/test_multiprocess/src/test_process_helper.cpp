@@ -28,6 +28,10 @@ int main(int argc, char **argv) {
   if (is_stress_test) {
     devices = lzt::get_ze_sub_devices(device_0);
   }
+  if (devices.empty()) {
+    LOG_ERROR << "No devices available for process " << proc_number;
+    exit(2);
+  }
   size_t deviceIndex = proc_number % devices.size();
   auto device = devices[deviceIndex];
   auto device_properties = lzt::get_device_properties(device);
@@ -38,6 +42,8 @@ int main(int argc, char **argv) {
   auto kernel = lzt::create_function(module, "add_two_arrays");
 
   auto constexpr memory_size = 8192;
+  // add_two_arrays operates on int elements
+  constexpr uint32_t num_elements = memory_size / sizeof(int32_t);
 
   auto input_a =
       static_cast<uint8_t *>(lzt::allocate_shared_memory(memory_size, device));
@@ -48,7 +54,7 @@ int main(int argc, char **argv) {
   std::fill(input_a, input_a + memory_size, 0x01);
   std::fill(input_b, input_b + memory_size, 0x01);
 
-  uint32_t global_size_x = memory_size;
+  uint32_t global_size_x = num_elements;
   uint32_t global_size_y = 1;
   uint32_t global_size_z = 1;
 
@@ -56,13 +62,13 @@ int main(int argc, char **argv) {
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
 
-  lzt::suggest_group_size(kernel, global_size_x, global_size_y, global_size_y,
+  lzt::suggest_group_size(kernel, global_size_x, global_size_y, global_size_z,
                           group_size_x, group_size_y, group_size_z);
   lzt::set_group_size(kernel, group_size_x, group_size_y, group_size_z);
 
   ze_group_count_t group_count;
 
-  group_count.groupCountX = memory_size / group_size_x;
+  group_count.groupCountX = num_elements / group_size_x;
   group_count.groupCountY = 1;
   group_count.groupCountZ = 1;
 
