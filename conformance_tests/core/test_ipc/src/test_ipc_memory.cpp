@@ -1404,19 +1404,21 @@ static void run_ipc_physical_mem_getipchwithprops_opaque(
   lzt::query_page_size(context, device, allocSize, &pageSize);
   allocSize = lzt::create_page_aligned_size(allocSize, pageSize);
 
-  // Allocate physical device memory.  Intentionally do NOT create a virtual
-  // mapping so that the handle itself is passed directly to
-  // zeMemGetIpcHandleWithProperties.
-  ze_physical_mem_handle_t physMem = {};
-  lzt::physical_device_memory_allocation(context, device, allocSize, &physMem);
-
-  // Obtain an IPC handle by casting the physical mem handle to (const void*).
-  ze_ipc_mem_handle_t ipc_handle = {};
   ze_ipc_mem_handle_type_ext_desc_t handle_type_desc = {};
   handle_type_desc.stype = ZE_STRUCTURE_TYPE_IPC_MEM_HANDLE_TYPE_EXT_DESC;
   handle_type_desc.pNext = nullptr;
   handle_type_desc.typeFlags = handle_type_flags;
 
+  // Allocate physical device memory.  Intentionally do NOT create a virtual
+  // mapping so that the handle itself is passed directly to
+  // zeMemGetIpcHandleWithProperties. The IPC handle type must be requested at
+  // creation time, as drivers may not enable IPC sharing by default.
+  ze_physical_mem_handle_t physMem = {};
+  lzt::physical_device_memory_allocation(context, device, allocSize, &physMem,
+                                         &handle_type_desc);
+
+  // Obtain an IPC handle by casting the physical mem handle to (const void*).
+  ze_ipc_mem_handle_t ipc_handle = {};
   ASSERT_ZE_RESULT_SUCCESS(zeMemGetIpcHandleWithProperties(
       context, reinterpret_cast<const void *>(physMem), &handle_type_desc,
       &ipc_handle));
