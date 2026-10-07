@@ -36,9 +36,6 @@ add_lzt_test(
     src/vulkan_interop/test_vulkan_interop.cpp
     src/vulkan_interop/vulkan_library.cpp
     src/main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../test_image/src/utils.cpp
-  INCLUDE_DIRECTORIES
-    ${CMAKE_CURRENT_SOURCE_DIR}/../test_image/include
   LINK_LIBRARIES
     $<$<BOOL:${WIN32}>:dxgi.lib>
     $<$<BOOL:${WIN32}>:d3d11.lib>

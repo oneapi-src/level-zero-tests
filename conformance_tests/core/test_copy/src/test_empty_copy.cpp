@@ -11,7 +11,7 @@
 #include "test_harness/test_harness_event.hpp"
 #include "test_harness/test_harness_image.hpp"
 #include "test_harness/test_harness_memory.hpp"
-#include "test_image/utils.hpp"
+#include "utils/utils_image.hpp"
 #include "gtest/gtest.h"
 #include <level_zero/ze_api.h>
 #include <numeric>

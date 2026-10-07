@@ -8,7 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "test_harness/test_harness.hpp"
-#include "test_image/utils.hpp"
+#include "utils/utils_image.hpp"
 #include "logging/logging.hpp"
 
 namespace lzt = level_zero_tests;
@@ -47,7 +47,7 @@ public:
     image_cache_flag = std::get<3>(GetParam());
     image_type = std::get<4>(GetParam());
     image_size = std::get<5>(GetParam());
-    auto supported_image_types = get_supported_image_types(
+    auto supported_image_types = lzt::get_supported_image_types(
         lzt::zeDevice::get_instance()->get_device(), false, false);
     if (std::find(supported_image_types.begin(), supported_image_types.end(),
                   image_type) == supported_image_types.end()) {
@@ -130,7 +130,7 @@ public:
   ze_device_handle_t device =
       lzt::get_default_device(lzt::get_default_driver());
 
-  ImageFuncDispatcher img_dispatcher;
+  lzt::ImageFuncDispatcher img_dispatcher;
   void TearDown() override { img_dispatcher.apply(); }
 };
 
@@ -228,7 +228,7 @@ public:
     image_rw_flag = std::get<2>(GetParam());
     image_cache_flag = std::get<3>(GetParam());
     image_type = std::get<4>(GetParam());
-    auto supported_image_types = get_supported_image_types(
+    auto supported_image_types = lzt::get_supported_image_types(
         lzt::zeDevice::get_instance()->get_device(), false, false);
     if (std::find(supported_image_types.begin(), supported_image_types.end(),
                   image_type) == supported_image_types.end()) {
@@ -311,7 +311,7 @@ protected:
   ze_device_handle_t device =
       lzt::get_default_device(lzt::get_default_driver());
 
-  ImageFuncDispatcher img_dispatcher;
+  lzt::ImageFuncDispatcher img_dispatcher;
   void TearDown() override {
     if (buffer_ptr != nullptr) {
       lzt::free_memory(context, buffer_ptr);

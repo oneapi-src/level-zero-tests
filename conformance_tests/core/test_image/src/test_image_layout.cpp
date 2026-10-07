@@ -10,7 +10,7 @@
 
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
-#include "test_image/utils.hpp"
+#include "utils/utils_image.hpp"
 #include "logging/logging.hpp"
 #include <complex>
 
@@ -33,8 +33,8 @@ public:
     }
     auto device = lzt::zeDevice::get_instance()->get_device();
     module = lzt::create_module(device, "image_layout_tests.spv");
-    supported_image_types =
-        get_supported_image_types(device, skip_array_type, skip_buffer_type);
+    supported_image_types = lzt::get_supported_image_types(
+        device, skip_array_type, skip_buffer_type);
   }
 
   void run_test(ze_image_type_t image_type,
@@ -45,7 +45,7 @@ public:
     LOG_INFO << "TYPE - " << image_type << " FORMAT - " << format_type;
     LOG_INFO << "LAYOUT: BASE - " << base_layout << " CONVERT - "
              << convert_layout;
-    image_dims = get_sample_image_dims(image_type);
+    image_dims = lzt::get_sample_image_dims(image_type);
     image_size = static_cast<size_t>(image_dims.width * image_dims.height *
                                      image_dims.depth);
 
@@ -212,9 +212,9 @@ public:
 
   ze_module_handle_t module;
   std::vector<ze_image_type_t> supported_image_types;
-  Dims image_dims;
+  lzt::Dims image_dims;
   size_t image_size;
-  ImageFuncDispatcher skip;
+  lzt::ImageFuncDispatcher skip;
 };
 
 size_t ImageLayoutFixture::get_pixel_bytes(ze_image_format_layout_t layout) {
@@ -267,7 +267,7 @@ std::string ImageLayoutFixture::get_kernel(ze_image_format_type_t format_type,
     kernel += "_uint";
     break;
   }
-  return kernel + '_' + shortened_string(image_type);
+  return kernel + '_' + lzt::shortened_string(image_type);
 }
 
 ze_image_handle_t
@@ -582,7 +582,7 @@ LZT_TEST_P(zeImageDepthFormatLayoutTests,
   LOG_INFO << "LAYOUT - " << layout << " (Depth swizzle: D, 0, 0, 0)";
 
   auto cmd_bundle = lzt::create_command_bundle(mode);
-  image_dims = get_sample_image_dims(image_type);
+  image_dims = lzt::get_sample_image_dims(image_type);
   image_size = static_cast<size_t>(image_dims.width * image_dims.height *
                                    image_dims.depth);
 
@@ -639,7 +639,7 @@ LZT_TEST_P(
   std::string kernel_name = get_kernel(format, image_type);
   ze_kernel_handle_t kernel = lzt::create_function(module, kernel_name);
 
-  image_dims = get_sample_image_dims(image_type);
+  image_dims = lzt::get_sample_image_dims(image_type);
   image_size = static_cast<size_t>(image_dims.width * image_dims.height *
                                    image_dims.depth);
 
@@ -738,7 +738,7 @@ LZT_TEST_P(
   LOG_INFO << "LAYOUT - " << layout << " (Depth swizzle: D, 0, 0, 0)";
 
   auto cmd_bundle = lzt::create_command_bundle(mode);
-  image_dims = get_sample_image_dims(image_type);
+  image_dims = lzt::get_sample_image_dims(image_type);
   image_size = static_cast<size_t>(image_dims.width * image_dims.height *
                                    image_dims.depth);
 

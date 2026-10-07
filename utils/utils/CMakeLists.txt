@@ -17,12 +17,14 @@ if(NOT BUILD_ZE_PERF_TESTS_ONLY)
     SOURCE
     "include/utils/utils.hpp"
     "include/utils/utils_command_bundle.hpp"
+    "include/utils/utils_image.hpp"
     "include/utils/utils_process.hpp"
     "include/utils/utils_system.hpp"
     "src/utils_process.cpp"
     "src/utils_system.cpp"
     "src/utils.cpp"
     "src/utils_command_bundle.cpp"
+    "src/utils_image.cpp"
   )
   target_link_libraries(utils
     PUBLIC

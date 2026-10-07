@@ -10,10 +10,7 @@ add_lzt_test(
     src/test_image_layout.cpp
     src/test_image_swizzle.cpp
     src/test_image_view.cpp
-    src/utils.cpp
     src/main.cpp
-  INCLUDE_DIRECTORIES
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils

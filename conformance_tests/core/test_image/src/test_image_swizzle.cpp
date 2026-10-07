@@ -12,7 +12,7 @@
 
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
-#include "test_image/utils.hpp"
+#include "utils/utils_image.hpp"
 #include "logging/logging.hpp"
 
 namespace lzt = level_zero_tests;
@@ -32,8 +32,8 @@ protected:
     }
     auto device = lzt::zeDevice::get_instance()->get_device();
     module = lzt::create_module(device, "image_swizzle_tests.spv");
-    supported_image_types =
-        get_supported_image_types(device, skip_array_type, skip_buffer_type);
+    supported_image_types = lzt::get_supported_image_types(
+        device, skip_array_type, skip_buffer_type);
   }
 
   void TearDown() override {
@@ -58,9 +58,9 @@ public:
   ze_image_handle_t img_in = nullptr, img_out = nullptr;
   ze_module_handle_t module = nullptr;
   std::vector<ze_image_type_t> supported_image_types;
-  Dims image_dims;
+  lzt::Dims image_dims;
   size_t image_size;
-  ImageFuncDispatcher img_dispatcher;
+  lzt::ImageFuncDispatcher img_dispatcher;
 };
 
 void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
@@ -68,9 +68,9 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
     bool is_shared_system) {
   LOG_INFO << "TYPE - " << image_type;
 
-  std::string kernel_name = "swizzle_test_" + shortened_string(image_type);
+  std::string kernel_name = "swizzle_test_" + lzt::shortened_string(image_type);
 
-  image_dims = get_sample_image_dims(image_type);
+  image_dims = lzt::get_sample_image_dims(image_type);
   image_size = static_cast<size_t>(image_dims.width * image_dims.height *
                                    image_dims.depth);
 

@@ -10,7 +10,7 @@
 
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
-#include "test_image/utils.hpp"
+#include "utils/utils_image.hpp"
 #include "test_harness/test_harness_fence.hpp"
 #include "logging/logging.hpp"
 #include <thread>

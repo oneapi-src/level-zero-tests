@@ -13,7 +13,7 @@
 
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
-#include "test_image/utils.hpp"
+#include "utils/utils_image.hpp"
 #include "logging/logging.hpp"
 
 namespace lzt = level_zero_tests;
@@ -29,9 +29,9 @@ public:
       GTEST_SKIP() << "Device does not support images";
     }
     set_up_module();
-    supported_image_types =
-        get_supported_image_types(lzt::zeDevice::get_instance()->get_device(),
-                                  skip_array_type, skip_buffer_type);
+    supported_image_types = lzt::get_supported_image_types(
+        lzt::zeDevice::get_instance()->get_device(), skip_array_type,
+        skip_buffer_type);
   }
 
   void TearDown() override {
@@ -70,12 +70,12 @@ public:
 
   ze_image_handle_t img_in = nullptr, img_out = nullptr;
   ze_module_handle_t module = nullptr;
-  Dims image_dims;
+  lzt::Dims image_dims;
   size_t image_size;
   std::vector<ze_image_type_t> supported_image_types;
   void *inbuff = nullptr, *outbuff = nullptr;
   std::string kernel_name;
-  ImageFuncDispatcher img_dispatcher;
+  lzt::ImageFuncDispatcher img_dispatcher;
 };
 
 void ImageFormatFixture::run_test(
@@ -87,7 +87,7 @@ void ImageFormatFixture::run_test(
   LOG_INFO << "LAYOUT - " << layout;
   uint32_t group_size_x, group_size_y, group_size_z;
 
-  image_dims = get_sample_image_dims(image_type);
+  image_dims = lzt::get_sample_image_dims(image_type);
   image_size = static_cast<size_t>(image_dims.width * image_dims.height *
                                    image_dims.depth);
 
@@ -245,7 +245,7 @@ void zeImageFormatTypeTests::get_kernel(ze_image_type_t image_type,
     kernel_name = "UNKNOWN_KERNEL";
     return;
   }
-  kernel_name += '_' + shortened_string(image_type);
+  kernel_name += '_' + lzt::shortened_string(image_type);
 }
 
 ze_image_handle_t zeImageFormatTypeTests::create_image_desc_format(
@@ -538,7 +538,7 @@ void zeImageFormatLayoutTests::get_kernel(ze_image_type_t image_type,
     kernel_name = "UNKNOWN_KERNEL";
     return;
   }
-  kernel_name += '_' + shortened_string(image_type);
+  kernel_name += '_' + lzt::shortened_string(image_type);
 }
 
 template <typename T, size_t size_multiplier>

@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
-#include "test_image/utils.hpp"
+#include "utils/utils_image.hpp"
 
 namespace lzt = level_zero_tests;
 
@@ -18,8 +18,8 @@ namespace {
 class zeImageViewCreateTests : public ::testing::Test {
 public:
   void SetUp() override {
-    supported_img_types =
-        get_supported_image_types(lzt::zeDevice::get_instance()->get_device());
+    supported_img_types = lzt::get_supported_image_types(
+        lzt::zeDevice::get_instance()->get_device());
     if (supported_img_types.size() == 0) {
       GTEST_SKIP() << "Device does not support images";
     }
@@ -36,7 +36,7 @@ public:
   virtual bool check_view_support() = 0;
   virtual ze_image_handle_t
   create_image_view(ze_image_format_layout_t view_layout, uint32_t plane_index,
-                    Dims view_dims = {0, 0, 0}) const = 0;
+                    lzt::Dims view_dims = {0, 0, 0}) const = 0;
 
   ze_image_desc_t create_image_desc_view(ze_image_type_t img_type,
                                          ze_image_format_layout_t layout);
@@ -56,13 +56,13 @@ public:
   ze_image_handle_t img;
   std::vector<ze_image_type_t> supported_img_types;
 
-  ImageFuncDispatcher img_dispatcher;
+  lzt::ImageFuncDispatcher img_dispatcher;
   void TearDown() override { img_dispatcher.apply(); }
 };
 
 ze_image_desc_t zeImageViewCreateTests::create_image_desc_view(
     ze_image_type_t img_type, ze_image_format_layout_t layout) {
-  Dims img_dims = get_sample_image_dims(img_type);
+  lzt::Dims img_dims = lzt::get_sample_image_dims(img_type);
 
   uint32_t array_levels = 0;
   if (img_type == ZE_IMAGE_TYPE_1DARRAY) {
@@ -157,7 +157,7 @@ class zeImageViewCreateExtTests : public zeImageViewCreateTests {
 public:
   virtual ze_image_handle_t
   create_image_view(ze_image_format_layout_t view_layout, uint32_t plane_index,
-                    Dims view_dims = {0, 0, 0}) const override;
+                    lzt::Dims view_dims = {0, 0, 0}) const override;
 
   virtual bool check_view_support() override {
     if (!lzt::check_if_extension_supported(lzt::get_default_driver(),
@@ -176,7 +176,7 @@ public:
 
 ze_image_handle_t zeImageViewCreateExtTests::create_image_view(
     ze_image_format_layout_t view_layout, uint32_t plane_index,
-    Dims view_dims) const {
+    lzt::Dims view_dims) const {
   ze_image_view_planar_ext_desc_t img_view_desc = {};
   img_view_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_VIEW_PLANAR_EXT_DESC;
   img_view_desc.pNext = nullptr;
