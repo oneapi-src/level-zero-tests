@@ -1411,6 +1411,9 @@ RunIclAndRclAppendOperations(ze_command_list_handle_t cmdlist_immediate,
 
     lzt::execute_command_lists(command_queue, 1, &command_list, nullptr);
 
+    if (mode != ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS) {
+      lzt::synchronize_command_list_host(cmdlist_immediate, timeout);
+    }
     lzt::event_host_synchronize(event2, UINT64_MAX);
     EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(event1));
     EXPECT_ZE_RESULT_SUCCESS(zeEventHostReset(event2));
