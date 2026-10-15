@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -19,6 +19,7 @@ bool ZePeer::parallel_copy_to_multiple_targets = false;
 bool ZePeer::parallel_copy_to_pair_targets = false;
 bool ZePeer::parallel_divide_buffers = false;
 bool ZePeer::use_immediate_cmdlist = true;
+bool ZePeer::remote_wait = false;
 uint32_t ZePeer::number_iterations = 50;
 const size_t max_elems = 268435456; /* 256 MB */
 
@@ -467,10 +468,22 @@ int main(int argc, char **argv) {
       ZePeer::validate_results = true;
     } else if (strcmp(argv[i], "--regular_cmdlist") == 0) {
       ZePeer::use_immediate_cmdlist = false;
+    } else if (strcmp(argv[i], "--remote_wait") == 0) {
+      ZePeer::remote_wait = true;
     } else {
       std::cout << usage_str;
       exit(-1);
     }
+  }
+
+  // Only bandwidth_latency() implements the remote wait.
+  if (ZePeer::remote_wait && (run_ipc || ZePeer::bidirectional ||
+                              ZePeer::parallel_copy_to_single_target ||
+                              ZePeer::parallel_copy_to_multiple_targets ||
+                              ZePeer::parallel_copy_to_pair_targets)) {
+    std::cerr << "[ERROR] --remote_wait is not supported with --ipc, -b or "
+                 "parallel tests\n";
+    exit(-1);
   }
 
   if (run_ipc == false) {
@@ -494,6 +507,9 @@ int main(int argc, char **argv) {
             << "tests\n"
             << "============================================================="
                "===================\n";
+  if (ZePeer::remote_wait) {
+    std::cout << "Remote device waits on each copy (--remote_wait)\n";
+  }
 
   if (ZePeer::parallel_copy_to_multiple_targets ||
       ZePeer::parallel_copy_to_pair_targets ||
@@ -764,6 +780,22 @@ ZePeer::ZePeer(std::vector<uint32_t> &remote_device_ids,
   ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC};
   event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
   SUCCESS_OR_TERMINATE(zeEventCreate(event_pool, &event_desc, &event));
+
+  if (ZePeer::remote_wait) {
+    ze_event_pool_desc_t remote_wait_pool_desc = {
+        ZE_STRUCTURE_TYPE_EVENT_POOL_DESC};
+    remote_wait_pool_desc.count = 1;
+    remote_wait_pool_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
+    SUCCESS_OR_TERMINATE(zeEventPoolCreate(benchmark->context,
+                                           &remote_wait_pool_desc, 0, nullptr,
+                                           &remote_wait_event_pool));
+
+    ze_event_desc_t remote_wait_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC};
+    remote_wait_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    remote_wait_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
+    SUCCESS_OR_TERMINATE(zeEventCreate(remote_wait_event_pool,
+                                       &remote_wait_desc, &remote_wait_event));
+  }
 }
 
 ZePeer::~ZePeer() {
@@ -778,6 +810,10 @@ ZePeer::~ZePeer() {
   if (event) {
     SUCCESS_OR_TERMINATE(zeEventDestroy(event));
     SUCCESS_OR_TERMINATE(zeEventPoolDestroy(event_pool));
+  }
+  if (remote_wait_event) {
+    SUCCESS_OR_TERMINATE(zeEventDestroy(remote_wait_event));
+    SUCCESS_OR_TERMINATE(zeEventPoolDestroy(remote_wait_event_pool));
   }
   benchmark->allDevicesCleanup();
   delete benchmark;
