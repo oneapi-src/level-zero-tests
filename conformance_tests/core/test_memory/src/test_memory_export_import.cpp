@@ -967,6 +967,7 @@ void zeDeviceGetExternalMemoryProperties::
   lzt::destroy_command_bundle(cmd_bundle);
   lzt::free_memory(context, verification_memory);
   lzt::virtual_memory_unmap(context, virtual_address, aligned_size);
+  exported_memory.reset();
   lzt::physical_memory_destroy(context, physical_memory);
   lzt::virtual_memory_free(context, virtual_address, aligned_size);
 }
