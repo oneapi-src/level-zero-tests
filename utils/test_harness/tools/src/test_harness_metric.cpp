@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2025 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -235,148 +235,200 @@ void get_all_device_concurrent_metric_groups(
       &concurrentGroupCount));
 }
 
+bool get_metric_group_source_id(zet_metric_group_handle_t metric_group_handle,
+                                uint32_t &source_id) {
+  zet_metric_group_properties_t props = {};
+  props.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+  zet_metric_source_id_exp_t source_id_ext = {};
+  source_id_ext.stype = ZET_STRUCTURE_TYPE_METRIC_SOURCE_ID_EXP;
+  source_id_ext.pNext = nullptr;
+  props.pNext = &source_id_ext;
+  if (zetMetricGroupGetProperties(metric_group_handle, &props) !=
+      ZE_RESULT_SUCCESS) {
+    ADD_FAILURE() << "Failed to get metric group properties";
+    return false;
+  }
+  source_id = source_id_ext.sourceId;
+  return true;
+}
+
 std::map<uint32_t, std::vector<zet_metric_group_handle_t>>
 get_device_metric_groups_by_source_id(
-    const std::vector<zet_metric_group_handle_t> &metricGroupHandleList) {
-  // Query each handle's source ID exactly once and group the handles by it.
-  // Using std::map keeps source IDs in ascending order for deterministic
-  // iteration.
+    const std::vector<zet_metric_group_handle_t> &metric_group_handle_list) {
+
   std::map<uint32_t, std::vector<zet_metric_group_handle_t>>
-      metric_groups_by_source;
-  for (auto metricGroupHandle : metricGroupHandleList) {
-    zet_metric_group_properties_t props = {};
-    props.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
-    zet_metric_source_id_exp_t sourceIdExt = {};
-    sourceIdExt.stype = ZET_STRUCTURE_TYPE_METRIC_SOURCE_ID_EXP;
-    sourceIdExt.pNext = nullptr;
-    props.pNext = &sourceIdExt;
-    EXPECT_ZE_RESULT_SUCCESS(
-        zetMetricGroupGetProperties(metricGroupHandle, &props));
-    metric_groups_by_source[sourceIdExt.sourceId].push_back(metricGroupHandle);
+      metric_groups_by_key = {};
+  if (!check_if_extension_supported(get_default_driver(),
+                                    ZET_METRIC_SOURCE_ID_EXP_NAME)) {
+    LOG_WARNING << ZET_METRIC_SOURCE_ID_EXP_NAME
+                << " is not supported, metric source ids are unavailable";
+    const auto fallback_source_id_to_domains =
+        lzt::getenv("LZT_METRICS_FALLBACK_SOURCE_ID_TO_DOMAINS");
+    if (fallback_source_id_to_domains) {
+      LOG_WARNING << "Using fallback from source ID to domains";
+
+      for (auto const &metric_group : metric_group_handle_list) {
+        zet_metric_group_properties_t props = {};
+        props.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+        props.pNext = nullptr;
+        const auto result = zetMetricGroupGetProperties(metric_group, &props);
+        EXPECT_ZE_RESULT_SUCCESS(result);
+        if (result != ZE_RESULT_SUCCESS) {
+          LOG_WARNING
+              << "Failed to get metric group properties for domain fallback";
+          return {};
+        }
+
+        metric_groups_by_key[props.domain].push_back(metric_group);
+      }
+      return metric_groups_by_key;
+    } else {
+      ADD_FAILURE() << "No fallback source ID to domains specified";
+      return {};
+    }
   }
 
-  for (const auto &entry : metric_groups_by_source) {
+  for (auto metric_group_handle : metric_group_handle_list) {
+    uint32_t source_id = 0;
+    if (!get_metric_group_source_id(metric_group_handle, source_id)) {
+      LOG_WARNING << "metric source id is not reported by the driver";
+      return {};
+    }
+    metric_groups_by_key[source_id].push_back(metric_group_handle);
+  }
+
+  for (const auto &entry : metric_groups_by_key) {
     LOG_DEBUG << "Source ID " << entry.first << " has " << entry.second.size()
               << " metric groups";
   }
 
-  return metric_groups_by_source;
+  return metric_groups_by_key;
 }
 
 bool optimize_metric_group_info_list(
-    std::vector<metricGroupInfo_t> &metricGroupInfoList,
-    uint32_t percentOfMetricGroupForTest, const char *metricGroupName,
-    uint32_t minCountPerSource, std::vector<metricGroupInfo_t> &optimizedList) {
+    std::vector<metricGroupInfo_t> &metric_group_info_list,
+    uint32_t percent_of_metric_group_for_test, const char *metric_group_name,
+    uint32_t min_count_per_source,
+    std::vector<metricGroupInfo_t> &optimized_list) {
 
-  optimizedList.clear();
+  optimized_list.clear();
 
-  if (metricGroupInfoList.empty()) {
+  if (metric_group_info_list.empty()) {
     LOG_ERROR << "metric group info list is empty";
     return false;
   }
 
-  const char *specificMetricGroupName = nullptr;
+  const char *specific_metric_group_name = nullptr;
 
-  const auto metricGroupNameEnvironmentVariable =
+  const auto metric_group_name_environment_variable =
       lzt::getenv("LZT_METRIC_GROUPS_TEST_SPECIFIC");
 
-  if (metricGroupNameEnvironmentVariable) {
-    specificMetricGroupName = metricGroupNameEnvironmentVariable->c_str();
-    LOG_INFO << "Specific group name set by LZT_METRIC_GROUPS_TEST_SPECIFIC = "
-             << specificMetricGroupName;
-  } else if (metricGroupName != nullptr) {
-    specificMetricGroupName = metricGroupName;
+  if (metric_group_name_environment_variable) {
+    specific_metric_group_name =
+        metric_group_name_environment_variable->c_str();
+  } else if (metric_group_name != nullptr) {
+    specific_metric_group_name = metric_group_name;
   }
-  if (specificMetricGroupName != nullptr) {
-    LOG_INFO << "specific group " << specificMetricGroupName;
-    for (auto const &metricGroupInfo : metricGroupInfoList) {
-      if (metricGroupInfo.metricGroupName.compare(specificMetricGroupName) ==
-          0) {
-        LOG_INFO << "Specific name push_back "
-                 << metricGroupInfo.metricGroupName;
-        optimizedList.push_back(metricGroupInfo);
+  if (specific_metric_group_name != nullptr) {
+    LOG_INFO << "specific group " << specific_metric_group_name;
+    for (auto const &metric_group_info : metric_group_info_list) {
+      if (metric_group_info.metricGroupName.compare(
+              specific_metric_group_name) == 0) {
+        LOG_INFO << "specific name push_back "
+                 << metric_group_info.metricGroupName;
+        optimized_list.push_back(metric_group_info);
         return true;
       }
     }
-    LOG_ERROR << __FUNCTION__ << " specific group " << specificMetricGroupName
+    LOG_ERROR << __FUNCTION__ << " specific group "
+              << specific_metric_group_name
               << " not found in the list for the given test";
     return false;
   }
 
-  optimizedList.reserve(metricGroupInfoList.size());
+  optimized_list.reserve(metric_group_info_list.size());
 
   // allow PERCENTAGE environment variable to override argument argument
-  const auto valueString = lzt::getenv("LZT_METRIC_GROUPS_TEST_PERCENTAGE");
-  if (valueString) {
-    uint32_t value = to_u32(valueString->c_str());
-    percentOfMetricGroupForTest =
-        value != 0 ? value : percentOfMetricGroupForTest;
-    percentOfMetricGroupForTest = std::min(percentOfMetricGroupForTest, 100u);
+  const auto value_string = lzt::getenv("LZT_METRIC_GROUPS_TEST_PERCENTAGE");
+  if (value_string) {
+    uint32_t value = to_u32(value_string->c_str());
+    percent_of_metric_group_for_test =
+        value != 0 ? value : percent_of_metric_group_for_test;
+    percent_of_metric_group_for_test =
+        std::min(percent_of_metric_group_for_test, 100u);
     LOG_INFO << "Overriding the percentage of metric groups to test as "
-             << percentOfMetricGroupForTest
+             << percent_of_metric_group_for_test
              << "% because LZT_METRIC_GROUPS_TEST_PERCENTAGE is used with "
                 "value of "
              << value;
   }
-  LOG_INFO << "Reducing list of metric groups to "
-           << percentOfMetricGroupForTest << "%";
+  LOG_INFO << "percentage of metric groups "
+           << percent_of_metric_group_for_test;
 
-  double metricGrpTestPerc = to_f64(percentOfMetricGroupForTest) * 0.01;
-  minCountPerSource = std::max(minCountPerSource, 1u);
+  double metric_grp_test_perc = to_f64(percent_of_metric_group_for_test) * 0.01;
+  min_count_per_source = std::max(min_count_per_source, 1u);
 
   // Collect all handles and build a handle -> metricGroupInfo lookup
-  std::vector<zet_metric_group_handle_t> MetricGroupHandles;
-  MetricGroupHandles.reserve(metricGroupInfoList.size());
+  std::vector<zet_metric_group_handle_t> metric_group_handles;
+  metric_group_handles.reserve(metric_group_info_list.size());
   std::map<zet_metric_group_handle_t, const metricGroupInfo_t *>
-      MetricGroupHandleToInfo;
-  for (auto const &metricGroupInfo : metricGroupInfoList) {
-    MetricGroupHandles.push_back(metricGroupInfo.metricGroupHandle);
-    MetricGroupHandleToInfo[metricGroupInfo.metricGroupHandle] =
-        &metricGroupInfo;
+      metric_group_handle_to_info;
+  for (auto const &metric_group_info : metric_group_info_list) {
+    metric_group_handles.push_back(metric_group_info.metricGroupHandle);
+    metric_group_handle_to_info[metric_group_info.metricGroupHandle] =
+        &metric_group_info;
   }
 
-  // Group all handles by their source ID in a single pass over the device
   std::map<uint32_t, std::vector<zet_metric_group_handle_t>>
-      metricGroupsBySource =
-          get_device_metric_groups_by_source_id(MetricGroupHandles);
+      metric_groups_by_key =
+          get_device_metric_groups_by_source_id(metric_group_handles);
+
+  if (metric_groups_by_key.empty()) {
+    LOG_WARNING << "Failed to get metric groups by key";
+    return false;
+  }
 
   // For each source: take x% of metric groups from that source
-  bool meetsMinimumCount = false;
-  for (auto const &sourceEntry : metricGroupsBySource) {
-    const std::vector<zet_metric_group_handle_t> &MetricGroupHandlePerSource =
-        sourceEntry.second;
+  bool meets_minimum_count = false;
+  // For each source (or domain): take x% of metric groups from that group
+  for (auto const &key_entry : metric_groups_by_key) {
+    const std::vector<zet_metric_group_handle_t> &metric_group_handles_per_key =
+        key_entry.second;
 
-    uint32_t sourceCnt = std::max(
-        minCountPerSource,
-        to_u32(to_f64(MetricGroupHandlePerSource.size()) * metricGrpTestPerc));
-    sourceCnt = std::min(sourceCnt, to_u32(MetricGroupHandlePerSource.size()));
+    uint32_t key_count =
+        std::max(min_count_per_source,
+                 to_u32(to_f64(metric_group_handles_per_key.size()) *
+                        metric_grp_test_perc));
+    key_count =
+        std::min(key_count, to_u32(metric_group_handles_per_key.size()));
 
-    std::transform(MetricGroupHandlePerSource.begin(),
-                   MetricGroupHandlePerSource.begin() + sourceCnt,
-                   std::back_inserter(optimizedList),
-                   [&MetricGroupHandleToInfo](auto handle) {
-                     return *MetricGroupHandleToInfo.at(handle);
+    std::transform(metric_group_handles_per_key.begin(),
+                   metric_group_handles_per_key.begin() + key_count,
+                   std::back_inserter(optimized_list),
+                   [&metric_group_handle_to_info](auto handle) {
+                     return *metric_group_handle_to_info.at(handle);
                    });
 
-    if (sourceCnt < minCountPerSource) {
-      LOG_WARNING << "source " << sourceEntry.first << " has " << sourceCnt
-                  << " metric groups, less than minCountPerSource "
-                  << minCountPerSource;
+    if (key_count < min_count_per_source) {
+      LOG_WARNING << key_entry.first
+                  << " has less metric groups than the minimum required: "
+                  << key_count << " < " << min_count_per_source;
     } else {
-      LOG_DEBUG << "source " << sourceEntry.first
-                << " meets the requested minimum count " << minCountPerSource;
-      meetsMinimumCount = true;
+      LOG_DEBUG << key_entry.first
+                << " meets the requested minimum count: " << key_count
+                << " >= " << min_count_per_source;
+      meets_minimum_count = true;
     }
   }
+  LOG_INFO << "Size of optimized metric groups list : "
+           << optimized_list.size();
 
-  LOG_INFO << "Size of optimized metric groups list : " << optimizedList.size();
-
-  for (auto const &metricGroupInfo : optimizedList) {
+  for (auto const &metricGroupInfo : optimized_list) {
     LOG_DEBUG << "optimizedList metric group name "
               << metricGroupInfo.metricGroupName;
   }
 
-  return meetsMinimumCount;
+  return meets_minimum_count;
 }
 
 std::vector<metricGroupInfo_t> get_device_metric_groups_for_sampling_type(

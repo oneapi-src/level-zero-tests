@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2025 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -134,9 +134,10 @@ void validate_metrics_std(zet_metric_group_handle_t matchedGroupHandle,
                           const size_t rawDataSize, const uint8_t *rawData);
 
 bool optimize_metric_group_info_list(
-    std::vector<metricGroupInfo_t> &metricGroupInfoList,
-    uint32_t percentOfMetricGroupForTest, const char *MetricGroupName,
-    uint32_t minCountPerSource, std::vector<metricGroupInfo_t> &optimizedList);
+    std::vector<metricGroupInfo_t> &metric_group_info_list,
+    uint32_t percent_of_metric_group_for_test, const char *metric_group_name,
+    uint32_t min_count_per_source,
+    std::vector<metricGroupInfo_t> &optimized_list);
 
 bool validateMetricsStructures(zet_metric_group_handle_t hMetricGroup);
 
@@ -271,9 +272,12 @@ void get_all_device_concurrent_metric_groups(
     uint32_t &concurrentGroupCount,
     std::vector<uint32_t> &countPerConcurrentGroup);
 
+bool get_metric_group_source_id(zet_metric_group_handle_t metric_group_handle,
+                                uint32_t &source_id);
+
 std::map<uint32_t, std::vector<zet_metric_group_handle_t>>
 get_device_metric_groups_by_source_id(
-    const std::vector<zet_metric_group_handle_t> &metricGroupHandleList);
+    const std::vector<zet_metric_group_handle_t> &metric_group_handle_list);
 
 void enable_metrics_runtime(ze_device_handle_t device);
 
