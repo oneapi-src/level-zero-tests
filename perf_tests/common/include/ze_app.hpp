@@ -13,6 +13,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <string>
 #include <cstring>
 #include <vector>
@@ -27,6 +28,47 @@ public:
   void memoryAlloc(size_t size, void **ptr);
   void memoryAlloc(const uint32_t device_index, size_t size, void **ptr);
   void memoryAllocHost(size_t size, void **ptr);
+  // Host allocation placed on a NUMA node. Returns false, with the allocation
+  // still usable, when the placement could not be applied; pass
+  // numa_support::no_node to keep the kernel's own choice.
+  bool memoryAllocHost(size_t size, void **ptr, int numa_node,
+                       std::string *bind_error = nullptr);
+  // Host allocation routed through one device's context. With per-device
+  // contexts enabled the driver places the pages on that device's NUMA node,
+  // which is the whole reason the mode exists.
+  void memoryAllocHost(const uint32_t device_index, size_t size, void **ptr);
+  //---------------------------------------------------------------------
+  // Per-device contexts.
+  //
+  // The driver serves a host allocation from the node of the device it
+  // routes the allocation through, and in a context holding several devices
+  // that is always the first of them. Giving each device a context of its
+  // own therefore places every host buffer on its own device's node, using
+  // nothing outside the core API.
+  //
+  // Off by default: ZeApp::context stays the single shared context, which is
+  // what every other perf test uses.
+  //---------------------------------------------------------------------
+  bool enablePerDeviceContexts(void);
+  bool perDeviceContextsEnabled(void) const {
+    return !_device_contexts.empty();
+  }
+  // Context owning a device's objects: the per-device one when enabled, the
+  // shared one otherwise. Anything created from a context must be used only
+  // with objects from the same context, events included.
+  ze_context_handle_t contextFor(const uint32_t device_index) const;
+  // Context an allocation was made from, for freeing it again.
+  ze_context_handle_t contextOfAllocation(const void *ptr) const;
+  // True when a host allocation can be placed on a NUMA node and still be
+  // used by the driver, which needs the import extension.
+  bool numaPlacedHostAllocationsSupported(void);
+  // The driver supports system memory on copy operations only, so an imported
+  // pointer is resolved correctly by zeCommandListAppendMemoryCopy but is not
+  // a USM allocation and must not become a kernel argument. A caller whose
+  // host buffers reach a kernel turns the import path off.
+  void setHostAllocationImportEnabled(bool enabled) {
+    _host_allocation_import_enabled = enabled;
+  }
   void memoryAllocImportFd(const uint32_t device_index, size_t size, int fd,
                            ze_device_mem_alloc_flags_t flags, void **ptr);
   void memoryAllocHostImportFd(size_t size, int fd,
@@ -130,6 +172,29 @@ public:
   std::vector<ze_device_handle_t> _devices;
 
 private:
+  ze_driver_handle_t _driver = nullptr;
+
+  // One context per device when the mode is on, empty otherwise.
+  std::vector<ze_context_handle_t> _device_contexts;
+  // Which context an allocation came from, so that it can be freed against
+  // that context. Only populated when per-device contexts are in use.
+  std::map<const void *, ze_context_handle_t> _allocation_contexts;
+
+  // Host allocations the tool placed itself and handed to the driver through
+  // the import extension, with the length needed to unmap them again. They
+  // are not driver allocations, so memoryFree() must not pass them to
+  // zeMemFree().
+  std::map<const void *, size_t> _imported_host_allocations;
+
+  // Resolved once, on first use: the import extension is how a host buffer
+  // whose NUMA placement the caller controls becomes usable by Level Zero.
+  bool importExtensionAvailable(void);
+  void rememberAllocationContext(const void *ptr, ze_context_handle_t owner);
+  bool _import_extension_resolved = false;
+  bool _host_allocation_import_enabled = true;
+  ze_result_t (*_import_pointer)(ze_driver_handle_t, void *, size_t) = nullptr;
+  ze_result_t (*_release_pointer)(ze_driver_handle_t, void *) = nullptr;
+
   std::vector<ze_module_handle_t> _modules;
   std::string _module_path;
   std::vector<uint8_t> _binary_file;

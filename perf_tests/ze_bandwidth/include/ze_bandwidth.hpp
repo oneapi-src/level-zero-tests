@@ -7,10 +7,26 @@
  */
 
 #include <chrono>
+#include <memory>
 #include <string>
 #include <level_zero/ze_api.h>
 #include "../../common/include/common.hpp"
+#include "numa_support.hpp"
 #include "ze_app.hpp"
+
+// Where the host buffers are placed, and which CPUs drive the transfers.
+// "none" keeps the kernel's own choice, which is what the tool did before the
+// option existed; "auto" follows each device's own NUMA node; "fixed" forces
+// every host allocation onto one node named on the command line.
+enum class HostNumaMode { none, automatic, fixed };
+
+// How the host buffers are actually obtained once the mode is resolved
+// against what the driver offers.
+enum class HostNumaPath {
+  driver_allocated,   // whatever the driver chooses; no placement
+  per_device_context, // one context per device, so the driver places them
+  imported            // placed here, handed over with the import extension
+};
 
 // Level Zero has no name for a queue group, so one is derived from the group
 // flags and from the queue index within the group.
@@ -58,6 +74,22 @@ public:
   void kernel_cleanup(void);
   void ze_bandwidth_query_engines();
   bool any_kernel_test(void) const;
+  // NUMA node the host allocations of a device are bound to, or
+  // numa_support::no_node when the placement is left to the kernel.
+  int host_node_for_device(uint32_t device_id) const;
+  // Host allocation for a device, placed according to --hostNuma. Every host
+  // buffer in the tool goes through here, so a run either honours the option
+  // everywhere or reports why it could not.
+  void alloc_host_buffer(uint32_t device_id, size_t size, void **ptr);
+  // Pins the process to the node that serves the first selected device, for
+  // the tests that do not retarget per device. Returns an object that holds
+  // the binding for as long as it is alive.
+  std::unique_ptr<numa_support::ScopedCpuBind> bind_cpu_to_first_device(void);
+  void select_host_numa_path(void);
+  void report_host_numa_plan(void);
+  // Points out, when no placement was asked for, that some selected device's
+  // host buffers are served from another node.
+  void warn_if_host_memory_is_remote(void);
   // Commentary stream: stdout normally, stderr under --csv, so that stdout
   // carries nothing but the header and the data rows.
   std::ostream &info(void);
@@ -87,6 +119,8 @@ public:
   bool query_engines = false;
   bool enable_fixed_ordinal_index = false;
   bool enable_engine_names = false;
+  HostNumaMode host_numa_mode = HostNumaMode::none;
+  int host_numa_fixed_node = numa_support::no_node;
   std::string h2d_engine_name;
   std::string d2h_engine_name;
   uint32_t command_queue_group_ordinal = 0;
@@ -94,9 +128,14 @@ public:
   uint32_t command_queue_group_ordinal1 = 0;
   uint32_t command_queue_index1 = 0;
   bool csv_output = false;
-  ze_event_pool_handle_t event_pool = {};
-  ze_event_pool_handle_t wait_event_pool = {};
-  ze_event_handle_t wait_event = {};
+  // One release gate per device. A single shared event cannot work once each
+  // objects from the context that created it.
+  std::vector<ze_event_handle_t> wait_event{};
+  // Signals every gate, releasing all devices. With one context this is a
+  // single call; with per-device contexts it is a short host loop, whose skew
+  // is small against the transfers being timed.
+  void signal_wait_events(void);
+  void reset_wait_events(void);
 
   std::vector<ze_event_handle_t> event{};
   std::vector<ze_event_handle_t> event1{};
@@ -207,6 +246,23 @@ private:
   bool d2h_slot_needs_compute(void) const;
 
   bool csv_extra_column = false;
+
+  // Sysfs NUMA node of each device, indexed by device id, filled while the
+  // engines are queried. A device whose node sysfs does not report stays at
+  // numa_support::no_node and is left unbound.
+  std::vector<int> device_numa_node{};
+  std::vector<std::string> device_pci_address{};
+  // Pools are per device so that each one belongs to that device's context.
+  std::vector<ze_event_pool_handle_t> event_pools{};
+  std::vector<ze_event_pool_handle_t> wait_event_pools{};
+  // One warning per run: the allocation loop would otherwise repeat it for
+  // every transfer size and every measured device.
+  bool host_numa_bind_warned = false;
+  bool host_numa_placement_warned = false;
+  bool host_numa_cpu_warned = false;
+  HostNumaPath host_numa_path = HostNumaPath::driver_allocated;
+  void verify_host_placement(uint32_t device_id, void *ptr);
+  std::string host_numa_plan_string(void) const;
 
   // One bundle per device: a copy is issued on the queue of the device that
   // owns the memory, so verification works for any device in -d, not only 0.

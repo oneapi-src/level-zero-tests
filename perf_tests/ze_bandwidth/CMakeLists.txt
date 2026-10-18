@@ -6,6 +6,7 @@ add_lzt_test(
   GROUP "/perf_tests"
   SOURCES
     ../common/src/ze_app.cpp
+    ../common/src/numa_support.cpp
     src/ze_bandwidth.cpp
     src/kernel_copy.cpp
     src/all_host.cpp

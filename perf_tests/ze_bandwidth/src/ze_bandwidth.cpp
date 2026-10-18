@@ -193,11 +193,10 @@ ZeBandwidth::~ZeBandwidth() {
 
       SUCCESS_OR_TERMINATE(zeEventDestroy(event[device_id]));
       SUCCESS_OR_TERMINATE(zeEventDestroy(event1[device_id]));
+      SUCCESS_OR_TERMINATE(zeEventDestroy(wait_event[device_id]));
+      SUCCESS_OR_TERMINATE(zeEventPoolDestroy(event_pools[device_id]));
+      SUCCESS_OR_TERMINATE(zeEventPoolDestroy(wait_event_pools[device_id]));
     }
-
-    SUCCESS_OR_TERMINATE(zeEventDestroy(wait_event));
-    SUCCESS_OR_TERMINATE(zeEventPoolDestroy(event_pool));
-    SUCCESS_OR_TERMINATE(zeEventPoolDestroy(wait_event_pool));
   }
 
   benchmark->singleDeviceCleanup();
@@ -208,6 +207,251 @@ ZeBandwidth::~ZeBandwidth() {
 bool ZeBandwidth::any_kernel_test(void) const {
   return run_host2dev_kernel || run_dev2host_kernel ||
          run_bidirectional_kernel || (run_all_host && all_host_use_kernel);
+}
+
+//---------------------------------------------------------------------
+// Host side NUMA placement.
+//
+// zeMemAllocHost() takes no node, and the memory it hands back is not reached
+// by numactl either, so the placement is applied to the returned range. The
+// node is resolved per device, which is what lets the multi device tests put
+// each device's host buffers on the node that device hangs off.
+//---------------------------------------------------------------------
+int ZeBandwidth::host_node_for_device(uint32_t device_id) const {
+  switch (host_numa_mode) {
+  case HostNumaMode::fixed:
+    return host_numa_fixed_node;
+  case HostNumaMode::automatic:
+    return (device_id < device_numa_node.size()) ? device_numa_node[device_id]
+                                                 : numa_support::no_node;
+  case HostNumaMode::none:
+    break;
+  }
+
+  return numa_support::no_node;
+}
+
+void ZeBandwidth::alloc_host_buffer(uint32_t device_id, size_t size,
+                                    void **ptr) {
+  // With per-device contexts the driver already places the allocation on the
+  // device's own node, so the buffer is simply taken from that context and
+  // nothing has to be bound afterwards. This is the whole of `auto`, and it
+  // uses nothing outside the core API.
+  //
+  // The placement is not checked here: these pages are the driver's own
+  // mapping and the page allocator does not account for them, so the per
+  // allocation check below would report "no node" for a buffer that is in
+  // fact placed correctly.
+  if (benchmark->perDeviceContextsEnabled()) {
+    benchmark->memoryAllocHost(device_id, size, ptr);
+    return;
+  }
+
+  const int node = host_node_for_device(device_id);
+  std::string error;
+
+  if (!benchmark->memoryAllocHost(size, ptr, node, &error)) {
+    if (!host_numa_bind_warned) {
+      std::cerr << "WARNING: the host allocation for device " << device_id
+                << " could not be bound to NUMA node " << node << " (" << error
+                << "), it is placed wherever the kernel chose\n";
+      host_numa_bind_warned = true;
+    }
+    return;
+  }
+
+  if (node == numa_support::no_node) {
+    return;
+  }
+
+  // A binding only decides where a page lands when it is first faulted in, so
+  // the pages are touched here rather than during the first copy, where the
+  // fault would land inside the measurement.
+  numa_support::touch_pages(*ptr, size);
+  verify_host_placement(device_id, *ptr);
+}
+
+//---------------------------------------------------------------------
+// Confirms where a placed buffer actually ended up. Only meaningful on the
+// imported path, where the pages are anonymous and the page allocator can
+// account for them; a driver mapping reports no node at all.
+//---------------------------------------------------------------------
+void ZeBandwidth::verify_host_placement(uint32_t device_id, void *ptr) {
+  const int wanted = host_node_for_device(device_id);
+  if (wanted == numa_support::no_node || host_numa_placement_warned) {
+    return;
+  }
+
+  const int placed = numa_support::memory_node(ptr);
+  if (placed == wanted) {
+    return;
+  }
+
+  std::cerr << "WARNING: the host allocation for device " << device_id
+            << " was meant for NUMA node " << wanted << " but reports node "
+            << placed << ", the placement did not take\n";
+  host_numa_placement_warned = true;
+}
+
+std::unique_ptr<numa_support::ScopedCpuBind>
+ZeBandwidth::bind_cpu_to_first_device(void) {
+  const int node = host_node_for_device(device_ids[0]);
+  auto binding = std::make_unique<numa_support::ScopedCpuBind>(node);
+
+  if (node != numa_support::no_node && !binding->active()) {
+    std::cerr << "WARNING: could not pin the submitting thread to NUMA node "
+              << node << ": " << binding->error() << "\n";
+  }
+
+  return binding;
+}
+
+//---------------------------------------------------------------------
+// Without --hostNuma the host buffers are the driver's own. A driver that
+// serves every host allocation from the first device in its context puts all
+// of them on that device's node, whatever -d names, so a device on another
+// node crosses the interconnect on every transfer and nothing in the figure
+// says that it did. Saying it here costs one line and saves the reader from
+// reading a topology effect as a device difference.
+//---------------------------------------------------------------------
+void ZeBandwidth::warn_if_host_memory_is_remote(void) {
+  if (host_numa_mode != HostNumaMode::none ||
+      numa_support::online_nodes().size() < 2 || device_numa_node.empty()) {
+    return;
+  }
+
+  const int serving_node = device_numa_node[0];
+  if (serving_node == numa_support::no_node) {
+    return;
+  }
+
+  std::vector<uint32_t> remote;
+  for (auto device_id : device_ids) {
+    const int node = device_numa_node[device_id];
+    if (node != numa_support::no_node && node != serving_node) {
+      remote.push_back(device_id);
+    }
+  }
+
+  if (remote.empty()) {
+    return;
+  }
+
+  std::cerr << "NOTE: device";
+  for (const uint32_t device_id : remote) {
+    std::cerr << " " << device_id;
+  }
+  std::cerr << (remote.size() > 1 ? " sit" : " sits")
+            << " on a NUMA node other than node " << serving_node
+            << ", which is where device 0 sits and where a driver that serves "
+               "every host allocation from the first device in the context "
+               "places them. Those transfers then cross the interconnect "
+               "without the figure saying so; pass --hostNuma=auto to place "
+               "each device's host buffers on its own node\n";
+}
+
+std::string ZeBandwidth::host_numa_plan_string(void) const {
+  std::string plan =
+      (host_numa_mode == HostNumaMode::fixed) ? "mode=fixed" : "mode=auto";
+
+  // The allocation path is part of the figure, because the three paths are
+  // not the same allocation and only two of them place anything.
+  switch (host_numa_path) {
+  case HostNumaPath::per_device_context:
+    plan += ", host buffers=per-device context";
+    break;
+  case HostNumaPath::imported:
+    plan += ", host buffers=imported";
+    break;
+  case HostNumaPath::driver_allocated:
+    plan += ", host buffers=driver allocated";
+    break;
+  }
+
+  for (auto device_id : device_ids) {
+    const int node = host_node_for_device(device_id);
+
+    plan += ", device " + std::to_string(device_id) + " -> ";
+    plan += (node == numa_support::no_node) ? "unbound"
+                                            : ("node " + std::to_string(node));
+  }
+
+  return plan;
+}
+
+//---------------------------------------------------------------------
+// Choosing how the host buffers are placed.
+//
+// `auto` only ever wants each device's own node, which is exactly what the
+// driver does when a context holds one device, so it is served by giving
+// every device a context of its own. That is core API only and works for the
+// kernel driven tests too, which cannot use an imported pointer at all.
+//
+// `--hostNuma=N` asks for a node of the caller's choosing, which no context
+// arrangement can express, so it still places the memory itself and hands it
+// over with the import extension.
+//---------------------------------------------------------------------
+void ZeBandwidth::select_host_numa_path(void) {
+  if (host_numa_mode == HostNumaMode::none) {
+    host_numa_path = HostNumaPath::driver_allocated;
+    return;
+  }
+
+  if (host_numa_mode == HostNumaMode::automatic) {
+    if (benchmark->enablePerDeviceContexts()) {
+      host_numa_path = HostNumaPath::per_device_context;
+      return;
+    }
+    std::cerr << "WARNING: per device contexts are unavailable, falling back "
+                 "to placing the host buffers directly\n";
+  }
+
+  // A kernel driven test passes the host buffer to the kernel as an argument.
+  // The driver supports system memory on copy operations only, and
+  // zexDriverImportExternalPointer does not change that: it moves ownership
+  // of the internal graphics allocation from the command list to the driver
+  // handle, which is a copy path optimisation. Passing an imported range to a
+  // kernel is outside that, and a full size dispatch hangs the compute
+  // engine.
+  if (any_kernel_test()) {
+    benchmark->setHostAllocationImportEnabled(false);
+  }
+
+  host_numa_path = benchmark->numaPlacedHostAllocationsSupported()
+                       ? HostNumaPath::imported
+                       : HostNumaPath::driver_allocated;
+}
+
+void ZeBandwidth::report_host_numa_plan(void) {
+  if (host_numa_mode == HostNumaMode::none) {
+    return;
+  }
+
+  info() << "Host NUMA placement: " << host_numa_plan_string() << "\n";
+
+  if (host_numa_path == HostNumaPath::driver_allocated) {
+    std::cerr << "WARNING: the host buffers are the driver's own, because "
+              << (any_kernel_test()
+                      ? "a kernel driven test passes them as a kernel "
+                        "argument and the driver supports system memory on "
+                        "copy operations only"
+                      : "the driver has no pointer import extension")
+              << ". A placement applied to them is ignored by a driver that "
+                 "backs host memory with its own mapping\n";
+  }
+
+  if (numa_support::online_nodes().size() < 2) {
+    std::cerr << "NOTE: the host reports a single NUMA node, so --hostNuma "
+                 "cannot move anything\n";
+  }
+
+  for (auto device_id : device_ids) {
+    if (host_node_for_device(device_id) == numa_support::no_node) {
+      std::cerr << "WARNING: device " << device_id
+                << " does not report a NUMA node, its host allocations are "
+                   "left where the kernel puts them\n";
+    }
+  }
 }
 
 //---------------------------------------------------------------------
@@ -303,6 +547,13 @@ std::ostream &ZeBandwidth::info(void) {
 void ZeBandwidth::print_csv_header(const char *extra_column) {
   csv_extra_column = (extra_column != nullptr);
 
+  // The placement is part of what the figures mean, so it is recorded with
+  // them. A comment line keeps the column header itself unchanged, and a run
+  // that asked for no placement emits nothing extra at all.
+  if (host_numa_mode != HostNumaMode::none) {
+    std::cout << "# host_numa: " << host_numa_plan_string() << std::endl;
+  }
+
   std::cout << "Transfer_size,Bandwidth_(GBPS),Latency_(usec)";
   if (csv_extra_column) {
     std::cout << "," << extra_column;
@@ -372,7 +623,9 @@ void ZeBandwidth::transfer_size_test(
   auto &list = use_h2d_slot ? command_list : command_list1;
 
   if (verify) {
-    benchmark->memoryAllocHost(buffer_size, &host_buffer_verify1);
+    // One staging buffer shared by every device in the run, so it is placed
+    // for the first of them; it carries no measured traffic either way.
+    alloc_host_buffer(device_ids[0], buffer_size, &host_buffer_verify1);
     char *host_buffer_verify_char1 = static_cast<char *>(host_buffer_verify1);
     for (uint32_t i = 0; i < buffer_size; i++) {
       host_buffer_verify_char1[i] = static_cast<char>(i);
@@ -389,7 +642,8 @@ void ZeBandwidth::transfer_size_test(
       SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
           list[device_id], destination_buffer[device_id],
           source_buffer[device_id], buffer_size,
-          use_event_timer ? event[device_id] : nullptr, 1, &wait_event));
+          use_event_timer ? event[device_id] : nullptr, 1,
+          &wait_event[device_id]));
     }
 
     for (auto device_id : device_ids) {
@@ -406,13 +660,13 @@ void ZeBandwidth::transfer_size_test(
                                                   &list[device_id]);
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event));
+      signal_wait_events();
 
       for (auto device_id : device_ids) {
         benchmark->commandQueueSynchronize(queue[device_id]);
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event));
+      reset_wait_events();
     }
 
     Timer<std::chrono::nanoseconds::period> timer;
@@ -435,7 +689,7 @@ void ZeBandwidth::transfer_size_test(
         timers[device_id].start();
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event));
+      signal_wait_events();
 
       for (auto device_id : device_ids) {
         benchmark->commandQueueSynchronize(queue[device_id]);
@@ -450,7 +704,7 @@ void ZeBandwidth::transfer_size_test(
         }
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event));
+      reset_wait_events();
     }
     timer.end();
 
@@ -467,17 +721,17 @@ void ZeBandwidth::transfer_size_test(
         SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
             list[device_id], destination_buffer[device_id],
             source_buffer[device_id], buffer_size, event[device_id], 1,
-            &wait_event));
+            &wait_event[device_id]));
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event));
+      signal_wait_events();
 
       for (auto device_id : device_ids) {
         SUCCESS_OR_TERMINATE(
             zeEventHostSynchronize(event[device_id], UINT64_MAX));
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event));
+      reset_wait_events();
     }
 
     Timer<std::chrono::nanoseconds::period> timer;
@@ -491,14 +745,14 @@ void ZeBandwidth::transfer_size_test(
         SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
             list[device_id], destination_buffer[device_id],
             source_buffer[device_id], buffer_size, event[device_id], 1,
-            &wait_event));
+            &wait_event[device_id]));
       }
 
       for (auto device_id : device_ids) {
         timers[device_id].start();
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event));
+      signal_wait_events();
 
       for (auto device_id : device_ids) {
         SUCCESS_OR_TERMINATE(
@@ -514,7 +768,7 @@ void ZeBandwidth::transfer_size_test(
         }
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event));
+      reset_wait_events();
     }
     timer.end();
 
@@ -523,7 +777,7 @@ void ZeBandwidth::transfer_size_test(
 
   if (verify) {
     uint32_t number_of_errors = 0;
-    benchmark->memoryAllocHost(buffer_size, &host_buffer_verify);
+    alloc_host_buffer(device_ids[0], buffer_size, &host_buffer_verify);
 
     for (auto device_id : device_ids) {
       run_verify_copy(device_id, host_buffer_verify,
@@ -665,7 +919,8 @@ void ZeBandwidth::transfer_bidir_size_test(
       SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
           list[device_id], destination_buffer[device_id],
           source_buffer[device_id], buffer_size,
-          use_event_timer ? event[device_id] : nullptr, 1, &wait_event));
+          use_event_timer ? event[device_id] : nullptr, 1,
+          &wait_event[device_id]));
     }
 
     for (auto device_id : device_ids) {
@@ -676,7 +931,8 @@ void ZeBandwidth::transfer_bidir_size_test(
       SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
           list_interfering[device_id], destination_buffer1[device_id],
           source_buffer1[device_id], buffer_size1,
-          use_event_timer ? event1[device_id] : nullptr, 1, &wait_event));
+          use_event_timer ? event1[device_id] : nullptr, 1,
+          &wait_event[device_id]));
     }
 
     for (auto device_id : device_ids) {
@@ -696,14 +952,14 @@ void ZeBandwidth::transfer_bidir_size_test(
             queue_interfering[device_id], 1, &list_interfering[device_id]);
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event));
+      signal_wait_events();
 
       for (auto device_id : device_ids) {
         benchmark->commandQueueSynchronize(queue[device_id]);
         benchmark->commandQueueSynchronize(queue_interfering[device_id]);
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event));
+      reset_wait_events();
     }
 
     Timer<std::chrono::nanoseconds::period> timer;
@@ -730,7 +986,7 @@ void ZeBandwidth::transfer_bidir_size_test(
         timers1[device_id].start();
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event));
+      signal_wait_events();
 
       for (auto device_id : device_ids) {
         benchmark->commandQueueSynchronize(queue[device_id]);
@@ -742,7 +998,7 @@ void ZeBandwidth::transfer_bidir_size_test(
                                 timers1[device_id], timings);
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event));
+      reset_wait_events();
     }
     timer.end();
 
@@ -761,14 +1017,14 @@ void ZeBandwidth::transfer_bidir_size_test(
         SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
             list[device_id], destination_buffer[device_id],
             source_buffer[device_id], buffer_size, event[device_id], 1,
-            &wait_event));
+            &wait_event[device_id]));
         SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
             list_interfering[device_id], destination_buffer1[device_id],
             source_buffer1[device_id], buffer_size1, event1[device_id], 1,
-            &wait_event));
+            &wait_event[device_id]));
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event));
+      signal_wait_events();
 
       for (auto device_id : device_ids) {
         SUCCESS_OR_TERMINATE(
@@ -777,7 +1033,7 @@ void ZeBandwidth::transfer_bidir_size_test(
             zeEventHostSynchronize(event1[device_id], UINT64_MAX));
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event));
+      reset_wait_events();
     }
 
     Timer<std::chrono::nanoseconds::period> timer;
@@ -794,11 +1050,11 @@ void ZeBandwidth::transfer_bidir_size_test(
         SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
             list[device_id], destination_buffer[device_id],
             source_buffer[device_id], buffer_size, event[device_id], 1,
-            &wait_event));
+            &wait_event[device_id]));
         SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
             list_interfering[device_id], destination_buffer1[device_id],
             source_buffer1[device_id], buffer_size1, event1[device_id], 1,
-            &wait_event));
+            &wait_event[device_id]));
       }
 
       for (auto device_id : device_ids) {
@@ -806,7 +1062,7 @@ void ZeBandwidth::transfer_bidir_size_test(
         timers1[device_id].start();
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event));
+      signal_wait_events();
 
       for (auto device_id : device_ids) {
         SUCCESS_OR_TERMINATE(
@@ -820,7 +1076,7 @@ void ZeBandwidth::transfer_bidir_size_test(
                                 timers1[device_id], timings);
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event));
+      reset_wait_events();
     }
     timer.end();
 
@@ -847,7 +1103,7 @@ void ZeBandwidth::test_host2device(void) {
 
     for (auto device_id : device_ids) {
       benchmark->memoryAlloc(device_id, size, &device_buffers[device_id]);
-      benchmark->memoryAllocHost(size, &host_buffers[device_id]);
+      alloc_host_buffer(device_id, size, &host_buffers[device_id]);
     }
 
     transfer_size_test(size, device_buffers, host_buffers, device_times_nsec,
@@ -897,7 +1153,7 @@ void ZeBandwidth::test_device2host(void) {
 
     for (auto device_id : device_ids) {
       benchmark->memoryAlloc(device_id, size, &device_buffers[device_id]);
-      benchmark->memoryAllocHost(size, &host_buffers[device_id]);
+      alloc_host_buffer(device_id, size, &host_buffers[device_id]);
     }
 
     transfer_size_test(size, host_buffers, device_buffers, device_times_nsec,
@@ -1029,9 +1285,9 @@ void ZeBandwidth::test_bidir(void) {
 
     for (auto device_id : device_ids) {
       benchmark->memoryAlloc(device_id, size, &device_buffers[device_id]);
-      benchmark->memoryAllocHost(size, &host_buffers[device_id]);
+      alloc_host_buffer(device_id, size, &host_buffers[device_id]);
       benchmark->memoryAlloc(device_id, size, &device_buffers_bidir[device_id]);
-      benchmark->memoryAllocHost(size, &host_buffers_bidir[device_id]);
+      alloc_host_buffer(device_id, size, &host_buffers_bidir[device_id]);
     }
 
     transfer_bidir_size_test(size, size, device_buffers, host_buffers,
@@ -1114,11 +1370,11 @@ void ZeBandwidth::test_bidir_measured(bool measure_h2d) {
 
     for (auto device_id : device_ids) {
       benchmark->memoryAlloc(device_id, size, &device_buffers[device_id]);
-      benchmark->memoryAllocHost(size, &host_buffers[device_id]);
+      alloc_host_buffer(device_id, size, &host_buffers[device_id]);
       benchmark->memoryAlloc(device_id, size_interference,
                              &device_buffers_bidir[device_id]);
-      benchmark->memoryAllocHost(size_interference,
-                                 &host_buffers_bidir[device_id]);
+      alloc_host_buffer(device_id, size_interference,
+                        &host_buffers_bidir[device_id]);
     }
 
     if (measure_h2d) {
@@ -1467,14 +1723,23 @@ void ZeBandwidth::ze_bandwidth_query_engines() {
   device_properties.resize(benchmark->_devices.size());
   device_memory_size.resize(benchmark->_devices.size());
 
+  // Every device is located, not only the selected ones: the driver serves
+  // host allocations from the first device in the context, so its node
+  // matters even when -d never names it.
+  device_numa_node.assign(benchmark->_devices.size(), numa_support::no_node);
+  device_pci_address.assign(benchmark->_devices.size(), std::string());
+  for (uint32_t id = 0; id < benchmark->_devices.size(); id++) {
+    const DeviceLocation location = device_location(benchmark->_devices[id]);
+    device_numa_node[id] = location.numa_node;
+    device_pci_address[id] = location.pci_address;
+  }
+
   for (auto device_id : device_ids) {
-    const DeviceLocation location =
-        device_location(benchmark->_devices[device_id]);
-    if (!location.pci_address.empty()) {
-      info() << "[Device " << device_id << "] PCI " << location.pci_address
-             << ", NUMA node ";
-      if (location.numa_node >= 0) {
-        info() << location.numa_node;
+    if (!device_pci_address[device_id].empty()) {
+      info() << "[Device " << device_id << "] PCI "
+             << device_pci_address[device_id] << ", NUMA node ";
+      if (device_numa_node[device_id] >= 0) {
+        info() << device_numa_node[device_id];
       } else {
         info() << "unknown";
       }
@@ -1545,13 +1810,13 @@ void ZeBandwidth::ze_bandwidth_query_engines() {
       command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
       SUCCESS_OR_TERMINATE(zeCommandListCreateImmediate(
-          benchmark->context, benchmark->_devices[device_id],
+          benchmark->contextFor(device_id), benchmark->_devices[device_id],
           &command_queue_description, &command_list[device_id]));
 
       command_queue_description.ordinal = command_queue_group_ordinal1;
       command_queue_description.index = command_queue_index1;
       SUCCESS_OR_TERMINATE(zeCommandListCreateImmediate(
-          benchmark->context, benchmark->_devices[device_id],
+          benchmark->contextFor(device_id), benchmark->_devices[device_id],
           &command_queue_description, &command_list1[device_id]));
     }
   }
@@ -1568,47 +1833,71 @@ void ZeBandwidth::ze_bandwidth_query_engines() {
   }
 
   // The measurement events live in their own pool because requesting kernel
-  // timestamps leaves an event duration undefined, while wait_event is only
+  // timestamps leaves an event duration undefined, while a wait event is only
   // ever used as a host controlled release gate.
+  //
+  // A pool, and the events in it, belong to the context it was created from,
+  // so with per-device contexts each device needs a pool of its own.
+  const size_t device_count = benchmark->_devices.size();
+  event_pools.assign(device_count, nullptr);
+  wait_event_pools.assign(device_count, nullptr);
+  wait_event.assign(device_count, nullptr);
+
   ze_event_pool_desc_t event_pool_desc = {ZE_STRUCTURE_TYPE_EVENT_POOL_DESC};
-  event_pool_desc.count = static_cast<uint32_t>(2 * device_ids.size());
+  event_pool_desc.count = 2;
   event_pool_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
   if (use_event_timer) {
     event_pool_desc.flags |= ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP;
   }
-  SUCCESS_OR_TERMINATE(
-      zeEventPoolCreate(benchmark->context, &event_pool_desc,
-                        static_cast<uint32_t>(benchmark->_devices.size()),
-                        benchmark->_devices.data(), &event_pool));
 
   ze_event_pool_desc_t wait_event_pool_desc = {
       ZE_STRUCTURE_TYPE_EVENT_POOL_DESC};
   wait_event_pool_desc.count = 1;
   wait_event_pool_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
-  SUCCESS_OR_TERMINATE(
-      zeEventPoolCreate(benchmark->context, &wait_event_pool_desc,
-                        static_cast<uint32_t>(benchmark->_devices.size()),
-                        benchmark->_devices.data(), &wait_event_pool));
 
-  ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC};
-  event_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
-  event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
-
-  uint32_t event_index = 0;
   for (auto device_id : device_ids) {
-    event_desc.index = event_index++;
-    SUCCESS_OR_TERMINATE(
-        zeEventCreate(event_pool, &event_desc, &event[device_id]));
-    event_desc.index = event_index++;
-    SUCCESS_OR_TERMINATE(
-        zeEventCreate(event_pool, &event_desc, &event1[device_id]));
-  }
+    ze_context_handle_t owner = benchmark->contextFor(device_id);
 
-  event_desc.index = 0;
-  event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
-  event_desc.wait = ZE_EVENT_SCOPE_FLAG_DEVICE;
-  SUCCESS_OR_TERMINATE(
-      zeEventCreate(wait_event_pool, &event_desc, &wait_event));
+    SUCCESS_OR_TERMINATE(zeEventPoolCreate(owner, &event_pool_desc, 1,
+                                           &benchmark->_devices[device_id],
+                                           &event_pools[device_id]));
+    SUCCESS_OR_TERMINATE(zeEventPoolCreate(owner, &wait_event_pool_desc, 1,
+                                           &benchmark->_devices[device_id],
+                                           &wait_event_pools[device_id]));
+
+    ze_event_desc_t event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC};
+    event_desc.signal = ZE_EVENT_SCOPE_FLAG_DEVICE;
+    event_desc.wait = ZE_EVENT_SCOPE_FLAG_HOST;
+
+    event_desc.index = 0;
+    SUCCESS_OR_TERMINATE(
+        zeEventCreate(event_pools[device_id], &event_desc, &event[device_id]));
+    event_desc.index = 1;
+    SUCCESS_OR_TERMINATE(
+        zeEventCreate(event_pools[device_id], &event_desc, &event1[device_id]));
+
+    event_desc.index = 0;
+    event_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+    event_desc.wait = ZE_EVENT_SCOPE_FLAG_DEVICE;
+    SUCCESS_OR_TERMINATE(zeEventCreate(wait_event_pools[device_id], &event_desc,
+                                       &wait_event[device_id]));
+  }
+}
+
+//---------------------------------------------------------------------
+// Releasing the devices. Every selected device waits on its own gate, so
+// they are signalled together and reset together.
+//---------------------------------------------------------------------
+void ZeBandwidth::signal_wait_events(void) {
+  for (auto device_id : device_ids) {
+    SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event[device_id]));
+  }
+}
+
+void ZeBandwidth::reset_wait_events(void) {
+  for (auto device_id : device_ids) {
+    SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event[device_id]));
+  }
 }
 
 int main(int argc, char **argv) {
@@ -1637,9 +1926,25 @@ int main(int argc, char **argv) {
     }
   }
 
+  // Resolved before anything is created from a context, because per-device
+  // contexts have to exist before the command lists, queues, event pools and
+  // modules that belong to them.
+  bw.select_host_numa_path();
+
   bw.ze_bandwidth_query_engines();
 
   if (!bw.query_engines) {
+    bw.report_host_numa_plan();
+    bw.warn_if_host_memory_is_remote();
+
+    // The multi device tests re-pin per measured device, so they are left to
+    // do it themselves; everything else runs against the first device in -d
+    // and the submitting thread follows that one for the whole run.
+    std::unique_ptr<numa_support::ScopedCpuBind> cpu_binding;
+    if (!bw.run_all_host) {
+      cpu_binding = bw.bind_cpu_to_first_device();
+    }
+
     default_size = bw.transfer_lower_limit;
     while (default_size < bw.transfer_upper_limit) {
       bw.transfer_size.push_back(default_size);

@@ -11,6 +11,7 @@
 #include "ze_app.hpp"
 
 #include "../../common/include/common.hpp"
+#include "numa_support.hpp"
 
 #include <assert.h>
 
@@ -107,8 +108,82 @@ void ZeApp::memoryAlloc(const uint32_t device_index, size_t size, void **ptr) {
   device_desc.ordinal = 0;
   device_desc.flags = 0;
 
-  SUCCESS_OR_TERMINATE(zeMemAllocDevice(context, &device_desc, size, 0,
+  ze_context_handle_t owner = contextFor(device_index);
+  SUCCESS_OR_TERMINATE(zeMemAllocDevice(owner, &device_desc, size, 0,
                                         _devices[device_index], ptr));
+  rememberAllocationContext(*ptr, owner);
+}
+
+//---------------------------------------------------------------------
+// Per-device contexts. zeContextCreateEx restricted to one device is what
+// makes the driver place that context's host allocations on the device's own
+// NUMA node; a context spanning several devices serves all of them from the
+// first device's node.
+//---------------------------------------------------------------------
+bool ZeApp::enablePerDeviceContexts(void) {
+  if (!_device_contexts.empty()) {
+    return true;
+  }
+
+  if (_driver == nullptr || _devices.empty()) {
+    return false;
+  }
+
+  std::vector<ze_context_handle_t> contexts;
+  contexts.reserve(_devices.size());
+
+  for (size_t i = 0; i < _devices.size(); i++) {
+    ze_context_desc_t context_desc = {};
+    context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
+
+    ze_context_handle_t device_context = nullptr;
+    if (zeContextCreateEx(_driver, &context_desc, 1, &_devices[i],
+                          &device_context) != ZE_RESULT_SUCCESS) {
+      for (auto created : contexts) {
+        zeContextDestroy(created);
+      }
+      return false;
+    }
+
+    contexts.push_back(device_context);
+  }
+
+  _device_contexts = std::move(contexts);
+  return true;
+}
+
+ze_context_handle_t ZeApp::contextFor(const uint32_t device_index) const {
+  if (_device_contexts.empty() || device_index >= _device_contexts.size()) {
+    return context;
+  }
+
+  return _device_contexts[device_index];
+}
+
+/* An allocation has to be freed against the context it came from, which is
+ * only ambiguous once there is more than one. */
+void ZeApp::rememberAllocationContext(const void *ptr,
+                                      ze_context_handle_t owner) {
+  if (!_device_contexts.empty() && ptr != nullptr) {
+    _allocation_contexts[ptr] = owner;
+  }
+}
+
+ze_context_handle_t ZeApp::contextOfAllocation(const void *ptr) const {
+  const auto known = _allocation_contexts.find(ptr);
+  return (known == _allocation_contexts.end()) ? context : known->second;
+}
+
+void ZeApp::memoryAllocHost(const uint32_t device_index, size_t size,
+                            void **ptr) {
+  ze_host_mem_alloc_desc_t host_desc = {};
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+  host_desc.pNext = nullptr;
+  host_desc.flags = 0;
+
+  ze_context_handle_t owner = contextFor(device_index);
+  SUCCESS_OR_TERMINATE(zeMemAllocHost(owner, &host_desc, size, 1, ptr));
+  rememberAllocationContext(*ptr, owner);
 }
 
 void ZeApp::memoryAllocHost(size_t size, void **ptr) {
@@ -119,6 +194,116 @@ void ZeApp::memoryAllocHost(size_t size, void **ptr) {
   host_desc.flags = 0;
 
   SUCCESS_OR_TERMINATE(zeMemAllocHost(context, &host_desc, size, 1, ptr));
+}
+
+/* Host allocation pinned to a NUMA node.
+ *
+ * zeMemAllocHost() takes no node, and on a driver that answers it from its
+ * own device mapping the pages are outside the page allocator entirely, so
+ * mbind() on the returned range is accepted and then ignored and numactl
+ * does not reach it either. The placement is therefore made first, on
+ * anonymous memory the kernel does control, and the result is handed to the
+ * driver through the import extension.
+ *
+ * Without that extension the allocation falls back to zeMemAllocHost() with
+ * a binding applied to the returned range, which is what a driver backing
+ * host memory with ordinary pages responds to. A failed placement is
+ * reported rather than fatal: the buffer is still valid, it is merely
+ * wherever the kernel put it. */
+bool ZeApp::memoryAllocHost(size_t size, void **ptr, int numa_node,
+                            std::string *bind_error) {
+  if (bind_error != nullptr) {
+    bind_error->clear();
+  }
+
+  if (numa_node == numa_support::no_node) {
+    memoryAllocHost(size, ptr);
+    return true;
+  }
+
+  std::string error;
+
+  if (numaPlacedHostAllocationsSupported()) {
+    void *placed = numa_support::allocate_on_node(size, numa_node, error);
+
+    if (placed != nullptr) {
+      const ze_result_t imported = _import_pointer(_driver, placed, size);
+
+      if (imported == ZE_RESULT_SUCCESS) {
+        _imported_host_allocations[placed] = size;
+        *ptr = placed;
+        return true;
+      }
+
+      numa_support::free_on_node(placed, size);
+      error = "the driver refused the imported pointer (0x" +
+              std::to_string(static_cast<uint32_t>(imported)) + ")";
+    }
+  } else {
+    error = "the placed host allocation path is unavailable";
+  }
+
+  ze_host_mem_alloc_desc_t host_desc = {};
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+  host_desc.pNext = nullptr;
+  host_desc.flags = 0;
+
+  // mbind() works on whole pages, so page alignment is what keeps the
+  // fallback binding from reaching into a neighbouring allocation.
+  SUCCESS_OR_TERMINATE(zeMemAllocHost(context, &host_desc, size,
+                                      numa_support::page_size(), ptr));
+
+  std::string fallback_error;
+  const bool bound =
+      numa_support::bind_memory(*ptr, size, numa_node, fallback_error);
+
+  if (!bound && bind_error != nullptr) {
+    *bind_error =
+        error.empty() ? fallback_error : (error + "; " + fallback_error);
+  } else if (bind_error != nullptr) {
+    *bind_error = error;
+  }
+
+  return bound;
+}
+
+bool ZeApp::numaPlacedHostAllocationsSupported(void) {
+  return _host_allocation_import_enabled && importExtensionAvailable();
+}
+
+/* The import extension is not part of the core API, so it is looked up by
+ * name and the result cached, including the failure. */
+bool ZeApp::importExtensionAvailable(void) {
+  if (_import_extension_resolved) {
+    return _import_pointer != nullptr && _release_pointer != nullptr;
+  }
+
+  _import_extension_resolved = true;
+
+  if (_driver == nullptr) {
+    return false;
+  }
+
+  void *import_address = nullptr;
+  void *release_address = nullptr;
+
+  if (zeDriverGetExtensionFunctionAddress(
+          _driver, "zexDriverImportExternalPointer", &import_address) !=
+          ZE_RESULT_SUCCESS ||
+      zeDriverGetExtensionFunctionAddress(
+          _driver, "zexDriverReleaseImportedPointer", &release_address) !=
+          ZE_RESULT_SUCCESS) {
+    return false;
+  }
+
+  _import_pointer =
+      reinterpret_cast<ze_result_t (*)(ze_driver_handle_t, void *, size_t)>(
+          import_address);
+  _release_pointer =
+      reinterpret_cast<ze_result_t (*)(ze_driver_handle_t, void *)>(
+          release_address);
+
+  return _import_pointer != nullptr && _release_pointer != nullptr;
 }
 
 /* Imports an externally created dma_buf into device memory. A size of 0 makes
@@ -168,7 +353,21 @@ void ZeApp::memoryGetAddressRange(void *ptr, void **base, size_t *size) {
 }
 
 void ZeApp::memoryFree(const void *ptr) {
-  SUCCESS_OR_TERMINATE(zeMemFree(context, const_cast<void *>(ptr)));
+  // An imported pointer belongs to this process, not to the driver, so it is
+  // released and unmapped instead of handed to zeMemFree().
+  const auto imported = _imported_host_allocations.find(ptr);
+  if (imported != _imported_host_allocations.end()) {
+    if (_release_pointer != nullptr) {
+      _release_pointer(_driver, const_cast<void *>(ptr));
+    }
+    numa_support::free_on_node(const_cast<void *>(ptr), imported->second);
+    _imported_host_allocations.erase(imported);
+    return;
+  }
+
+  SUCCESS_OR_TERMINATE(
+      zeMemFree(contextOfAllocation(ptr), const_cast<void *>(ptr)));
+  _allocation_contexts.erase(ptr);
 }
 
 void ZeApp::memoryOpenIpcHandle(const uint32_t device_index,
@@ -263,9 +462,9 @@ void ZeApp::commandListCreate(uint32_t device_index,
   command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
   command_list_description.pNext = nullptr;
 
-  SUCCESS_OR_TERMINATE(zeCommandListCreate(context, _devices[device_index],
-                                           &command_list_description,
-                                           phCommandList));
+  SUCCESS_OR_TERMINATE(
+      zeCommandListCreate(contextFor(device_index), _devices[device_index],
+                          &command_list_description, phCommandList));
 }
 
 void ZeApp::commandListCreate(uint32_t device_index,
@@ -277,16 +476,16 @@ void ZeApp::commandListCreate(uint32_t device_index,
       command_queue_group_ordinal;
   command_list_description.pNext = nullptr;
 
-  SUCCESS_OR_TERMINATE(zeCommandListCreate(context, _devices[device_index],
-                                           &command_list_description,
-                                           phCommandList));
+  SUCCESS_OR_TERMINATE(
+      zeCommandListCreate(contextFor(device_index), _devices[device_index],
+                          &command_list_description, phCommandList));
 }
 
 void ZeApp::immediateCommandListCreate(
     uint32_t device_index, ze_command_list_handle_t *phCommandList) {
   SUCCESS_OR_TERMINATE(zeCommandListCreateImmediate(
-      context, _devices[device_index], &zeDefaultGPUImmediateCommandQueueDesc,
-      phCommandList));
+      contextFor(device_index), _devices[device_index],
+      &zeDefaultGPUImmediateCommandQueueDesc, phCommandList));
 }
 
 void ZeApp::immediateCommandListCreate(
@@ -301,9 +500,9 @@ void ZeApp::immediateCommandListCreate(
       ZE_COMMAND_QUEUE_FLAG_IN_ORDER | ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
   command_queue_description.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
-  SUCCESS_OR_TERMINATE(
-      zeCommandListCreateImmediate(context, _devices[device_index],
-                                   &command_queue_description, phCommandList));
+  SUCCESS_OR_TERMINATE(zeCommandListCreateImmediate(
+      contextFor(device_index), _devices[device_index],
+      &command_queue_description, phCommandList));
 }
 
 void ZeApp::commandListDestroy(ze_command_list_handle_t command_list) {
@@ -414,9 +613,9 @@ void ZeApp::commandQueueCreate(const uint32_t device_index,
   command_queue_description.ordinal = command_queue_group_ordinal;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
-  SUCCESS_OR_TERMINATE(zeCommandQueueCreate(context, _devices[device_index],
-                                            &command_queue_description,
-                                            command_queue));
+  SUCCESS_OR_TERMINATE(
+      zeCommandQueueCreate(contextFor(device_index), _devices[device_index],
+                           &command_queue_description, command_queue));
 }
 
 void ZeApp::commandQueueCreate(const uint32_t device_index,
@@ -430,9 +629,9 @@ void ZeApp::commandQueueCreate(const uint32_t device_index,
   command_queue_description.index = command_queue_index;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
-  SUCCESS_OR_TERMINATE(zeCommandQueueCreate(context, _devices[device_index],
-                                            &command_queue_description,
-                                            command_queue));
+  SUCCESS_OR_TERMINATE(
+      zeCommandQueueCreate(contextFor(device_index), _devices[device_index],
+                           &command_queue_description, command_queue));
 }
 
 void ZeApp::commandQueueDestroy(ze_command_queue_handle_t command_queue) {
@@ -505,6 +704,7 @@ void ZeApp::initCountDevices(const uint32_t count) {
   driver_count = 1;
   ze_driver_handle_t driver;
   SUCCESS_OR_TERMINATE(zeDriverGet(&driver_count, &driver));
+  _driver = driver;
 
   ze_context_desc_t context_desc = {};
   context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
@@ -541,7 +741,24 @@ void ZeApp::cleanupDevices(void) {
     }
   }
 
+  // Anything the tool imported and did not free has to be handed back before
+  // the driver goes away, or the release would run against a dead driver.
+  for (const auto &allocation : _imported_host_allocations) {
+    void *ptr = const_cast<void *>(allocation.first);
+    if (_release_pointer != nullptr) {
+      _release_pointer(_driver, ptr);
+    }
+    numa_support::free_on_node(ptr, allocation.second);
+  }
+  _imported_host_allocations.clear();
+
   zeContextDestroy(this->context);
+
+  for (auto device_context : _device_contexts) {
+    zeContextDestroy(device_context);
+  }
+  _device_contexts.clear();
+  _allocation_contexts.clear();
 }
 
 void ZeApp::singleDeviceCleanup(void) { cleanupDevices(); }

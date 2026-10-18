@@ -9,6 +9,7 @@ add_lzt_test(
   GROUP "/perf_tests"
   SOURCES
     ../common/src/ze_app.cpp
+    ../common/src/numa_support.cpp
     src/cl_image_copy.cpp
     src/options.cpp
     src/utils.cpp

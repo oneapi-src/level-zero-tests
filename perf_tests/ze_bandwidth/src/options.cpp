@@ -66,6 +66,15 @@ static const char *usage_str = R"HELP(
                             e.g. bcs0, bcs1, ccs0. mutually exclusive with -g / -n
   --useEvents              measure with GPU timestamps instead of the host timer
                             [default:  host timer]
+  --hostNuma mode          placement of the host allocations and of the thread
+                            that drives the transfers:
+      none                             leave it to the kernel [default]
+      auto                             give each device its own context, so the
+                                       driver places that device's host buffers
+                                       on its own NUMA node, and pin the
+                                       submitting thread to that node's CPUs
+      N                                bind every host buffer, and the
+                                       submitting thread, to node N
   --immediate              use immediate command lists (default: disabled)
   --csv                    output in csv format (default: disabled)
   -h, --help               display help message
@@ -202,6 +211,53 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
     return false;
   };
 
+  std::string host_numa_value;
+
+  //---------------------------------------------------------------------
+  // --hostNuma takes "none", "auto" or a node id. A node that the running
+  // system does not have online is rejected here rather than silently
+  // ignored later, because a figure produced under a placement that never
+  // took effect cannot be told apart from an unbound one.
+  //---------------------------------------------------------------------
+  auto parse_host_numa = [&](const std::string &value) {
+    if (value == "none") {
+      host_numa_mode = HostNumaMode::none;
+      host_numa_fixed_node = numa_support::no_node;
+      return;
+    }
+
+    if (!numa_support::supported()) {
+      std::cerr << "--hostNuma needs NUMA support from the running system, "
+                   "and none is reported\n";
+      exit(-1);
+    }
+
+    if (value == "auto") {
+      host_numa_mode = HostNumaMode::automatic;
+      host_numa_fixed_node = numa_support::no_node;
+      return;
+    }
+
+    if (value.find_first_not_of("0123456789") != std::string::npos) {
+      std::cerr << "--hostNuma takes 'none', 'auto' or a NUMA node id, but '"
+                << value << "' is none of those\n";
+      exit(-1);
+    }
+
+    const int node = static_cast<int>(parse_u32(value));
+    if (!numa_support::node_online(node)) {
+      std::cerr << "NUMA node " << node << " is not online, the host reports";
+      for (const int online : numa_support::online_nodes()) {
+        std::cerr << " " << online;
+      }
+      std::cerr << "\n";
+      exit(-1);
+    }
+
+    host_numa_mode = HostNumaMode::fixed;
+    host_numa_fixed_node = node;
+  };
+
   for (size_t i = 0; i < args.size(); i++) {
     const std::string &argument = args[i];
 
@@ -234,6 +290,8 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
       enable_engine_names = true;
     } else if (argument == "--useEvents") {
       use_event_timer = true;
+    } else if (parse_named_value("--hostNuma", i, host_numa_value)) {
+      parse_host_numa(host_numa_value);
     } else if (argument == "--csv") {
       csv_output = true;
     } else if (argument == "--immediate") {

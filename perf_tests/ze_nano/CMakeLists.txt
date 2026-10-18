@@ -22,6 +22,7 @@ add_lzt_test(
   GROUP "/perf_tests"
   SOURCES
     ../common/src/ze_app.cpp
+    ../common/src/numa_support.cpp
     src/api_static_probe.cpp
     ${ZE_NANO_HWCOUNTER_SRC}
     src/ze_nano.cpp

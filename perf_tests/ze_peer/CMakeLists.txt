@@ -12,6 +12,7 @@ add_lzt_test(
   GROUP "/perf_tests"
   SOURCES
     ../common/src/ze_app.cpp
+    ../common/src/numa_support.cpp
     src/ze_peer.cpp
     src/ze_peer_ipc.cpp
     src/ze_peer_unidirectional.cpp
