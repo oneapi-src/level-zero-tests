@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_BMP_HPP
-#define level_zero_tests_BMP_HPP
+#pragma once
 
 #include <cstdint>
 #include <stddef.h>
@@ -30,5 +29,3 @@ public:
                                 uint32_t &height, const char *file_name);
 };
 } // namespace level_zero_tests
-
-#endif

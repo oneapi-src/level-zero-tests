@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_LOGGING_HPP
-#define level_zero_tests_LOGGING_HPP
+#pragma once
 
 #include <string>
 #include <sstream>
@@ -59,5 +58,3 @@ template <typename T> std::string to_string(const std::vector<T> &x) {
 }
 
 } // namespace level_zero_tests
-
-#endif

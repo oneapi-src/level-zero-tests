@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_UTILS_SYSTEM_HPP
-#define level_zero_tests_UTILS_SYSTEM_HPP
+#pragma once
 
 #include <cassert>
 #include <cstdint>
@@ -55,5 +54,3 @@ find_helper_executable(const boost::filesystem::path &name,
                        const std::vector<boost::filesystem::path> &directories);
 
 } // namespace level_zero_tests
-
-#endif

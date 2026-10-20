@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_UTILS_IMAGE_HPP
-#define level_zero_tests_UTILS_IMAGE_HPP
+#pragma once
 
 #include <algorithm>
 #include <cstddef>
@@ -169,5 +168,3 @@ int compare_data_pattern(
 );
 
 } // namespace level_zero_tests
-
-#endif

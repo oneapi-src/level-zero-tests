@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef COMPUTE_API_BENCH_ZE_SOBEL_HPP
-#define COMPUTE_API_BENCH_ZE_SOBEL_HPP
+#pragma once
 
 #include <vector>
 #include <string>
@@ -47,5 +46,3 @@ private:
 };
 
 } // namespace compute_api_bench
-
-#endif // COMPUTE_API_BENCH_ZE_SOBEL_HPP

@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef CL_IMAGE_COPY_H
-#define CL_IMAGE_COPY_H
+#pragma once
 
 #include <memory>
 #include <string>
@@ -100,5 +99,3 @@ namespace level_zero_tests {
 std::string to_string(const cl_uint cl_var);
 std::string to_string(const cl_mem_flags flags);
 } // namespace level_zero_tests
-
-#endif /* CL_IMAGE_COPY_H */

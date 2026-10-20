@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef COMPUTE_API_BENCH_WORKLOAD_HPP
-#define COMPUTE_API_BENCH_WORKLOAD_HPP
+#pragma once
 
 #include <vector>
 #include <numeric>
@@ -65,5 +64,3 @@ private:
 };
 
 } // namespace compute_api_bench
-
-#endif // COMPUTE_API_BENCH_WORKLOAD_HPP

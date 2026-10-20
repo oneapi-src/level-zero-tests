@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_UTILS_TYPE_CONVERT_HPP
-#define level_zero_tests_UTILS_TYPE_CONVERT_HPP
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -113,5 +112,3 @@ template <typename T, typename U> inline const T *as_const_ptr(const U *ptr) {
 }
 
 } // namespace level_zero_tests
-
-#endif // level_zero_tests_UTILS_TYPE_CONVERT_HPP

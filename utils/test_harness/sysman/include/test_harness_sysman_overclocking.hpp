@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_OVERCLOCKING_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_OVERCLOCKING_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -39,5 +38,3 @@ double get_oc_tjmax(zes_freq_handle_t freqHandle);
 void set_oc_tjmax(zes_freq_handle_t freqHandle, double tjmax);
 
 } // namespace level_zero_tests
-
-#endif

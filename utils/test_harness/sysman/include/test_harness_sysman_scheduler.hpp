@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_SCHEDULER_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_SCHEDULER_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -39,5 +38,3 @@ ze_bool_t set_compute_unit_debug_mode(zes_sched_handle_t hScheduler);
 zes_sched_properties_t get_scheduler_properties(zes_sched_handle_t hScheduler);
 
 } // namespace level_zero_tests
-
-#endif

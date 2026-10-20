@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef TEST_HARNESS_SYSMAN_METRIC_HPP
-#define TEST_HARNESS_SYSMAN_METRIC_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include "gtest/gtest.h"
@@ -308,5 +307,3 @@ void run_matrix_multiplication_and_collect_query_data(
     std::vector<uint8_t> &raw_data);
 
 }; // namespace level_zero_tests
-
-#endif /* TEST_HARNESS_SYSMAN_METRIC_HPP */

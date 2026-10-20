@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_TEST_HARNESS_LTRACING_HPP
-#define level_zero_tests_TEST_HARNESS_LTRACING_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include <level_zero/layers/zel_tracing_api.h>
@@ -55,5 +54,3 @@ void lepilogue_callback(params_type params, ze_result_t result,
 }
 
 }; // namespace level_zero_tests
-
-#endif

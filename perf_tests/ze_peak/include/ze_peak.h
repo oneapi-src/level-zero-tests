@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef ZE_PEAK_H
-#define ZE_PEAK_H
+#pragma once
 
 #include <chrono>
 #include <cstdint>
@@ -183,5 +182,3 @@ private:
 };
 
 TimingMeasurement is_bandwidth_with_event_timer(void);
-
-#endif /* ZE_PEAK_H */

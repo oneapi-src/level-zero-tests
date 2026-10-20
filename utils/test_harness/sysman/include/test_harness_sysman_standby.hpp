@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_STANDBY_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_STANDBY_HPP
+#pragma once
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
 
@@ -22,5 +21,3 @@ zes_standby_properties_t
 get_standby_properties(zes_standby_handle_t pStandbyHandle);
 
 } // namespace level_zero_tests
-
-#endif

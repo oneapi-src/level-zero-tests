@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_CMDLIST_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_CMDLIST_HPP
+#pragma once
 
 #include "test_harness_device.hpp"
 #include <level_zero/ze_api.h>
@@ -310,4 +309,3 @@ void execute_and_sync_command_bundle(zeCommandBundle bundle, uint64_t timeout);
 void destroy_command_bundle(zeCommandBundle bundle);
 
 }; // namespace level_zero_tests
-#endif

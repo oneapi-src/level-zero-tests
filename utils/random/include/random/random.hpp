@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef UTILS_RANDOM_INCLUDE_RANDOM_RANDOM_HPP
-#define UTILS_RANDOM_INCLUDE_RANDOM_RANDOM_HPP
+#pragma once
 
 #include <vector>
 #include <random>
@@ -65,5 +64,3 @@ std::vector<T> generate_vector(const size_t size, const int seed) {
 }
 
 } // namespace level_zero_tests
-
-#endif

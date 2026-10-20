@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_FENCE_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_FENCE_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 
@@ -20,5 +19,3 @@ ze_result_t query_fence(ze_fence_handle_t fence);
 ze_result_t sync_fence(ze_fence_handle_t fence, uint64_t timeout);
 
 }; // namespace level_zero_tests
-
-#endif

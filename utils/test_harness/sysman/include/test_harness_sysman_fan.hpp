@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_FAN_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_FAN_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include "gtest/gtest.h"
@@ -35,5 +34,3 @@ void set_fan_fixed_speed_mode(zes_fan_handle_t fanHandle,
 void set_fan_speed_table_mode(zes_fan_handle_t fanHandle,
                               zes_fan_speed_table_t &speedTable);
 } // namespace level_zero_tests
-
-#endif

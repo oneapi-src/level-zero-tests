@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef TEST_IPC_EVENT_HPP
-#define TEST_IPC_EVENT_HPP
+#pragma once
 
 #include "utils/utils.hpp"
 
@@ -41,5 +40,3 @@ typedef struct {
   ipc_event_test_sock_t test_sock_type;
   ze_ipc_event_pool_handle_t ipc_handle;
 } shared_data_t;
-
-#endif

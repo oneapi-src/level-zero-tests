@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_UTILS_STRING_HPP
-#define level_zero_tests_UTILS_STRING_HPP
+#pragma once
 
 #include <algorithm>
 #include <cstdint>
@@ -134,5 +133,3 @@ bool operator!=(const ze_device_uuid_t &id_a, const ze_device_uuid_t &id_b);
 
 bool operator==(const ze_device_thread_t &a, const ze_device_thread_t &b);
 bool operator!=(const ze_device_thread_t &a, const ze_device_thread_t &b);
-
-#endif

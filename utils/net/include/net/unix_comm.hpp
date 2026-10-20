@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef __UNIX_COMM_HPP__
-#define __UNIX_COMM_HPP__
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include <chrono>
@@ -24,5 +23,3 @@ const std::chrono::milliseconds CONNECTION_WAIT =
 const std::chrono::milliseconds CONNECTION_TIMEOUT = CONNECTION_WAIT * 10;
 
 } // namespace level_zero_tests
-
-#endif

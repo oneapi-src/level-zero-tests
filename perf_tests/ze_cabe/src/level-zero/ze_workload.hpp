@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef COMPUTE_API_BENCH_ZE_WORKLOAD_HPP
-#define COMPUTE_API_BENCH_ZE_WORKLOAD_HPP
+#pragma once
 
 #define ZE_CHECK_RESULT(result)                                                \
   {                                                                            \
@@ -51,5 +50,3 @@ protected:
 };
 
 } // namespace compute_api_bench
-
-#endif // COMPUTE_API_BENCH_ZE_WORKLOAD_HPP

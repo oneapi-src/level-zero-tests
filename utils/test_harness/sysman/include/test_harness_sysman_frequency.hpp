@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_FREQUENCY_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_FREQUENCY_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -38,5 +37,3 @@ bool check_for_throttling(zes_freq_handle_t pFreqHandle);
 zes_freq_throttle_time_t get_throttle_time(zes_freq_handle_t pFreqHandle);
 
 } // namespace level_zero_tests
-
-#endif

@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef COMPUTE_API_BENCH_ZE_BLACKSCHOLES_HPP
-#define COMPUTE_API_BENCH_ZE_BLACKSCHOLES_HPP
+#pragma once
 
 #include <vector>
 #include <string>
@@ -54,5 +53,3 @@ private:
 };
 
 } // namespace compute_api_bench
-
-#endif // COMPUTE_API_BENCH_ZE_BLACKSCHOLES_HPP

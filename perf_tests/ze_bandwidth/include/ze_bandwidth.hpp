@@ -6,6 +6,8 @@
  *
  */
 
+#pragma once
+
 #include <chrono>
 #include <string>
 #include <level_zero/ze_api.h>

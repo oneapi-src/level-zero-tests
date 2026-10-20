@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_MODULE_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_MODULE_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include <string>
@@ -102,5 +101,3 @@ void set_kernel_scheduling_hint(ze_kernel_handle_t kernel,
 #endif
 
 } // namespace level_zero_tests
-
-#endif

@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_UTILS_COMMAND_BUNDLE_HPP
-#define level_zero_tests_UTILS_COMMAND_BUNDLE_HPP
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -307,5 +306,3 @@ void destroy_command_bundle(command_bundle bundle);
 std::string to_string(const command_list_mode_t mode);
 command_list_mode_t from_string(const std::string &str);
 } // namespace level_zero_tests
-
-#endif // level_zero_tests_UTILS_COMMAND_BUNDLE_HPP

@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef COMPUTE_API_BENCH_UTILS_HPP
-#define COMPUTE_API_BENCH_UTILS_HPP
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -235,5 +234,3 @@ inline void mandelbrot_cpu(float *pixels, int width, int height) {
 }
 
 } // namespace compute_api_bench
-
-#endif // COMPUTE_API_BENCH_UTILS_HPP

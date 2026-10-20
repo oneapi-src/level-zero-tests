@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef _API_STATIC_PROBE_HPP_
-#define _API_STATIC_PROBE_HPP_
+#pragma once
 
 #include "common.hpp"
 #include "hardware_counter.hpp"
@@ -189,4 +188,3 @@ void _function_call_rate_iter(const std::string filename, const int line_number,
                      function_name, function_call_counter,
                      UNIT_FUNCTION_CALL_RATE);
 }
-#endif /* _API_STATIC_PROBE_HPP_ */

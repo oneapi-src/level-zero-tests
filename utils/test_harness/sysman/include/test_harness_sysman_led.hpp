@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_LED_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_LED_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include <level_zero/zes_api.h>
@@ -29,5 +28,3 @@ void set_led_state(zes_led_handle_t ledHandle, ze_bool_t enable);
 void set_led_color(zes_led_handle_t ledHandle, zes_led_color_t color);
 
 } // namespace level_zero_tests
-
-#endif

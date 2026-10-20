@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef _COMMON_HPP_
-#define _COMMON_HPP_
+#pragma once
 #include <chrono>
 #include <iostream>
 #include <string>
@@ -93,5 +92,3 @@ template <typename T> size_t size_in_bytes(const std::vector<T> &v) {
               << std::endl;                                                    \
     std::terminate();                                                          \
   }
-
-#endif /* _COMMON_HPP_ */

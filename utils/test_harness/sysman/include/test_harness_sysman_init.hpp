@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_INIT_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_INIT_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -42,5 +41,3 @@ public:
 };
 
 } // namespace level_zero_tests
-
-#endif

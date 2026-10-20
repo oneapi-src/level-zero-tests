@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_XE_TEST_HARNESS_OCL_HPP
-#define level_zero_tests_XE_TEST_HARNESS_OCL_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 
@@ -21,5 +20,3 @@ ocl_register_commandqueue(cl_context context, cl_command_queue command_queue);
 ze_module_handle_t ocl_register_program(cl_context context, cl_program program);
 
 }; // namespace level_zero_tests
-
-#endif

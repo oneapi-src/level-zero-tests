@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef TEST_DEBUG_HPP
-#define TEST_DEBUG_HPP
+#pragma once
 
 #include <boost/asio/io_context.hpp>
 
@@ -313,5 +312,3 @@ protected:
       {THREADS_IN_SLICE, "THREADS_IN_SLICE"},
       {ALL_THREADS, "ALL_THREADS"}};
 };
-
-#endif // TEST_DEBUG_HPP

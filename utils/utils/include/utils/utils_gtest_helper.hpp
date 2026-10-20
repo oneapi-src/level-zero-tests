@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_UTILS_GTEST_HELPER_HPP
-#define level_zero_tests_UTILS_GTEST_HELPER_HPP
+#pragma once
 
 #include <gtest/gtest.h>
 #include <level_zero/ze_api.h>
@@ -223,5 +222,3 @@ template <size_t N> constexpr size_t string_length(const char (&)[N]) {
 
 #define LZT_TEST_F(test_suite_name, test_name)                                 \
   LZT_TEST_F_(test_suite_name, test_name)
-
-#endif
