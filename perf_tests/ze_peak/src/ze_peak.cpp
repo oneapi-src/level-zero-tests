@@ -1115,7 +1115,7 @@ long double ZePeak::run_kernel(L0Context context, ze_kernel_handle_t &function,
                                  std::to_string(result));
       }
 
-      timed += context_time_in_us(context, function_event);
+      timed += context_time_in_us(context, function_event) * 1000.0L;
 
       if (context.sub_device_count) {
         if (context.sub_device_count == current_sub_device_id + 1) {
