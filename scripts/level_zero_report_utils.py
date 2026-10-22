@@ -514,6 +514,10 @@ def assign_tool_test_feature(test_binary: str, test_name: str):
         test_feature = "SysMan ECC"
     elif test_binary == "test_sysman_ecc_zesinit":
         test_feature = "SysMan ECC"    
+    elif test_binary == "test_sysman_info_logs":
+        test_feature = "SysMan Info Logs"
+    elif test_binary == "test_sysman_info_logs_zesinit":
+        test_feature = "SysMan Info Logs"
     if test_feature == "None":
         print("ERROR: test case " + test_name + " has no assigned feature\n", file=sys.stderr)
     return test_feature
