@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef TEST_HARNESS_DEBUG_HPP
-#define TEST_HARNESS_DEBUG_HPP
+#pragma once
 
 #include <boost/process.hpp>
 
@@ -93,5 +92,3 @@ bool is_heapless_mode(ze_device_thread_t stopped_thread,
                       zet_debug_session_handle_t debug_session);
 
 }; // namespace level_zero_tests
-
-#endif /* TEST_HARNESS_DEBUG_HPP */

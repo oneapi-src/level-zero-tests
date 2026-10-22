@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef TEST_HARNESS_SYSMAN_RAS_HPP
-#define TEST_HARNESS_SYSMAN_RAS_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -24,5 +23,3 @@ std::vector<zes_ras_state_exp_t> ras_get_state_exp(zes_ras_handle_t ras_handle);
 void ras_clear_state_exp(zes_ras_handle_t ras_handle,
                          zes_ras_error_category_exp_t category);
 } // namespace level_zero_tests
-
-#endif

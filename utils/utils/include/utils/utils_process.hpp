@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef LEVEL_ZERO_TESTS_UTILS_PROCESS_HPP
-#define LEVEL_ZERO_TESTS_UTILS_PROCESS_HPP
+#pragma once
 
 #include <boost/filesystem/path.hpp>
 #include <boost/process/v2/process.hpp>
@@ -43,5 +42,3 @@ process_output run_process_with_timeout(
     process_stderr stderr_mode = process_stderr::inherit);
 
 } // namespace level_zero_tests
-
-#endif

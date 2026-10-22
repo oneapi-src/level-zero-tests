@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef _BENCHMARK_HPP_
-#define _BENCHMARK_HPP_
+#pragma once
 
 #include "api_static_probe.hpp"
 #include "ze_app.hpp"
@@ -32,5 +31,3 @@ namespace fuction_call_rate {
 #include "benchmark_template/set_parameter.hpp"
 } /* namespace fuction_call_rate */
 } /* namespace ze_api_benchmarks */
-
-#endif /* _BENCHMARK_HPP_ */

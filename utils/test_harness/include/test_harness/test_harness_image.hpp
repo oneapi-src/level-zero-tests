@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_IMAGE_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_IMAGE_HPP
+#pragma once
 
 #include "test_harness_device.hpp"
 #include <level_zero/ze_api.h>
@@ -142,5 +141,3 @@ uint64_t get_image_device_offset_exp(ze_image_handle_t image,
                                      uint64_t *device_offset);
 
 }; // namespace level_zero_tests
-
-#endif

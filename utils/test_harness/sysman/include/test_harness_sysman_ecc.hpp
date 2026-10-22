@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_ECC_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_ECC_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -25,5 +24,3 @@ zes_device_ecc_properties_t set_ecc_state(zes_device_handle_t hDevice,
                                           zes_device_ecc_desc_t &newState);
 
 } // namespace level_zero_tests
-
-#endif

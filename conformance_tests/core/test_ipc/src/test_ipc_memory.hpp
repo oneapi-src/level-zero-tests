@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef TEST_IPC_MEMORY_HPP
-#define TEST_IPC_MEMORY_HPP
+#pragma once
 
 typedef enum {
   TEST_DEVICE_ACCESS,
@@ -48,5 +47,3 @@ typedef struct {
   lzt::command_list_mode_t mode;
   ze_ipc_mem_handle_t ipc_handles[IPC_LOOP_NUM_ITERATIONS];
 } shared_data_loop_t;
-
-#endif

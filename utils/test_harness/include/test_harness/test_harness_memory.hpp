@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_MEMORY_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_MEMORY_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include "utils/utils.hpp"
@@ -250,4 +249,3 @@ size_t get_mem_pitch_for_2d_image(ze_context_handle_t context,
                                   size_t *row_pitch);
 
 }; // namespace level_zero_tests
-#endif

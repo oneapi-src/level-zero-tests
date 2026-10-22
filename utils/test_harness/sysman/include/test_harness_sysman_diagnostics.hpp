@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_DIAGNOSTICS_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_DIAGNOSTICS_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -28,5 +27,3 @@ zes_diag_result_t run_diag_tests(zes_diag_handle_t diagHandle, uint32_t start,
                                  uint32_t end);
 
 } // namespace level_zero_tests
-
-#endif

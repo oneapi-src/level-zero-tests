@@ -4,8 +4,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_PERFORMANCE_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_PERFORMANCE_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -25,5 +24,3 @@ double get_performance_config(zes_perf_handle_t performanceHandle);
 void set_performance_config(zes_perf_handle_t performanceHandle, double factor);
 
 } // namespace level_zero_tests
-
-#endif

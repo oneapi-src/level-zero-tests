@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef _STRESS_COMMON_FUNC_HPP_
-#define _STRESS_COMMON_FUNC_HPP_
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include "test_harness/test_harness.hpp"
@@ -84,4 +83,3 @@ extern double seventy_percent;
 extern double eighty_percent;
 extern double ninety_percent;
 extern double hundred_percent;
-#endif /* _STRESS_COMMON_FUNC_HPP_*/

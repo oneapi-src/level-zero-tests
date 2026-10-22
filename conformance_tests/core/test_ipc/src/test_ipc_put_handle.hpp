@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef TEST_IPC_PUT_HANDLE_HPP
-#define TEST_IPC_PUT_HANDLE_HPP
+#pragma once
 
 typedef enum {
   TEST_PUT_DEVICE_ACCESS,
@@ -20,5 +19,3 @@ typedef struct {
   ze_ipc_memory_flags_t flags;
   lzt::command_list_mode_t mode;
 } shared_data_t;
-
-#endif

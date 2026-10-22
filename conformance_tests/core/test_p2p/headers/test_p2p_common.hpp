@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_P2P_COMMON_HPP
-#define level_zero_tests_ZE_TEST_P2P_COMMON_HPP
+#pragma once
 
 typedef enum _lzt_p2p_memory_type_tests {
   LZT_P2P_MEMORY_TYPE_DEVICE =
@@ -19,5 +18,3 @@ typedef enum _lzt_p2p_memory_type_tests {
   LZT_P2P_MEMORY_TYPE_SHARED_SYSTEM =
       3 ///< P2P test the memory pointed to is a system allocation
 } lzt_p2p_memory_type_tests_t;
-
-#endif

@@ -56,9 +56,9 @@ set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 if(BUILD_ZE_PERF_TESTS_ONLY)
   # do not require boost when building perf tests only, will skip tests that use boost
-  find_package(Boost 1.92 COMPONENTS log log_setup program_options timer chrono serialization process)
+  find_package(Boost 1.92 COMPONENTS log log_setup program_options serialization process)
 else()
-  find_package(Boost 1.92 REQUIRED COMPONENTS log log_setup program_options timer chrono serialization process)
+  find_package(Boost 1.92 REQUIRED COMPONENTS log log_setup program_options serialization process)
 endif()
 message(STATUS "Boost_FOUND: ${Boost_FOUND}")
 

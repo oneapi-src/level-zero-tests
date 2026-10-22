@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_POWER_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_POWER_HPP
+#pragma once
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
 
@@ -43,5 +42,3 @@ void compare_power_descriptor_structures(
     zes_power_limit_ext_desc_t secondDescriptor);
 ze_result_t get_power_limit_count(zes_pwr_handle_t hPower, uint32_t *pCount);
 } // namespace level_zero_tests
-
-#endif

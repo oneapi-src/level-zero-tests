@@ -4,8 +4,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_TEMP_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_TEMP_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -27,5 +26,3 @@ ze_result_t set_temp_config(zes_temp_handle_t tempHandle,
 double get_temp_state(zes_temp_handle_t tempHandle);
 
 } // namespace level_zero_tests
-
-#endif

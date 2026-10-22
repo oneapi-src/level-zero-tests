@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_DRIVER_INFO_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_DRIVER_INFO_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 
@@ -28,5 +27,3 @@ typedef struct driverInfo {
 driverInfo_t *collect_driver_info(uint32_t &);
 void free_driver_info(driverInfo_t *, uint32_t);
 }; // namespace level_zero_tests
-
-#endif

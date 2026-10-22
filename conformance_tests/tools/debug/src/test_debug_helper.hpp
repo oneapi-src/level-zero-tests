@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef TEST_DEBUG_HELPER_HPP
-#define TEST_DEBUG_HELPER_HPP
+#pragma once
 
 #include <chrono>
 #include <thread>
@@ -111,5 +110,3 @@ public:
 #ifdef EXTENDED_TESTS
 #include "test_debug_extended.hpp"
 #endif
-
-#endif // TEST_DEBUG_HPP

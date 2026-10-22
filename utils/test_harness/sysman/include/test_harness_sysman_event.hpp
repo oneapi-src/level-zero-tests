@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_EVENT_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_EVENT_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include "gtest/gtest.h"
@@ -28,5 +27,3 @@ ze_result_t listen_eventEx(ze_driver_handle_t hDriver, uint64_t timeoutEx,
                            zes_event_type_flags_t *events);
 
 } // namespace level_zero_tests
-
-#endif

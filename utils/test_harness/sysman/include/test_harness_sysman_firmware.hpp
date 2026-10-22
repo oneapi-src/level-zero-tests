@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_FIRMWARE_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_FIRMWARE_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -26,5 +25,3 @@ void flash_firmware(zes_firmware_handle_t firmwareHandle, void *fwImage,
 void track_firmware_flash(zes_firmware_handle_t firmware_handle,
                           uint32_t *progress_percent);
 } // namespace level_zero_tests
-
-#endif

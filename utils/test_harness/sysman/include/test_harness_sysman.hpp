@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_TEST_HARNESS_SYSMAN_HPP
-#define level_zero_tests_TEST_HARNESS_SYSMAN_HPP
+#pragma once
 
 #include "gtest/gtest.h"
 #include "test_harness_sysman_pci.hpp"
@@ -33,4 +32,3 @@
 #include "test_harness_sysman_ecc.hpp"
 #include "test_harness_sysman_vf_management.hpp"
 #include "test_harness_sysman_info_log.hpp"
-#endif

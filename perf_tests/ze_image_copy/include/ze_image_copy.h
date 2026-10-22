@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef ZE_IMAGE_COPY_H
-#define ZE_IMAGE_COPY_H
+#pragma once
 
 #include "common.hpp"
 #include <level_zero/ze_api.h>
@@ -86,5 +85,3 @@ class ZeImageCopyLatency : public ZeImageCopy {
 public:
   ZeImageCopyLatency();
 };
-
-#endif /* ZE_IMAGE_COPY_H */

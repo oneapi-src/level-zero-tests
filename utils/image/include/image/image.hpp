@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_IMAGE_HPP
-#define level_zero_tests_IMAGE_HPP
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -110,5 +109,3 @@ template <typename T> size_t size_in_bytes(const Image<T> &i) {
 }
 
 } // namespace level_zero_tests
-
-#endif

@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_ENGINE_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_ENGINE_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -25,5 +24,3 @@ zes_engine_properties_t get_engine_properties(zes_engine_handle_t hEngine);
 zes_engine_stats_t get_engine_activity(zes_engine_handle_t hEngine);
 
 } // namespace level_zero_tests
-
-#endif

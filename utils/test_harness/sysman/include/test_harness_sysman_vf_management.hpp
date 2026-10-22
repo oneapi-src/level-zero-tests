@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_VF_MANAGEMENT_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_VF_MANAGEMENT_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 
@@ -25,5 +24,3 @@ std::vector<zes_vf_util_engine_exp2_t>
 get_vf_engine_util(zes_vf_handle_t vf_handle, uint32_t &count);
 
 } // namespace level_zero_tests
-
-#endif

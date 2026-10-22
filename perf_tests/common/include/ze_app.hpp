@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef _ZE_APP_HPP_
-#define _ZE_APP_HPP_
+#pragma once
 
 #include <level_zero/ze_api.h>
 
@@ -151,5 +150,3 @@ private:
                         ze_device_handle_t *devices);
   uint32_t deviceCount(ze_driver_handle_t driver);
 };
-
-#endif /* _ZE_APP_HPP_*/

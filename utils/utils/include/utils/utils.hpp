@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_UTILS_HPP
-#define level_zero_tests_UTILS_HPP
+#pragma once
 
 #include <cstdlib>
 #include <cassert>
@@ -125,5 +124,3 @@ extern std::unique_ptr<std::map<std::string, std::vector<uint8_t>>>
     binary_file_map;
 
 } // namespace level_zero_tests
-
-#endif

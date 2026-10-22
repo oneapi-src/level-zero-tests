@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef TEST_DEBUG_COMMON_HPP
-#define TEST_DEBUG_COMMON_HPP
+#pragma once
 
 #ifdef _WIN32
 #define BOOST_INTERPROCESS_SHARED_DIR_FUNC
@@ -335,5 +334,3 @@ private:
   bool enabled;
   uint32_t *spill_mem_size;
 };
-
-#endif // TEST_DEBUG_COMMON_HPP

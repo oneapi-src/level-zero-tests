@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef _HARDWARE_COUNTER_HPP_
-#define _HARDWARE_COUNTER_HPP_
+#pragma once
 #include <iostream>
 
 class HardwareCounter {
@@ -44,5 +43,3 @@ private:
   long long values[number_events];
 #endif
 };
-
-#endif /* _HARDWARE_COUNTER_HPP_ */

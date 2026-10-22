@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_EVENT_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_EVENT_HPP
+#pragma once
 
 #include "test_harness/test_harness.hpp"
 #include <level_zero/ze_api.h>
@@ -146,5 +145,3 @@ void event_counter_based_open_ipc_handle(
     ze_ipc_event_counter_based_handle_t ipc_handle, ze_event_handle_t *event);
 void event_counter_based_close_ipc_handle(ze_event_handle_t event);
 }; // namespace level_zero_tests
-
-#endif

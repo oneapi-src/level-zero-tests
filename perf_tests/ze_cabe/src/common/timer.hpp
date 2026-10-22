@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef COMPUTE_API_BENCH_TIMER_HPP
-#define COMPUTE_API_BENCH_TIMER_HPP
+#pragma once
 
 #include <chrono>
 
@@ -26,5 +25,3 @@ private:
 };
 
 } // namespace compute_api_bench
-
-#endif // COMPUTE_API_BENCH_TIMER_HPP

@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_DRIVER_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_DRIVER_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include <vector>
@@ -28,5 +27,3 @@ bool check_if_extension_supported(ze_driver_handle_t driver,
                                   const char *check_extension_name);
 const char *get_last_error_description(ze_driver_handle_t driver);
 }; // namespace level_zero_tests
-
-#endif

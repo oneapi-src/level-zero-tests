@@ -7,8 +7,7 @@
  *
  */
 
-#ifndef ZE_PINGPONG_H
-#define ZE_PINGPONG_H
+#pragma once
 
 #include <chrono>
 #include <cstdint>
@@ -77,5 +76,3 @@ public:
   void synchronize_command_queue(L0Context &context);
   void verify_result(int result);
 };
-
-#endif /* ZE_PINGPONG_H */

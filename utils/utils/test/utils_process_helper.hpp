@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef LEVEL_ZERO_TESTS_UTILS_PROCESS_HELPER_HPP
-#define LEVEL_ZERO_TESTS_UTILS_PROCESS_HELPER_HPP
+#pragma once
 
 #include <chrono>
 #include <cstddef>
@@ -70,5 +69,3 @@ inline constexpr auto hang_step = std::chrono::milliseconds(10);
 
 } // namespace process_helper
 } // namespace level_zero_tests
-
-#endif

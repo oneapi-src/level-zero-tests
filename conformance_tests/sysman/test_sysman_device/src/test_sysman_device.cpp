@@ -533,7 +533,7 @@ bool is_compute_engine_used(int pid, zes_device_handle_t device) {
 
   for (const auto &process : processes) {
     if (process.processId == to_u32(pid) &&
-        process.engines == ZES_ENGINE_TYPE_FLAG_COMPUTE) {
+        (process.engines & ZES_ENGINE_TYPE_FLAG_COMPUTE)) {
       return true;
     }
   }

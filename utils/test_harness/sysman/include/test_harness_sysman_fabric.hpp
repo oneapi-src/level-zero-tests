@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_FABRIC_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_FABRIC_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -38,5 +37,3 @@ zes_fabric_link_type_t
 get_fabric_port_link(zes_fabric_port_handle_t fabricPortHandle);
 
 } // namespace level_zero_tests
-
-#endif

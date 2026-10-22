@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_PCI_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_PCI_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -30,4 +29,3 @@ std::vector<zes_pci_bar_properties_t>
 get_pci_bars_extension(zes_device_handle_t device, uint32_t *pCount);
 zes_pci_stats_t get_pci_stats(zes_device_handle_t device);
 } // namespace level_zero_tests
-#endif

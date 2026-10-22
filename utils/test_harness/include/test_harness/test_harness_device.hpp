@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_DEVICE_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_DEVICE_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include <level_zero/zes_api.h>
@@ -118,4 +117,3 @@ void release_external_semaphore(ze_external_semaphore_ext_handle_t semaphore);
 void get_aggregated_copy_offload_increment_value(ze_device_handle_t device,
                                                  uint32_t *value);
 }; // namespace level_zero_tests
-#endif

@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef TEST_METRIC_UTILS_HPP
-#define TEST_METRIC_UTILS_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include <level_zero/zet_api.h>
@@ -25,5 +24,3 @@ void metric_run_ip_sampling_with_validation(
     bool enableOverflow, const std::vector<ze_device_handle_t> &devices,
     uint32_t notifyEveryNReports, uint32_t samplingPeriod,
     uint32_t timeForNReportsComplete, uint32_t dimensions = 8192);
-
-#endif // TEST_METRIC_UTILS_HPP

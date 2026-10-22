@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_PSU_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_PSU_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include <level_zero/zes_api.h>
@@ -24,5 +23,3 @@ zes_psu_properties_t get_psu_properties(zes_psu_handle_t psuHandle);
 
 zes_psu_state_t get_psu_state(zes_psu_handle_t psuHandle);
 } // namespace level_zero_tests
-
-#endif

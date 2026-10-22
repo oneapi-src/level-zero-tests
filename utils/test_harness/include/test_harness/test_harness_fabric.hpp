@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_FABRIC_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_FABRIC_HPP
+#pragma once
 
 #include <level_zero/ze_api.h>
 #include "gtest/gtest.h"
@@ -40,4 +39,3 @@ ze_fabric_edge_exp_properties_t
 get_ze_fabric_edge_properties(ze_fabric_edge_handle_t edge);
 
 }; // namespace level_zero_tests
-#endif

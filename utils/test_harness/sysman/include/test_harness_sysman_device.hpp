@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_SYSMAN_DEVICE_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_SYSMAN_DEVICE_HPP
+#pragma once
 
 #include <level_zero/zes_api.h>
 #include "gtest/gtest.h"
@@ -47,5 +46,3 @@ bool is_uuid_pair_equal(uint8_t *uuid1, uint8_t *uuid2);
 ze_device_handle_t get_core_device_by_uuid(uint8_t *uuid);
 
 } // namespace level_zero_tests
-
-#endif

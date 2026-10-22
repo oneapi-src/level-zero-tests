@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_CMDQUEUE_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_CMDQUEUE_HPP
+#pragma once
 
 #include "test_harness/test_harness_device.hpp"
 #include <level_zero/ze_api.h>
@@ -61,4 +60,3 @@ void synchronize(ze_command_queue_handle_t cq, uint64_t timeout);
 void destroy_command_queue(ze_command_queue_handle_t cq);
 
 }; // namespace level_zero_tests
-#endif

@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef level_zero_tests_ZE_TEST_HARNESS_HPP
-#define level_zero_tests_ZE_TEST_HARNESS_HPP
+#pragma once
 #include "gtest/gtest.h"
 
 #include "test_harness_driver.hpp"
@@ -28,5 +27,3 @@
 #include "../../sysman/include/test_harness_sysman.hpp"
 #include "../../tools/include/test_harness_metric.hpp"
 #include "../../tools/include/test_harness_debug.hpp"
-
-#endif
