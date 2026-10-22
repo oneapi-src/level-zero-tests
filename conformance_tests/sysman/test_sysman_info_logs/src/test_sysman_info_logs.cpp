@@ -133,8 +133,24 @@ void validate_info_log_records(const InfoLogRecords &records) {
   }
 }
 
+// The descriptor and payload ranges come from the driver, so they are checked
+// before use to report a failure instead of reading outside the vectors.
+bool is_record_in_bounds(const InfoLogRecords &records, uint32_t index) {
+  if (index >= records.record_count || index >= records.descriptors.size()) {
+    return false;
+  }
+  const auto &metadata = records.descriptors[index];
+  const uint64_t end =
+      static_cast<uint64_t>(metadata.offset) + metadata.lengthOfData;
+  return end <= records.size && end <= records.data.size();
+}
+
 bool is_same_record(const InfoLogRecords &first, uint32_t first_index,
                     const InfoLogRecords &second, uint32_t second_index) {
+  if (!is_record_in_bounds(first, first_index) ||
+      !is_record_in_bounds(second, second_index)) {
+    return false;
+  }
   const auto &a = first.descriptors[first_index];
   const auto &b = second.descriptors[second_index];
   return a.lengthOfData == b.lengthOfData && a.timestamp == b.timestamp &&
@@ -674,10 +690,12 @@ LZT_TEST_F(
     if (peeked.record_count > 0 &&
         peeked.result != ZE_RESULT_WARNING_DROPPED_DATA &&
         read.result != ZE_RESULT_WARNING_DROPPED_DATA) {
-      ASSERT_GT(read.record_count, 0u)
+      EXPECT_GT(read.record_count, 0u)
           << "Peeked records were not returned by read";
-      EXPECT_TRUE(is_same_record(peeked, 0, read, 0))
-          << "First record read differs from first record peeked";
+      if (read.record_count > 0) {
+        EXPECT_TRUE(is_same_record(peeked, 0, read, 0))
+            << "First record read differs from first record peeked";
+      }
     }
     lzt::delete_info_log_instance(instance);
   }
