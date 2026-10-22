@@ -6,6 +6,8 @@
  *
  */
 
+#include <array>
+
 #include "utils/utils.hpp"
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"

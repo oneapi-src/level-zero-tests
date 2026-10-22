@@ -6,6 +6,8 @@
  *
  */
 
+#include <array>
+
 #include "gtest/gtest.h"
 
 #include "utils/utils.hpp"
