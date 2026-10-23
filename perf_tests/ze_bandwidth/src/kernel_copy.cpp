@@ -79,8 +79,8 @@ void ZeBandwidth::kernel_init(void) {
 
     ze_module_build_log_handle_t build_log = nullptr;
     ze_result_t result = zeModuleCreate(
-        benchmark->context, benchmark->_devices[device_id], &module_description,
-        &module_handle[device_id], &build_log);
+        benchmark->deviceContext(device_id), benchmark->_devices[device_id],
+        &module_description, &module_handle[device_id], &build_log);
 
     if (build_log != nullptr) {
       size_t log_size = 0;
@@ -199,7 +199,8 @@ bool ZeBandwidth::kernel_launch_config(uint32_t device_id, bool split_direction,
 }
 
 //---------------------------------------------------------------------
-// Appends one kernel driven transfer to a command list, gated on wait_event
+// Appends one kernel driven transfer to a command list, gated on the wait
+// event of its device
 // like every other measured operation in this benchmark.
 //---------------------------------------------------------------------
 size_t ZeBandwidth::append_kernel_copy(ze_command_list_handle_t list,
@@ -231,7 +232,7 @@ size_t ZeBandwidth::append_kernel_copy(ze_command_list_handle_t list,
   }
 
   SUCCESS_OR_TERMINATE(zeCommandListAppendLaunchKernel(
-      list, kernel, &group_count, signal_event, 1, &wait_event));
+      list, kernel, &group_count, signal_event, 1, &wait_events[device_id]));
 
   return bytes_moved;
 }
@@ -274,12 +275,14 @@ void ZeBandwidth::kernel_transfer_test(size_t size, bool split_direction,
   ze_event_handle_t timed_event =
       use_h2d_slot ? event[device_id] : event1[device_id];
 
+  // Only this device's list waits on its gate, so releasing the other
+  // contexts would only add their signals to this device's host timer.
   Timer<std::chrono::nanoseconds::period> timer;
 
   if (use_immediate_command_list == false) {
     SUCCESS_OR_TERMINATE(zeCommandListAppendLaunchKernel(
         list, kernel, &group_count, use_event_timer ? timed_event : nullptr, 1,
-        &wait_event));
+        &wait_events[device_id]));
     benchmark->commandListClose(list);
 
     for (uint32_t i = 0; i < warmup_iterations; i++) {
@@ -287,9 +290,9 @@ void ZeBandwidth::kernel_transfer_test(size_t size, bool split_direction,
         SUCCESS_OR_TERMINATE(zeEventHostReset(timed_event));
       }
       benchmark->commandQueueExecuteCommandList(queue, 1, &list);
-      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event));
+      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_events[device_id]));
       benchmark->commandQueueSynchronize(queue);
-      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event));
+      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_events[device_id]));
     }
 
     for (uint32_t i = 0; i < number_iterations; i++) {
@@ -299,7 +302,7 @@ void ZeBandwidth::kernel_transfer_test(size_t size, bool split_direction,
       benchmark->commandQueueExecuteCommandList(queue, 1, &list);
 
       timer.start();
-      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event));
+      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_events[device_id]));
       benchmark->commandQueueSynchronize(queue);
       timer.end();
 
@@ -309,7 +312,7 @@ void ZeBandwidth::kernel_transfer_test(size_t size, bool split_direction,
         device_time_nsec += timer.period_minus_overhead();
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event));
+      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_events[device_id]));
     }
 
     benchmark->commandListReset(list);
@@ -317,10 +320,10 @@ void ZeBandwidth::kernel_transfer_test(size_t size, bool split_direction,
     for (uint32_t i = 0; i < warmup_iterations + number_iterations; i++) {
       SUCCESS_OR_TERMINATE(zeEventHostReset(timed_event));
       SUCCESS_OR_TERMINATE(zeCommandListAppendLaunchKernel(
-          list, kernel, &group_count, timed_event, 1, &wait_event));
+          list, kernel, &group_count, timed_event, 1, &wait_events[device_id]));
 
       timer.start();
-      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event));
+      SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_events[device_id]));
       SUCCESS_OR_TERMINATE(zeEventHostSynchronize(timed_event, UINT64_MAX));
       timer.end();
 
@@ -332,7 +335,7 @@ void ZeBandwidth::kernel_transfer_test(size_t size, bool split_direction,
         }
       }
 
-      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event));
+      SUCCESS_OR_TERMINATE(zeEventHostReset(wait_events[device_id]));
     }
   }
 }
@@ -345,7 +348,7 @@ void ZeBandwidth::kernel_transfer_test(size_t size, bool split_direction,
 void ZeBandwidth::kernel_fill_pattern(uint32_t device_id, void *buffer,
                                       size_t bytes) {
   void *staging = nullptr;
-  benchmark->memoryAllocHost(bytes, &staging);
+  benchmark->memoryAllocHost(device_id, bytes, &staging);
 
   unsigned char *staging_bytes = static_cast<unsigned char *>(staging);
   for (size_t offset = 0; offset < bytes; offset++) {
@@ -367,7 +370,7 @@ void ZeBandwidth::kernel_fill_split_patterns(uint32_t device_id,
                                              void *device_buffer,
                                              size_t bytes) {
   void *staging = nullptr;
-  benchmark->memoryAllocHost(bytes, &staging);
+  benchmark->memoryAllocHost(device_id, bytes, &staging);
 
   unsigned char *host_bytes = static_cast<unsigned char *>(host_buffer);
   unsigned char *staging_bytes = static_cast<unsigned char *>(staging);
@@ -386,7 +389,7 @@ void ZeBandwidth::kernel_check_pattern(uint32_t device_id, void *buffer,
   void *staging = nullptr;
   uint32_t number_of_errors = 0;
 
-  benchmark->memoryAllocHost(bytes, &staging);
+  benchmark->memoryAllocHost(device_id, bytes, &staging);
 
   run_verify_copy(device_id, staging, buffer, bytes);
 
@@ -419,7 +422,7 @@ void ZeBandwidth::kernel_verify_split(size_t bytes_moved, void *host_buffer,
   uint32_t number_of_errors = 0;
   void *readback = nullptr;
 
-  benchmark->memoryAllocHost(bytes_moved, &readback);
+  benchmark->memoryAllocHost(device_id, bytes_moved, &readback);
 
   run_verify_copy(device_id, readback, device_buffer, bytes_moved);
 
@@ -465,7 +468,7 @@ void ZeBandwidth::test_host2device_kernel(void) {
       long double device_time_nsec = 0.0L;
 
       benchmark->memoryAlloc(device_id, size, &device_buffers[device_id]);
-      benchmark->memoryAllocHost(size, &host_buffers[device_id]);
+      allocate_host_buffer(device_id, size, &host_buffers[device_id]);
 
       if (verify) {
         kernel_fill_pattern(device_id, host_buffers[device_id], size);
@@ -480,7 +483,7 @@ void ZeBandwidth::test_host2device_kernel(void) {
       }
 
       benchmark->memoryFree(device_buffers[device_id]);
-      benchmark->memoryFree(host_buffers[device_id]);
+      free_host_buffer(host_buffers[device_id]);
 
       if (bytes_moved == 0) {
         std::cerr << "\t[skipped " << size
@@ -515,7 +518,7 @@ void ZeBandwidth::test_device2host_kernel(void) {
       long double device_time_nsec = 0.0L;
 
       benchmark->memoryAlloc(device_id, size, &device_buffers[device_id]);
-      benchmark->memoryAllocHost(size, &host_buffers[device_id]);
+      allocate_host_buffer(device_id, size, &host_buffers[device_id]);
 
       if (verify) {
         kernel_fill_pattern(device_id, device_buffers[device_id], size);
@@ -530,7 +533,7 @@ void ZeBandwidth::test_device2host_kernel(void) {
       }
 
       benchmark->memoryFree(device_buffers[device_id]);
-      benchmark->memoryFree(host_buffers[device_id]);
+      free_host_buffer(host_buffers[device_id]);
 
       if (bytes_moved == 0) {
         std::cerr << "\t[skipped " << size
@@ -582,7 +585,7 @@ void ZeBandwidth::test_bidir_kernel(void) {
       }
 
       benchmark->memoryAlloc(device_id, size, &device_buffers[device_id]);
-      benchmark->memoryAllocHost(size, &host_buffers[device_id]);
+      allocate_host_buffer(device_id, size, &host_buffers[device_id]);
 
       if (verify) {
         kernel_fill_split_patterns(device_id, host_buffers[device_id],
@@ -599,7 +602,7 @@ void ZeBandwidth::test_bidir_kernel(void) {
       }
 
       benchmark->memoryFree(device_buffers[device_id]);
-      benchmark->memoryFree(host_buffers[device_id]);
+      free_host_buffer(host_buffers[device_id]);
 
       if (bytes_moved == 0) {
         std::cerr << "\t[skipped " << size

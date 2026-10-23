@@ -107,8 +107,10 @@ void ZeApp::memoryAlloc(const uint32_t device_index, size_t size, void **ptr) {
   device_desc.ordinal = 0;
   device_desc.flags = 0;
 
-  SUCCESS_OR_TERMINATE(zeMemAllocDevice(context, &device_desc, size, 0,
+  SUCCESS_OR_TERMINATE(zeMemAllocDevice(deviceContext(device_index),
+                                        &device_desc, size, 0,
                                         _devices[device_index], ptr));
+  rememberContext(*ptr, deviceContext(device_index));
 }
 
 void ZeApp::memoryAllocHost(size_t size, void **ptr) {
@@ -119,6 +121,87 @@ void ZeApp::memoryAllocHost(size_t size, void **ptr) {
   host_desc.flags = 0;
 
   SUCCESS_OR_TERMINATE(zeMemAllocHost(context, &host_desc, size, 1, ptr));
+}
+
+void ZeApp::memoryAllocHost(const uint32_t device_index, size_t size,
+                            void **ptr) {
+
+  ze_host_mem_alloc_desc_t host_desc = {};
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+  host_desc.pNext = nullptr;
+  host_desc.flags = 0;
+
+  SUCCESS_OR_TERMINATE(
+      zeMemAllocHost(deviceContext(device_index), &host_desc, size, 1, ptr));
+  rememberContext(*ptr, deviceContext(device_index));
+}
+
+/* The answer is looked up once and cached. */
+bool ZeApp::hostMemoryMapSupported(void) {
+  if (_host_memory_map_supported >= 0) {
+    return _host_memory_map_supported == 1;
+  }
+  _host_memory_map_supported = 0;
+
+#ifdef ZE_EXTERNAL_MEMORY_MAPPING_EXT_NAME
+  uint32_t count = 0;
+  if (_driver == nullptr ||
+      zeDriverGetExtensionProperties(_driver, &count, nullptr) !=
+          ZE_RESULT_SUCCESS) {
+    return false;
+  }
+  std::vector<ze_driver_extension_properties_t> extensions(count);
+  if (zeDriverGetExtensionProperties(_driver, &count, extensions.data()) !=
+      ZE_RESULT_SUCCESS) {
+    return false;
+  }
+  for (const auto &extension : extensions) {
+    if (std::strcmp(extension.name, ZE_EXTERNAL_MEMORY_MAPPING_EXT_NAME) == 0) {
+      _host_memory_map_supported = 1;
+      break;
+    }
+  }
+#endif
+
+  return _host_memory_map_supported == 1;
+}
+
+/* The driver maps such memory for the first device of the context only, so
+ * the mapping is made in the device's own context; with per-device contexts
+ * that device is the only one. system_memory and size must be page aligned
+ * and the memory must outlive the allocation, so release it only after
+ * memoryFree(). The driver's result is returned rather than terminating, so
+ * that a caller can fall back to memoryAllocHost(). */
+ze_result_t
+ZeApp::memoryAllocHostMapped([[maybe_unused]] const uint32_t device_index,
+                             [[maybe_unused]] void *system_memory,
+                             [[maybe_unused]] size_t size,
+                             [[maybe_unused]] void **ptr) {
+#ifdef ZE_EXTERNAL_MEMORY_MAPPING_EXT_NAME
+  ze_external_memmap_sysmem_ext_desc_t map_desc = {};
+  map_desc.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMMAP_SYSMEM_EXT_DESC;
+  map_desc.pSystemMemory = system_memory;
+  map_desc.size = size;
+
+  ze_host_mem_alloc_desc_t host_desc = {};
+  host_desc.stype = ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC;
+  host_desc.pNext = &map_desc;
+  host_desc.flags = 0;
+
+  const ze_context_handle_t owner = deviceContext(device_index);
+  const ze_result_t result = zeMemAllocHost(owner, &host_desc, size, 0, ptr);
+  if (result == ZE_RESULT_SUCCESS && *ptr != system_memory) {
+    zeMemFree(owner, *ptr);
+    *ptr = nullptr;
+    return ZE_RESULT_ERROR_INVALID_ARGUMENT;
+  }
+  if (result == ZE_RESULT_SUCCESS) {
+    rememberContext(*ptr, owner);
+  }
+  return result;
+#else
+  return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
+#endif
 }
 
 /* Imports an externally created dma_buf into device memory. A size of 0 makes
@@ -140,8 +223,10 @@ void ZeApp::memoryAllocImportFd(const uint32_t device_index, size_t size,
   device_desc.ordinal = 0;
   device_desc.flags = flags;
 
-  SUCCESS_OR_TERMINATE(zeMemAllocDevice(context, &device_desc, size, 0,
+  SUCCESS_OR_TERMINATE(zeMemAllocDevice(deviceContext(device_index),
+                                        &device_desc, size, 0,
                                         _devices[device_index], ptr));
+  rememberContext(*ptr, deviceContext(device_index));
 }
 
 /* Imports an externally created dma_buf into host memory. See
@@ -164,18 +249,21 @@ void ZeApp::memoryAllocHostImportFd(size_t size, int fd,
 }
 
 void ZeApp::memoryGetAddressRange(void *ptr, void **base, size_t *size) {
-  SUCCESS_OR_TERMINATE(zeMemGetAddressRange(context, ptr, base, size));
+  SUCCESS_OR_TERMINATE(zeMemGetAddressRange(contextOf(ptr), ptr, base, size));
 }
 
 void ZeApp::memoryFree(const void *ptr) {
-  SUCCESS_OR_TERMINATE(zeMemFree(context, const_cast<void *>(ptr)));
+  SUCCESS_OR_TERMINATE(zeMemFree(contextOf(ptr), const_cast<void *>(ptr)));
+  _allocation_contexts.erase(ptr);
 }
 
 void ZeApp::memoryOpenIpcHandle(const uint32_t device_index,
                                 ze_ipc_mem_handle_t pIpcHandle,
                                 void **zeIpcBuffer) {
-  SUCCESS_OR_TERMINATE(zeMemOpenIpcHandle(context, _devices[device_index],
-                                          pIpcHandle, 0u, zeIpcBuffer));
+  SUCCESS_OR_TERMINATE(zeMemOpenIpcHandle(deviceContext(device_index),
+                                          _devices[device_index], pIpcHandle,
+                                          0u, zeIpcBuffer));
+  rememberContext(*zeIpcBuffer, deviceContext(device_index));
 }
 
 void ZeApp::deviceGetCommandQueueGroupProperties(
@@ -263,9 +351,9 @@ void ZeApp::commandListCreate(uint32_t device_index,
   command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
   command_list_description.pNext = nullptr;
 
-  SUCCESS_OR_TERMINATE(zeCommandListCreate(context, _devices[device_index],
-                                           &command_list_description,
-                                           phCommandList));
+  SUCCESS_OR_TERMINATE(
+      zeCommandListCreate(deviceContext(device_index), _devices[device_index],
+                          &command_list_description, phCommandList));
 }
 
 void ZeApp::commandListCreate(uint32_t device_index,
@@ -277,16 +365,16 @@ void ZeApp::commandListCreate(uint32_t device_index,
       command_queue_group_ordinal;
   command_list_description.pNext = nullptr;
 
-  SUCCESS_OR_TERMINATE(zeCommandListCreate(context, _devices[device_index],
-                                           &command_list_description,
-                                           phCommandList));
+  SUCCESS_OR_TERMINATE(
+      zeCommandListCreate(deviceContext(device_index), _devices[device_index],
+                          &command_list_description, phCommandList));
 }
 
 void ZeApp::immediateCommandListCreate(
     uint32_t device_index, ze_command_list_handle_t *phCommandList) {
   SUCCESS_OR_TERMINATE(zeCommandListCreateImmediate(
-      context, _devices[device_index], &zeDefaultGPUImmediateCommandQueueDesc,
-      phCommandList));
+      deviceContext(device_index), _devices[device_index],
+      &zeDefaultGPUImmediateCommandQueueDesc, phCommandList));
 }
 
 void ZeApp::immediateCommandListCreate(
@@ -301,9 +389,9 @@ void ZeApp::immediateCommandListCreate(
       ZE_COMMAND_QUEUE_FLAG_IN_ORDER | ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
   command_queue_description.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
-  SUCCESS_OR_TERMINATE(
-      zeCommandListCreateImmediate(context, _devices[device_index],
-                                   &command_queue_description, phCommandList));
+  SUCCESS_OR_TERMINATE(zeCommandListCreateImmediate(
+      deviceContext(device_index), _devices[device_index],
+      &command_queue_description, phCommandList));
 }
 
 void ZeApp::commandListDestroy(ze_command_list_handle_t command_list) {
@@ -319,11 +407,12 @@ void ZeApp::commandListReset(ze_command_list_handle_t command_list) {
 }
 
 void ZeApp::getIpcHandle(void *ptr, ze_ipc_mem_handle_t *pIpcHandle) {
-  SUCCESS_OR_TERMINATE(zeMemGetIpcHandle(context, ptr, pIpcHandle));
+  SUCCESS_OR_TERMINATE(zeMemGetIpcHandle(contextOf(ptr), ptr, pIpcHandle));
 }
 
 void ZeApp::closeIpcHandle(void *ipc_ptr) {
-  SUCCESS_OR_TERMINATE(zeMemCloseIpcHandle(context, ipc_ptr));
+  SUCCESS_OR_TERMINATE(zeMemCloseIpcHandle(contextOf(ipc_ptr), ipc_ptr));
+  _allocation_contexts.erase(ipc_ptr);
 }
 
 void ZeApp::commandListAppendImageCopyFromMemory(
@@ -414,9 +503,9 @@ void ZeApp::commandQueueCreate(const uint32_t device_index,
   command_queue_description.ordinal = command_queue_group_ordinal;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
-  SUCCESS_OR_TERMINATE(zeCommandQueueCreate(context, _devices[device_index],
-                                            &command_queue_description,
-                                            command_queue));
+  SUCCESS_OR_TERMINATE(
+      zeCommandQueueCreate(deviceContext(device_index), _devices[device_index],
+                           &command_queue_description, command_queue));
 }
 
 void ZeApp::commandQueueCreate(const uint32_t device_index,
@@ -430,9 +519,9 @@ void ZeApp::commandQueueCreate(const uint32_t device_index,
   command_queue_description.index = command_queue_index;
   command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
-  SUCCESS_OR_TERMINATE(zeCommandQueueCreate(context, _devices[device_index],
-                                            &command_queue_description,
-                                            command_queue));
+  SUCCESS_OR_TERMINATE(
+      zeCommandQueueCreate(deviceContext(device_index), _devices[device_index],
+                           &command_queue_description, command_queue));
 }
 
 void ZeApp::commandQueueDestroy(ze_command_queue_handle_t command_queue) {
@@ -505,6 +594,7 @@ void ZeApp::initCountDevices(const uint32_t count) {
   driver_count = 1;
   ze_driver_handle_t driver;
   SUCCESS_OR_TERMINATE(zeDriverGet(&driver_count, &driver));
+  _driver = driver;
 
   ze_context_desc_t context_desc = {};
   context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
@@ -527,6 +617,39 @@ void ZeApp::initCountDevices(const uint32_t count) {
   }
 }
 
+/* The driver takes the pages of a host allocation from the NUMA node of the
+ * first device in its context, so a context per device keeps every device's
+ * host memory on its own node. Nothing can be shared across contexts: create
+ * everything a device uses through the calls that take its index. */
+void ZeApp::createContextPerDevice(void) {
+  if (!_device_contexts.empty()) {
+    return;
+  }
+
+  _device_contexts.resize(_devices.size());
+  for (size_t i = 0U; i < _devices.size(); i++) {
+    ze_context_desc_t context_desc = {};
+    context_desc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
+    SUCCESS_OR_TERMINATE(zeContextCreateEx(_driver, &context_desc, 1,
+                                           &_devices[i], &_device_contexts[i]));
+  }
+}
+
+ze_context_handle_t ZeApp::deviceContext(const uint32_t device_index) const {
+  return _device_contexts.empty() ? context : _device_contexts[device_index];
+}
+
+void ZeApp::rememberContext(const void *ptr, ze_context_handle_t owner) {
+  if (owner != context) {
+    _allocation_contexts[ptr] = owner;
+  }
+}
+
+ze_context_handle_t ZeApp::contextOf(const void *ptr) const {
+  const auto found = _allocation_contexts.find(ptr);
+  return (found == _allocation_contexts.end()) ? context : found->second;
+}
+
 void ZeApp::singleDeviceInit(void) { initCountDevices(1); }
 
 uint32_t ZeApp::allDevicesInit(void) {
@@ -540,6 +663,12 @@ void ZeApp::cleanupDevices(void) {
       moduleDestroy(_modules[i]);
     }
   }
+
+  for (auto device_context : _device_contexts) {
+    zeContextDestroy(device_context);
+  }
+  _device_contexts.clear();
+  _allocation_contexts.clear();
 
   zeContextDestroy(this->context);
 }

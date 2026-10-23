@@ -71,6 +71,10 @@ To use command line option features:
   --d2hEngine name         engine used for the Device-to-Host direction
   --useEvents              measure with GPU timestamps instead of the host timer
   --immediate              use immediate command lists (default: disabled)
+  --hostNuma mode          host buffers from each device's own NUMA node
+                            (auto), from the first device's (none), or
+                            placed on node N (N)
+                            [default:  auto]
   --csv                    output in csv format (default: disabled)
   -h, --help               display help message
 
@@ -81,7 +85,8 @@ For example to run a single Host->Device test for transfer_size = 300 bytes, 100
 
 # Which options apply to which test
 
-`-i`, `-w`, `-s`, `-sb`, `-se`, `-d` and `--csv` apply to every test. `-q` lists
+`-i`, `-w`, `-s`, `-sb`, `-se`, `-d`, `--hostNuma` and `--csv` apply to every
+test. `-q` lists
 the engines and exits without running anything. The rest differ per test:
 
 | Test | `-v` | `--h2dEngine` (`-g`/`-n` first value) | `--d2hEngine` (`-g`/`-n` second value) | `--useEvents` | `--immediate` |
@@ -284,6 +289,94 @@ the measured device only; the interfering devices move data but are not
 verified. `--immediate` is not supported by these tests.
 
 
+# Host buffer placement
+
+`zeMemAllocHost` takes no device. The driver creates a host allocation through
+the first device of the context, and the kernel takes its pages from the NUMA
+node of that device. On a multi socket host, with every device in one context,
+all host buffers therefore come from the node of device 0, and the devices on
+the other socket reach host memory across the socket link: a figure such as
+`host_to_all` then measures the CPU interconnect rather than the device.
+`numactl` does not change this, because the pages are taken by the kernel
+driver, not faulted in by the process.
+
+`--hostNuma` decides where the host buffers of the timed transfers come from
+and which CPUs submit the work:
+
+| value | contexts | host buffers | submitting thread |
+| --- | --- | --- | --- |
+| `auto` (default) | one per device | from each device's own node | pinned to the node of the measured device |
+| `none` | one shared context | all from the node of device 0 | not pinned |
+| `N` | one per device | placed on node `N` | pinned to node `N` |
+
+`auto` keeps one shared context on a host with a single NUMA node, where there
+is nothing to balance, and says so when it was asked for explicitly. A device
+whose node is unknown still gets its own context, with a warning naming it,
+but the thread is not pinned for it. A node `N` that is not online is rejected.
+
+The pinning uses only CPUs that the process affinity already allows, so a run
+started under `taskset` stays on the CPUs it was given; when none of them
+belongs to the node the thread is left alone and a note says so. The multi
+device tests re-pin for each measured device, the other tests pin only when
+all selected devices share a node.
+
+## How each mode places the buffers
+
+With a context per device (`auto` and `N`) every buffer, queue, command list,
+event and kernel of a device is created in that device's context. An event
+cannot be waited on outside its context, so the host controlled gate that
+releases every device at once is one event per context, signalled in a loop;
+measured on a four GPU host, that loop takes 1.3 to 2.3 us (median of four
+runs), against transfers of milliseconds. A shared context keeps its single
+event.
+
+`auto` uses plain `zeMemAllocHost` in each device's context, so the buffers
+are the driver's own allocations, as with `none`, and only their node changes.
+
+`N` cannot be expressed as a context arrangement, so the tool places the
+memory itself: it maps anonymous memory, binds it to node `N` with `mbind`,
+faults it in there, checks the node of the first and last page, and maps it
+into the device's context with `zeMemAllocHost` and
+`ze_external_memmap_sysmem_ext_desc_t` (`ZE_extension_external_memmap_sysmem`).
+The result is a host USM allocation, so the kernel driven tests use it too.
+The driver maps such memory for the first device of a context only, which is
+why this mode also needs a context per device. Without the extension, or when
+a buffer cannot be placed, the buffer comes from the device's own context
+instead and a warning says so. Buffers of 2 MB and more are 2 MB aligned and
+advised for transparent huge pages.
+
+## Which placement a run used
+
+The start-up banner prints one line, for example:
+
+```
+Host NUMA placement: mode=auto, host buffers=per-device context, device 0 -> node 0, device 2 -> node 1
+```
+
+`host buffers=` is `shared context`, `per-device context` or `placed,
+per-device context`. The line goes to the commentary stream, which is stderr
+under `--csv`, so the CSV output on stdout stays unchanged.
+
+With `--hostNuma=none` on a multi node host, a note names the selected devices
+that take their host buffers from another node than their own:
+
+```
+NOTE: devices 2 3 take their host buffers from NUMA node 0, the node of device 0, so their transfers cross the interconnect; --hostNuma=auto gives each device host buffers on its own node
+```
+
+## Reading the numbers
+
+`auto` and `none` use the same kind of allocation, so comparing them shows the
+effect of placement alone. `N` uses memory of the application mapped by the
+driver, which is a different allocation from the driver's own: to isolate a
+NUMA effect with it, compare two placed runs, for example `--hostNuma=0`
+against `--hostNuma=1` on a device that sits on node 0, rather than a placed
+run against `none`.
+
+Whether placement moves a figure at all is a property of the part and of the
+direction. Where the link saturates well below host memory bandwidth, local
+and remote nodes measure the same.
+
 # Getting stable numbers
 
 * Each device's PCI address and NUMA node are printed at start-up. Per-device
@@ -291,8 +384,8 @@ verified. `--immediate` is not supported by these tests.
   devices share a socket or an upstream port tells you whether a slow device is
   actually slow or merely sharing a saturated path with its neighbour. Compare
   each device alone against pairs before reading a split as a device
-  difference. Note that `numactl` does not reach host allocations made through
-  `zeMemAllocHost`, so it is not a reliable way to test placement effects.
+  difference. Use `--hostNuma` rather than `numactl` to test placement
+  effects: `numactl` does not reach host allocations made by the driver.
 * On parts whose GPU frequency ramps under load, the default `-w 100` may
   still not be enough and run to run means can differ by more than 1.5x. Use a
   much larger warmup, for example `-w 500`, for any figure that will be

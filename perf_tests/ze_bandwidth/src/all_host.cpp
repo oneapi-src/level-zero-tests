@@ -35,14 +35,14 @@ void ZeBandwidth::allocate_all_host_buffers(size_t size, uint32_t target,
     const size_t device_size = (device_id == target) ? size : 2 * size;
 
     benchmark->memoryAlloc(device_id, device_size, &device_buffers[device_id]);
-    benchmark->memoryAllocHost(device_size, &host_buffers[device_id]);
+    allocate_host_buffer(device_id, device_size, &host_buffers[device_id]);
 
     if (second_pair) {
       // The opposite direction always interferes, so it is never the measured
       // copy and always runs at the larger size.
       benchmark->memoryAlloc(device_id, 2 * size,
                              &device_buffers_bidir[device_id]);
-      benchmark->memoryAllocHost(2 * size, &host_buffers_bidir[device_id]);
+      allocate_host_buffer(device_id, 2 * size, &host_buffers_bidir[device_id]);
     }
   }
 }
@@ -50,11 +50,11 @@ void ZeBandwidth::allocate_all_host_buffers(size_t size, uint32_t target,
 void ZeBandwidth::free_all_host_buffers(bool second_pair) {
   for (auto device_id : device_ids) {
     benchmark->memoryFree(device_buffers[device_id]);
-    benchmark->memoryFree(host_buffers[device_id]);
+    free_host_buffer(host_buffers[device_id]);
 
     if (second_pair) {
       benchmark->memoryFree(device_buffers_bidir[device_id]);
-      benchmark->memoryFree(host_buffers_bidir[device_id]);
+      free_host_buffer(host_buffers_bidir[device_id]);
     }
   }
 }
@@ -137,6 +137,15 @@ void ZeBandwidth::test_all_host(void) {
               "measured device."
            << std::endl;
   }
+  if (host_buffers_from == host_buffer_source::per_device_context) {
+    info() << "Each device's host buffers come from its own NUMA node, and the "
+              "submitting thread follows the measured device."
+           << std::endl;
+  } else if (host_buffers_from == host_buffer_source::placed) {
+    info() << "Every host buffer is placed on NUMA node "
+           << *host_numa_fixed_node << ", and the submitting thread runs there."
+           << std::endl;
+  }
   if (device_ids.size() < 2) {
     std::cerr << "NOTE: only one device selected, so there is no interfering "
                  "traffic and this is not a multi device measurement."
@@ -157,6 +166,9 @@ void ZeBandwidth::test_all_host(void) {
     }
 
     for (auto target : device_ids) {
+      const numa_support::ScopedCpuBind target_bind(host_numa_nodes[target]);
+      report_cpu_bind(target_bind, host_numa_nodes[target]);
+
       long double measured_nsec = 0.0L;
       long double overlap_nsec = 0.0L;
       size_t measured_bytes = 0;
@@ -210,7 +222,7 @@ void ZeBandwidth::test_all_host(void) {
           } else {
             SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
                 measured_list[device_id], destination, source, device_size,
-                signal, 1, &wait_event));
+                signal, 1, &wait_events[device_id]));
             if (device_id == target) {
               measured_bytes = device_size;
             }
@@ -228,7 +240,7 @@ void ZeBandwidth::test_all_host(void) {
           SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
               other_list[device_id], destination, source, 2 * size,
               use_event_timer ? other_event[device_id] : nullptr, 1,
-              &wait_event));
+              &wait_events[device_id]));
           benchmark->commandListClose(other_list[device_id]);
         }
       }
@@ -275,7 +287,7 @@ void ZeBandwidth::test_all_host(void) {
         }
 
         timer.start();
-        SUCCESS_OR_TERMINATE(zeEventHostSignal(wait_event));
+        signal_wait_events(target);
 
         // The target is drained first so that its host timer is not extended
         // by the longer interfering copies on the other devices.
@@ -303,7 +315,7 @@ void ZeBandwidth::test_all_host(void) {
           }
         }
 
-        SUCCESS_OR_TERMINATE(zeEventHostReset(wait_event));
+        reset_wait_events();
       }
 
       for (auto device_id : device_ids) {

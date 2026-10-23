@@ -9,10 +9,20 @@
 #pragma once
 
 #include <chrono>
+#include <map>
+#include <optional>
 #include <string>
 #include <level_zero/ze_api.h>
 #include "../../common/include/common.hpp"
+#include "numa_support.hpp"
 #include "ze_app.hpp"
+
+// --hostNuma: automatic gives every device a context of its own, none keeps
+// one shared context, fixed places every host buffer on one node.
+enum class host_numa_mode { automatic, none, fixed };
+
+// Where the timed host buffers come from.
+enum class host_buffer_source { shared_context, per_device_context, placed };
 
 // Level Zero has no name for a queue group, so one is derived from the group
 // flags and from the queue index within the group.
@@ -96,9 +106,14 @@ public:
   uint32_t command_queue_group_ordinal1 = 0;
   uint32_t command_queue_index1 = 0;
   bool csv_output = false;
-  ze_event_pool_handle_t event_pool = {};
-  ze_event_pool_handle_t wait_event_pool = {};
-  ze_event_handle_t wait_event = {};
+  host_numa_mode host_numa = host_numa_mode::automatic;
+  std::optional<int> host_numa_fixed_node;
+  bool host_numa_explicit = false;
+  std::vector<ze_event_pool_handle_t> event_pools{};
+  // Host controlled release gate, one per context: an event cannot be waited
+  // on outside its context.
+  std::vector<ze_event_pool_handle_t> wait_event_pools{};
+  std::vector<ze_event_handle_t> wait_events{};
 
   std::vector<ze_event_handle_t> event{};
   std::vector<ze_event_handle_t> event1{};
@@ -131,7 +146,22 @@ public:
 
   ZeApp *benchmark;
 
+  // Node the submitting thread is pinned to for the whole run: the node all
+  // selected devices take their host buffers from, if they share one.
+  std::optional<int> submission_node(void) const;
+  void report_cpu_bind(const numa_support::ScopedCpuBind &bind,
+                       const std::optional<int> &node);
+
 private:
+  void resolve_host_placement(void);
+  void note_shared_context_placement(void);
+  void print_host_placement(void);
+  void allocate_host_buffer(uint32_t device_id, size_t size, void **ptr);
+  void free_host_buffer(void *ptr);
+  void signal_wait_events(void);
+  void signal_wait_events(uint32_t first_device);
+  void reset_wait_events(void);
+
   void transfer_size_test(size_t size, std::vector<void *> &destination_buffer,
                           std::vector<void *> &source_buffer,
                           std::vector<long double> &device_times_nsec,
@@ -218,6 +248,14 @@ private:
                        size_t bytes);
   std::vector<ze_command_queue_group_properties_t> queueProperties;
 
-  void *host_buffer_verify;
-  void *host_buffer_verify1;
+  // NUMA node the host buffers of each device come from, empty when the
+  // devices share a context or the node is unknown.
+  std::vector<std::optional<int>> host_numa_nodes{};
+  host_buffer_source host_buffers_from = host_buffer_source::shared_context;
+  // Host buffers placed with --hostNuma=N, with the mapped length to release
+  // once the driver has let go of them.
+  std::map<const void *, size_t> placed_host_buffers{};
+  bool host_placement_failure_reported = false;
+  std::vector<ze_event_handle_t> unique_wait_events{};
+  bool cpu_bind_failure_reported = false;
 };

@@ -11,6 +11,7 @@
 #include <level_zero/ze_api.h>
 
 #include <fstream>
+#include <map>
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -26,6 +27,13 @@ public:
   void memoryAlloc(size_t size, void **ptr);
   void memoryAlloc(const uint32_t device_index, size_t size, void **ptr);
   void memoryAllocHost(size_t size, void **ptr);
+  void memoryAllocHost(const uint32_t device_index, size_t size, void **ptr);
+  // System memory mapped as a host allocation of the device's context, with
+  // the external memmap extension. The pointer returned is system_memory.
+  bool hostMemoryMapSupported(void);
+  ze_result_t memoryAllocHostMapped(const uint32_t device_index,
+                                    void *system_memory, size_t size,
+                                    void **ptr);
   void memoryAllocImportFd(const uint32_t device_index, size_t size, int fd,
                            ze_device_mem_alloc_flags_t flags, void **ptr);
   void memoryAllocHostImportFd(size_t size, int fd,
@@ -120,6 +128,15 @@ public:
                     uint32_t index);
   void destroy_event(ze_event_handle_t event);
 
+  // After this, the calls that take a device index work in that device's
+  // context, and so do the overloads that forward to device 0. The calls that
+  // take a pointer an allocation call returned use the context it came from.
+  // memoryAllocHost(size, ...), memoryAllocHostImportFd(), imageCreate(),
+  // create_event_pool() and functionCreate(), whose kernels come from modules
+  // built in context, keep using context.
+  void createContextPerDevice(void);
+  ze_context_handle_t deviceContext(const uint32_t device_index) const;
+
   void singleDeviceInit(void);
   uint32_t allDevicesInit(void);
   void singleDeviceCleanup(void);
@@ -129,6 +146,14 @@ public:
   std::vector<ze_device_handle_t> _devices;
 
 private:
+  ze_driver_handle_t _driver = nullptr;
+  int _host_memory_map_supported = -1;
+  std::vector<ze_context_handle_t> _device_contexts;
+  // Allocations made in a per-device context, for the calls that only get
+  // the pointer.
+  std::map<const void *, ze_context_handle_t> _allocation_contexts;
+  void rememberContext(const void *ptr, ze_context_handle_t owner);
+  ze_context_handle_t contextOf(const void *ptr) const;
   std::vector<ze_module_handle_t> _modules;
   std::string _module_path;
   std::vector<uint8_t> _binary_file;
