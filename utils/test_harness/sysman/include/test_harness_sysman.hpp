@@ -31,3 +31,4 @@
 #include "test_harness_sysman_performance.hpp"
 #include "test_harness_sysman_ecc.hpp"
 #include "test_harness_sysman_vf_management.hpp"
+#include "test_harness_sysman_info_log.hpp"

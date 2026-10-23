@@ -45,6 +45,7 @@ add_core_library(test_harness
     "sysman/src/test_harness_sysman_performance.cpp"
     "sysman/src/test_harness_sysman_ecc.cpp"
     "sysman/src/test_harness_sysman_vf_management.cpp"
+    "sysman/src/test_harness_sysman_info_log.cpp"
 
 )
 target_link_libraries(test_harness
