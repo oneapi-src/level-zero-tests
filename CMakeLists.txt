@@ -294,6 +294,19 @@ function(add_lzt_test_executable)
         )
         set_target_properties(${copy_target} PROPERTIES FOLDER "runtime-files")
         add_dependencies(${ADD_LZT_TEST_EXECUTABLE_NAME} ${copy_target})
+
+        # Executables in one directory often copy the same files, so run
+        # their copies one at a time.
+        string(MAKE_C_IDENTIFIER "${runtime_dir}" runtime_dir_id)
+        get_property(previous_copy_target GLOBAL
+          PROPERTY LZT_RUNTIME_COPY_TARGET_${runtime_dir_id}
+        )
+        if(previous_copy_target)
+            add_dependencies(${copy_target} ${previous_copy_target})
+        endif()
+        set_property(GLOBAL
+          PROPERTY LZT_RUNTIME_COPY_TARGET_${runtime_dir_id} ${copy_target}
+        )
     endif()
 
     install(
