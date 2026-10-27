@@ -14,6 +14,8 @@ The DirectX fixture setup matches the Level Zero device to the corresponding DXG
 | Test | Description |
 |------|-------------|
 | `GivenDX11SharedFenceWhenImportingExternalSemaphoreThenIsSuccess` | Creates a shared DX11 fence (`ID3D11Fence`), then imports it into Level Zero as an external semaphore via `zeDeviceImportExternalSemaphoreExt` with the `ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D11_FENCE` flag. Verifies the returned handle is non-null and releases it with `zeDeviceReleaseExternalSemaphoreExt`. |
+| `GivenDX11SharedFenceAndImportedTexture2DWhenPingPongingKernelResultsAcrossFramesThenValuesAreCorrect` | Ping-pongs one shared fence across 16 frames over a shared `DXGI_FORMAT_R32_UINT` `ID3D11Texture2D` imported with `ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE`. Each frame DX11 fills the texture with the frame index and signals; Level Zero waits on the fence, copies the imported image to a scratch image, launches the `double_image` kernel to write the doubled texels back into the imported image and signals back; DX11 waits, reads the texture back and asserts every texel equals `frame * 2`. The fence and the image are imported once and reused for all frames; the image is imported with `ZE_IMAGE_FLAG_KERNEL_WRITE` so the kernel can write it. |
+| `GivenDX11SharedFenceAndImportedTexture2DWhenPingPongingCopyResultsAcrossFramesThenValuesAreCorrect` | As above, but the per-frame Level Zero work op is a single `append_image_copy_to_mem` into host memory. Asserts the copied texels on the Level Zero side and, since a copy leaves the source untouched, that DX11's readback still equals `frame`. |
 
 ### DX12 Interoperability (`DX12InteroperabilityTests`)
 
@@ -25,8 +27,10 @@ The DirectX fixture setup matches the Level Zero device to the corresponding DXG
 | `GivenDX12SharedFenceAndImportedBufferWhenPingPongingKernelResultsAcrossFramesThenValuesAreCorrect` | Ping-pongs one shared fence across 16 frames. Each frame DX12 writes the frame index into the imported committed resource and signals; Level Zero waits on the fence, launches the `double_values` kernel over the imported memory and signals back; DX12 waits, reads the resource back and asserts every element equals `frame * 2`. The fence is imported once and reused for all frames, and each frame is drained on the host before the next begins. |
 | `GivenDX12SharedFenceAndImportedBufferWhenPingPongingCopyResultsAcrossFramesThenValuesAreCorrect` | As above, but the per-frame Level Zero work op is `append_memory_copy` from the imported memory to host memory rather than a kernel launch. Asserts the copied values on the Level Zero side and, since a copy leaves the source untouched, that DX12's readback still equals `frame`. |
 
-Both ping-pong cases exercise the two gaps the one-shot cases above do not: reuse of a
-shared fence across frames, and Level Zero kernel execution behind that fence.
+The ping-pong cases in both suites exercise the two gaps the one-shot cases above do not:
+reuse of a shared fence across frames, and Level Zero kernel execution behind that fence.
+DX12 ping-pongs an imported buffer; DX11 ping-pongs an imported Texture2D, because Level Zero
+declares no D3D11 buffer external-memory type.
 
 ### Vulkan Interoperability (`VulkanInteroperabilityWindowsTests`, `VulkanInteroperabilityLinuxTests`)
 

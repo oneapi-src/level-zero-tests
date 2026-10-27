@@ -48,6 +48,7 @@ add_lzt_test(
     Vulkan::Headers
   KERNELS
     interop_double
+    interop_double_image
   DEFINES
     $<$<BOOL:${WIN32}>:VK_USE_PLATFORM_WIN32_KHR>
     $<$<BOOL:${WIN32}>:WIN32_LEAN_AND_MEAN>

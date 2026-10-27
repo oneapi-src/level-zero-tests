@@ -86,7 +86,7 @@ import_fence_by_name(ze_device_handle_t l0_device, LPCWSTR name,
 ze_image_handle_t import_image(HANDLE shared_handle,
                                ze_external_memory_type_flags_t type,
                                uint64_t width, uint32_t height,
-                               DXGI_FORMAT format) {
+                               DXGI_FORMAT format, ze_image_flags_t flags) {
   ze_external_memory_import_win32_handle_t import_handle = {};
   import_handle.stype = ZE_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMPORT_WIN32;
   import_handle.flags = type;
@@ -95,6 +95,7 @@ ze_image_handle_t import_image(HANDLE shared_handle,
   ze_image_desc_t image_desc = {};
   image_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
   image_desc.pNext = &import_handle;
+  image_desc.flags = flags;
   image_desc.type = ZE_IMAGE_TYPE_2D;
   image_desc.format = dx::to_ze_image_format(format);
   image_desc.width = width;

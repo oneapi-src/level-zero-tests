@@ -23,9 +23,13 @@ HANDLE create_shared_handle(const ComPtr<ID3D11Fence> &fence,
 
 void wait_for_fence(const ComPtr<ID3D11Fence> &fence, uint64_t wait_value);
 
+enum class texture_usage { shared, upload, readback };
+
 ComPtr<ID3D11Texture2D> create_texture_2d(const ComPtr<ID3D11Device> &device,
+                                          texture_usage usage,
                                           DXGI_FORMAT format, UINT width,
-                                          UINT height, bool exportable = false);
+                                          UINT height,
+                                          UINT extra_bind_flags = 0u);
 
 HANDLE create_shared_handle(const ComPtr<ID3D11Texture2D> &texture);
 

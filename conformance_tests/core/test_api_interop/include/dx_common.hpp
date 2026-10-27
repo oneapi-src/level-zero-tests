@@ -32,7 +32,7 @@ import_fence_by_name(ze_device_handle_t l0_device, LPCWSTR name,
 ze_image_handle_t import_image(HANDLE shared_handle,
                                ze_external_memory_type_flags_t type,
                                uint64_t width, uint32_t height,
-                               DXGI_FORMAT format);
+                               DXGI_FORMAT format, ze_image_flags_t flags = 0);
 
 ze_image_handle_t create_plane_view(ze_device_handle_t l0_device,
                                     ze_image_handle_t image, uint32_t index,

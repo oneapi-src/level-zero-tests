@@ -11,6 +11,9 @@
 #include "utils/utils.hpp"
 #include "random/random.hpp"
 
+#include <algorithm>
+#include <vector>
+
 #ifdef __linux__
 struct DX11InteroperabilityTests : ::testing::Test {
   void SetUp() override { GTEST_SKIP() << "Not supported on Linux"; }
@@ -207,6 +210,284 @@ LZT_TEST_F(
 #endif
 }
 
+#ifndef __linux__
+
+enum class L0WorkOp { memory_copy, kernel_launch };
+
+constexpr uint32_t pingpong_frame_count = 16;
+constexpr UINT pingpong_width = 64;
+constexpr UINT pingpong_height = 64;
+
+ComPtr<IDXGIKeyedMutex>
+get_keyed_mutex(const ComPtr<ID3D11Texture2D> &shared_texture) {
+  ComPtr<IDXGIKeyedMutex> keyed_mutex;
+  if (FAILED(shared_texture.As(&keyed_mutex))) {
+    throw std::runtime_error(
+        "Failed to query IDXGIKeyedMutex on shared texture.");
+  }
+
+  return keyed_mutex;
+}
+
+void fill_texture_rows(void *mapped_ptr, UINT row_pitch, uint32_t value) {
+  for (UINT row = 0; row < pingpong_height; ++row) {
+    uint32_t *texels =
+        reinterpret_cast<uint32_t *>(static_cast<uint8_t *>(mapped_ptr) +
+                                     static_cast<size_t>(row_pitch) * row);
+    std::fill_n(texels, pingpong_width, value);
+  }
+}
+
+void read_texture_rows(const void *mapped_ptr, UINT row_pitch,
+                       std::vector<uint32_t> &texels) {
+  for (UINT row = 0; row < pingpong_height; ++row) {
+    const uint32_t *row_texels = reinterpret_cast<const uint32_t *>(
+        static_cast<const uint8_t *>(mapped_ptr) +
+        static_cast<size_t>(row_pitch) * row);
+    std::copy_n(row_texels, pingpong_width,
+                texels.data() + static_cast<size_t>(pingpong_width) * row);
+  }
+}
+
+void test_pingpong_with_semaphore(
+    const ComPtr<ID3D11Device> &dx11_device,
+    const ComPtr<ID3D11Device5> &dx11_device5,
+    const ComPtr<ID3D11DeviceContext> &dx11_device_context,
+    const ComPtr<ID3D11DeviceContext4> &dx11_device_context4,
+    ze_device_handle_t l0_device, L0WorkOp work_op) {
+  constexpr DXGI_FORMAT format = DXGI_FORMAT_R32_UINT;
+  constexpr uint32_t texel_count = pingpong_width * pingpong_height;
+  constexpr size_t total_size = texel_count * sizeof(uint32_t);
+
+  ze_module_handle_t l0_module = nullptr;
+  ze_kernel_handle_t l0_kernel = nullptr;
+  ze_image_handle_t l0_source_image = nullptr;
+  ze_image_flags_t imported_image_flags = 0;
+  UINT shared_texture_bind_flags = 0u;
+  if (work_op == L0WorkOp::kernel_launch) {
+    l0_module = lzt::create_module(l0_device, "interop_double_image.spv");
+    l0_kernel = lzt::create_function(l0_module, "double_image");
+
+    // The kernel writes the doubled texels into the imported image, so it
+    // reads them from a copy rather than aliasing one image as both arguments.
+    ze_image_desc_t source_image_desc = {};
+    source_image_desc.stype = ZE_STRUCTURE_TYPE_IMAGE_DESC;
+    source_image_desc.type = ZE_IMAGE_TYPE_2D;
+    source_image_desc.format = dx::to_ze_image_format(format);
+    source_image_desc.width = pingpong_width;
+    source_image_desc.height = pingpong_height;
+    source_image_desc.depth = 1;
+    l0_source_image = lzt::create_ze_image(source_image_desc);
+    imported_image_flags = ZE_IMAGE_FLAG_KERNEL_WRITE;
+    shared_texture_bind_flags = D3D11_BIND_UNORDERED_ACCESS;
+  }
+
+  auto shared_texture = dx11::create_texture_2d(
+      dx11_device, dx11::texture_usage::shared, format, pingpong_width,
+      pingpong_height, shared_texture_bind_flags);
+  auto keyed_mutex = get_keyed_mutex(shared_texture);
+  auto texture_shared_handle = dx11::create_shared_handle(shared_texture);
+  auto imported_image = dx::import_image(
+      texture_shared_handle, ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE,
+      pingpong_width, pingpong_height, format, imported_image_flags);
+
+  auto upload_texture =
+      dx11::create_texture_2d(dx11_device, dx11::texture_usage::upload, format,
+                              pingpong_width, pingpong_height);
+  auto readback_texture =
+      dx11::create_texture_2d(dx11_device, dx11::texture_usage::readback,
+                              format, pingpong_width, pingpong_height);
+
+  auto fence = dx11::create_fence(dx11_device5, true);
+  auto fence_shared_handle = dx11::create_shared_handle(fence);
+  auto external_semaphore_handle =
+      dx::import_fence(l0_device, fence_shared_handle,
+                       ZE_EXTERNAL_SEMAPHORE_EXT_FLAG_D3D11_FENCE);
+
+  auto l0_event_pool = lzt::create_event_pool(lzt::get_default_context(), 1,
+                                              ZE_EVENT_POOL_FLAG_HOST_VISIBLE);
+  ze_event_desc_t l0_event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC};
+  auto l0_after_wait_event = lzt::create_event(l0_event_pool, l0_event_desc);
+
+  auto l0_cmd_bundle =
+      lzt::create_command_bundle<lzt::command_list_mode_t::immediate>(
+          l0_device, ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS, ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+          0u, 0u);
+
+  void *l0_host_memory = lzt::allocate_host_memory(total_size);
+
+  const auto run_frames = [&] {
+    ze_group_count_t l0_group_count = {1, 1, 1};
+    if (work_op == L0WorkOp::kernel_launch) {
+      uint32_t group_size_x = 0, group_size_y = 0, group_size_z = 0;
+      lzt::suggest_group_size(l0_kernel, pingpong_width, pingpong_height, 1,
+                              group_size_x, group_size_y, group_size_z);
+      ASSERT_GT(group_size_x, 0u);
+      ASSERT_GT(group_size_y, 0u);
+      ASSERT_EQ(pingpong_width % group_size_x, 0u)
+          << "width " << pingpong_width
+          << " is not a multiple of the suggested group size " << group_size_x;
+      ASSERT_EQ(pingpong_height % group_size_y, 0u)
+          << "height " << pingpong_height
+          << " is not a multiple of the suggested group size " << group_size_y;
+      lzt::set_group_size(l0_kernel, group_size_x, group_size_y, 1);
+      lzt::set_argument_value(l0_kernel, 0, sizeof(l0_source_image),
+                              &l0_source_image);
+      lzt::set_argument_value(l0_kernel, 1, sizeof(imported_image),
+                              &imported_image);
+      l0_group_count = {pingpong_width / group_size_x,
+                        pingpong_height / group_size_y, 1};
+    }
+
+    std::vector<uint32_t> readback_texels(texel_count);
+    for (uint32_t frame = 0; frame < pingpong_frame_count; ++frame) {
+      const uint64_t dx_produced_value = 3ull * frame + 1;
+      const uint64_t l0_consumed_value = 3ull * frame + 2;
+      const uint64_t dx_readback_value = 3ull * frame + 3;
+
+      D3D11_MAPPED_SUBRESOURCE upload_mapped = {};
+      ASSERT_EQ(dx11_device_context->Map(upload_texture.Get(), 0,
+                                         D3D11_MAP_WRITE, 0, &upload_mapped),
+                S_OK);
+      fill_texture_rows(upload_mapped.pData, upload_mapped.RowPitch, frame);
+      dx11_device_context->Unmap(upload_texture.Get(), 0);
+
+      ASSERT_EQ(keyed_mutex->AcquireSync(0, INFINITE), S_OK);
+      dx11_device_context->CopyResource(shared_texture.Get(),
+                                        upload_texture.Get());
+      ASSERT_EQ(keyed_mutex->ReleaseSync(0), S_OK);
+      dx11_device_context4->Signal(fence.Get(), dx_produced_value);
+      dx11_device_context4->Flush();
+
+      dx11::wait_for_fence(fence, dx_produced_value);
+
+      lzt::event_host_reset(l0_after_wait_event);
+
+      ze_external_semaphore_wait_params_ext_t semaphore_wait_params = {};
+      semaphore_wait_params.stype =
+          ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_WAIT_PARAMS_EXT;
+      semaphore_wait_params.value = dx_produced_value;
+      lzt::append_wait_external_semaphore(
+          l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
+          &semaphore_wait_params, l0_after_wait_event, 0, nullptr);
+
+      if (work_op == L0WorkOp::kernel_launch) {
+        lzt::append_image_copy(l0_cmd_bundle.record_list(), l0_source_image,
+                               imported_image, nullptr, 1,
+                               &l0_after_wait_event);
+        lzt::append_launch_function(l0_cmd_bundle.record_list(), l0_kernel,
+                                    &l0_group_count, nullptr, 0, nullptr);
+      } else {
+        lzt::append_image_copy_to_mem(l0_cmd_bundle.record_list(),
+                                      l0_host_memory, imported_image, nullptr,
+                                      1, &l0_after_wait_event);
+      }
+
+      ze_external_semaphore_signal_params_ext_t semaphore_signal_params = {};
+      semaphore_signal_params.stype =
+          ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_SIGNAL_PARAMS_EXT;
+      semaphore_signal_params.value = l0_consumed_value;
+      lzt::append_signal_external_semaphore(
+          l0_cmd_bundle.record_list(), 1, &external_semaphore_handle,
+          &semaphore_signal_params, nullptr, 0, nullptr);
+
+      lzt::execute_and_sync_command_bundle(
+          l0_cmd_bundle, std::numeric_limits<uint64_t>::max());
+
+      if (work_op == L0WorkOp::memory_copy) {
+        const uint32_t *copied_texels =
+            static_cast<const uint32_t *>(l0_host_memory);
+        for (uint32_t i = 0; i < texel_count; ++i) {
+          ASSERT_EQ(copied_texels[i], frame)
+              << " frame = " << frame << ", index = " << i;
+        }
+      }
+
+      dx11::wait_for_fence(fence, l0_consumed_value);
+
+      ASSERT_EQ(keyed_mutex->AcquireSync(0, INFINITE), S_OK);
+      dx11_device_context->CopyResource(readback_texture.Get(),
+                                        shared_texture.Get());
+      ASSERT_EQ(keyed_mutex->ReleaseSync(0), S_OK);
+      dx11_device_context4->Signal(fence.Get(), dx_readback_value);
+      dx11_device_context4->Flush();
+      dx11::wait_for_fence(fence, dx_readback_value);
+
+      D3D11_MAPPED_SUBRESOURCE readback_mapped = {};
+      ASSERT_EQ(dx11_device_context->Map(readback_texture.Get(), 0,
+                                         D3D11_MAP_READ, 0, &readback_mapped),
+                S_OK);
+      read_texture_rows(readback_mapped.pData, readback_mapped.RowPitch,
+                        readback_texels);
+      dx11_device_context->Unmap(readback_texture.Get(), 0);
+
+      const uint32_t expected_value =
+          work_op == L0WorkOp::kernel_launch ? frame * 2 : frame;
+      for (uint32_t i = 0; i < texel_count; ++i) {
+        ASSERT_EQ(readback_texels[i], expected_value)
+            << " frame = " << frame << ", row = " << i / pingpong_width
+            << ", column = " << i % pingpong_width;
+      }
+    }
+
+    EXPECT_EQ(fence->GetCompletedValue(), 3ull * pingpong_frame_count);
+  };
+  run_frames();
+
+  if (work_op == L0WorkOp::kernel_launch) {
+    lzt::destroy_ze_image(l0_source_image);
+    lzt::destroy_function(l0_kernel);
+    lzt::destroy_module(l0_module);
+  }
+  lzt::free_memory(l0_host_memory);
+  lzt::destroy_command_bundle(l0_cmd_bundle);
+  lzt::destroy_event(l0_after_wait_event);
+  lzt::destroy_event_pool(l0_event_pool);
+  lzt::release_external_semaphore(external_semaphore_handle);
+  CloseHandle(fence_shared_handle);
+  lzt::destroy_ze_image(imported_image);
+  CloseHandle(texture_shared_handle);
+}
+
+void skip_unless_texture_import_supported(ze_device_handle_t l0_device) {
+  if (!lzt::image_support(l0_device)) {
+    throw LztGtestSkipExecutionException("Device doesn't support images.");
+  }
+  auto external_memory_props = lzt::get_external_memory_properties(l0_device);
+  if (!(external_memory_props.imageImportTypes &
+        ZE_EXTERNAL_MEMORY_TYPE_FLAG_D3D11_TEXTURE)) {
+    throw LztGtestSkipExecutionException(
+        "Device doesn't support D3D11 texture import.");
+  }
+}
+
+#endif
+
+LZT_TEST_F(
+    DX11InteroperabilityTests,
+    GivenDX11SharedFenceAndImportedTexture2DWhenPingPongingKernelResultsAcrossFramesThenValuesAreCorrect) {
+#ifndef __linux__
+  skip_unless_texture_import_supported(l0_device);
+
+  test_pingpong_with_semaphore(dx11_device, dx11_device5, dx11_device_context,
+                               dx11_device_context4, l0_device,
+                               L0WorkOp::kernel_launch);
+#endif
+}
+
+LZT_TEST_F(
+    DX11InteroperabilityTests,
+    GivenDX11SharedFenceAndImportedTexture2DWhenPingPongingCopyResultsAcrossFramesThenValuesAreCorrect) {
+#ifndef __linux__
+  skip_unless_texture_import_supported(l0_device);
+
+  test_pingpong_with_semaphore(dx11_device, dx11_device5, dx11_device_context,
+                               dx11_device_context4, l0_device,
+                               L0WorkOp::memory_copy);
+#endif
+}
+
 struct DX11InteroperabilityMultiPlanarImageTests
     : public DX11InteroperabilityTests {
   void SetUp() override {
@@ -231,7 +512,8 @@ struct DX11InteroperabilityMultiPlanarImageTests
                              const void *plane0_bytes, size_t plane0_row_size,
                              UINT plane0_rows, const void *plane1_bytes,
                              size_t plane1_row_size, UINT plane1_rows) {
-    auto staging = dx11::create_texture_2d(dx11_device, format, width, height);
+    auto staging = dx11::create_texture_2d(
+        dx11_device, dx11::texture_usage::upload, format, width, height);
 
     D3D11_MAPPED_SUBRESOURCE mapped = {};
     if (HRESULT hr = dx11_device_context->Map(staging.Get(), 0, D3D11_MAP_WRITE,
@@ -301,8 +583,8 @@ struct DX11InteroperabilityMultiPlanarImageTests
                                 size_t plane1_row_size, UINT plane1_rows,
                                 std::vector<T> &dst_y_plane_values,
                                 std::vector<T> &dst_uv_plane_values) {
-    auto shared_texture =
-        dx11::create_texture_2d(dx11_device, format, width, height, true);
+    auto shared_texture = dx11::create_texture_2d(
+        dx11_device, dx11::texture_usage::shared, format, width, height);
 
     upload_planar_texture(shared_texture, format, width, height, plane0_bytes,
                           plane0_row_size, plane0_rows, plane1_bytes,
@@ -365,8 +647,8 @@ struct DX11InteroperabilityMultiPlanarImageTests
     ze_event_desc_t l0_event_desc = {ZE_STRUCTURE_TYPE_EVENT_DESC};
     auto l0_after_wait_event = lzt::create_event(l0_event_pool, l0_event_desc);
 
-    auto shared_texture =
-        dx11::create_texture_2d(dx11_device, format, width, height, true);
+    auto shared_texture = dx11::create_texture_2d(
+        dx11_device, dx11::texture_usage::shared, format, width, height);
 
     upload_planar_texture(shared_texture, format, width, height, plane0_bytes,
                           plane0_row_size, plane0_rows, plane1_bytes,
@@ -628,7 +910,8 @@ struct DX11InteroperabilityImageTests
   void upload_texture(const ComPtr<ID3D11Texture2D> &shared_texture,
                       DXGI_FORMAT format, UINT width, UINT height,
                       const void *bytes, size_t row_size) {
-    auto staging = dx11::create_texture_2d(dx11_device, format, width, height);
+    auto staging = dx11::create_texture_2d(
+        dx11_device, dx11::texture_usage::upload, format, width, height);
 
     D3D11_MAPPED_SUBRESOURCE mapped = {};
     if (HRESULT hr = dx11_device_context->Map(staging.Get(), 0, D3D11_MAP_WRITE,
@@ -673,8 +956,8 @@ LZT_TEST_P(DX11InteroperabilityImageTests,
 
   auto src_image_values = lzt::generate_vector<uint8_t>(total_size, 0);
 
-  auto shared_texture =
-      dx11::create_texture_2d(dx11_device, format, width, height, true);
+  auto shared_texture = dx11::create_texture_2d(
+      dx11_device, dx11::texture_usage::shared, format, width, height);
   upload_texture(shared_texture, format, width, height, src_image_values.data(),
                  row_size);
 
@@ -723,8 +1006,8 @@ LZT_TEST_P(
 
   auto src_image_values = lzt::generate_vector<uint8_t>(total_size, 0);
 
-  auto shared_texture =
-      dx11::create_texture_2d(dx11_device, format, width, height, true);
+  auto shared_texture = dx11::create_texture_2d(
+      dx11_device, dx11::texture_usage::shared, format, width, height);
 
   auto fence = dx11::create_fence(dx11_device5, true);
   auto fence_shared_handle = dx11::create_shared_handle(fence);

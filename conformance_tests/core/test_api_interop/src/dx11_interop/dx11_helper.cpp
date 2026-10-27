@@ -12,6 +12,21 @@
 
 namespace dx11 {
 
+namespace {
+
+UINT cpu_access_flags(texture_usage usage) {
+  switch (usage) {
+  case texture_usage::upload:
+    return D3D11_CPU_ACCESS_WRITE;
+  case texture_usage::readback:
+    return D3D11_CPU_ACCESS_READ;
+  default:
+    return 0u;
+  }
+}
+
+} // namespace
+
 ComPtr<ID3D11Fence> create_fence(const ComPtr<ID3D11Device5> &device5,
                                  bool exportable) {
   ComPtr<ID3D11Fence> fence;
@@ -56,8 +71,11 @@ void wait_for_fence(const ComPtr<ID3D11Fence> &fence, uint64_t wait_value) {
 }
 
 ComPtr<ID3D11Texture2D> create_texture_2d(const ComPtr<ID3D11Device> &device,
+                                          texture_usage usage,
                                           DXGI_FORMAT format, UINT width,
-                                          UINT height, bool exportable) {
+                                          UINT height, UINT extra_bind_flags) {
+  const bool shared = usage == texture_usage::shared;
+
   D3D11_TEXTURE2D_DESC desc = {};
   desc.Width = width;
   desc.Height = height;
@@ -66,12 +84,13 @@ ComPtr<ID3D11Texture2D> create_texture_2d(const ComPtr<ID3D11Device> &device,
   desc.Format = format;
   desc.SampleDesc.Count = 1;
   desc.SampleDesc.Quality = 0;
-  desc.Usage = exportable ? D3D11_USAGE_DEFAULT : D3D11_USAGE_STAGING;
-  desc.BindFlags = exportable ? D3D11_BIND_SHADER_RESOURCE : 0u;
-  desc.CPUAccessFlags = exportable ? 0u : D3D11_CPU_ACCESS_WRITE;
-  desc.MiscFlags = exportable ? (D3D11_RESOURCE_MISC_SHARED_NTHANDLE |
-                                 D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX)
-                              : 0u;
+  desc.Usage = shared ? D3D11_USAGE_DEFAULT : D3D11_USAGE_STAGING;
+  desc.BindFlags =
+      (shared ? D3D11_BIND_SHADER_RESOURCE : 0u) | extra_bind_flags;
+  desc.CPUAccessFlags = cpu_access_flags(usage);
+  desc.MiscFlags = shared ? (D3D11_RESOURCE_MISC_SHARED_NTHANDLE |
+                             D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX)
+                          : 0u;
 
   ComPtr<ID3D11Texture2D> texture;
   if (HRESULT hr = device->CreateTexture2D(&desc, nullptr, &texture);
