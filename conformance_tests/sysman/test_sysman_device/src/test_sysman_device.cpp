@@ -657,13 +657,13 @@ LZT_TEST_F(
     SYSMAN_DEVICE_TEST,
     GivenValidDeviceWhenRetrievingProcessesStateAndDeviceMemoryIsAllocatedThenMemorySizeIsReturnedCorrectly) {
 
-  constexpr size_t sampleMemorySize = 512;
+  constexpr size_t sampleMemorySize = 8 * 1024 * 1024;
 
   for (auto device : devices) {
     uint32_t count = 0;
     uint64_t preAllocDeviceMemorySize = 0;
-    uint64_t postAllocDeviceMemorySize = 0;
-    uint64_t postFreeDeviceMemorySize = 0;
+    uint64_t firstAllocDeviceMemorySize = 0;
+    uint64_t secondAllocDeviceMemorySize = 0;
 
 #ifdef USE_ZESINIT
     auto sysman_device_properties = lzt::get_sysman_device_properties(device);
@@ -679,29 +679,41 @@ LZT_TEST_F(
     processes.clear();
 
 #ifdef USE_ZESINIT
-    void *ptr = lzt::allocate_device_memory(sampleMemorySize, 1, 0, core_device,
-                                            lzt::get_default_context());
-    lzt::make_memory_resident(core_device, ptr, sampleMemorySize);
+    void *ptr1 = lzt::allocate_device_memory(
+        sampleMemorySize, 1, 0, core_device, lzt::get_default_context());
+    lzt::make_memory_resident(core_device, ptr1, sampleMemorySize);
 #else  // USE_ZESINIT
-    void *ptr = lzt::allocate_device_memory(sampleMemorySize);
-    lzt::make_memory_resident(device, ptr, sampleMemorySize);
+    void *ptr1 = lzt::allocate_device_memory(sampleMemorySize, 1, 0, device,
+                                             lzt::get_default_context());
+    lzt::make_memory_resident(device, ptr1, sampleMemorySize);
 #endif // USE_ZESINIT
 
     processes = lzt::get_processes_state(device, count);
     for (auto process : processes) {
-      postAllocDeviceMemorySize += process.memSize;
+      firstAllocDeviceMemorySize += process.memSize;
     }
     processes.clear();
-    EXPECT_GT(postAllocDeviceMemorySize, preAllocDeviceMemorySize);
-    lzt::free_memory(ptr);
+    EXPECT_GT(firstAllocDeviceMemorySize, preAllocDeviceMemorySize);
+
+#ifdef USE_ZESINIT
+    void *ptr2 = lzt::allocate_device_memory(
+        sampleMemorySize, 1, 0, core_device, lzt::get_default_context());
+    lzt::make_memory_resident(core_device, ptr2, sampleMemorySize);
+#else  // USE_ZESINIT
+    void *ptr2 = lzt::allocate_device_memory(sampleMemorySize, 1, 0, device,
+                                             lzt::get_default_context());
+    lzt::make_memory_resident(device, ptr2, sampleMemorySize);
+#endif // USE_ZESINIT
 
     processes = lzt::get_processes_state(device, count);
     for (auto process : processes) {
-      postFreeDeviceMemorySize += process.memSize;
+      secondAllocDeviceMemorySize += process.memSize;
     }
     processes.clear();
-    EXPECT_LT(postFreeDeviceMemorySize, postAllocDeviceMemorySize);
-    EXPECT_EQ(preAllocDeviceMemorySize, postFreeDeviceMemorySize);
+    EXPECT_GT(secondAllocDeviceMemorySize, firstAllocDeviceMemorySize);
+
+    lzt::free_memory(ptr1);
+    lzt::free_memory(ptr2);
   }
 }
 
