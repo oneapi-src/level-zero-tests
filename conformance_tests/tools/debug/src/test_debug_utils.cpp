@@ -664,7 +664,6 @@ void wait_for_events_interrupt_and_resume(
 
   auto device_properties = lzt::get_device_properties(device);
 
-  zet_debug_event_t debug_event;
   std::vector<zet_debug_event_type_t> expectedEvents = {
       ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD};
 
@@ -706,7 +705,7 @@ void wait_for_events_interrupt_and_resume(
   uint8_t *buffer = new uint8_t[1], *val_buffer = new uint8_t[1];
   buffer[0] = 0;
   val_buffer[0] = 1;
-  auto thread = debug_event.info.thread.thread;
+  auto thread = device_thread;
   LOG_INFO << "[Debugger] Writing to address: " << std::hex << *gpu_buffer_va;
   LOG_INFO << "[Debugger] on device:" << device_properties.uuid;
 
