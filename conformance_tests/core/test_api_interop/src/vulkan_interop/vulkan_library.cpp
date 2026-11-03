@@ -79,10 +79,15 @@ bool initialize_loader() {
       vulkan_lib = std::make_unique<level_zero_tests::SharedLibrary>(
           VULKAN_LIBRARY_NAME);
     }
-    vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(
-        vulkan_lib->get_function_ptr("vkGetInstanceProcAddr"));
   } catch (const std::exception &e) {
     LOG_WARNING << "Failed to load Vulkan library: " << e.what();
+    return false;
+  }
+
+  vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(
+      vulkan_lib->get_function_ptr("vkGetInstanceProcAddr"));
+  if (vkGetInstanceProcAddr == nullptr) {
+    LOG_WARNING << "Failed to load Vulkan function: vkGetInstanceProcAddr";
     return false;
   }
 

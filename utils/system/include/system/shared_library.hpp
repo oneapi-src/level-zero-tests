@@ -21,7 +21,7 @@ public:
 
   virtual ~SharedLibrary();
 
-  virtual void *get_function_ptr(const std::string &name) const;
+  [[nodiscard]] virtual void *get_function_ptr(const std::string &name) const;
 
   SharedLibrary(const SharedLibrary &) = delete;
   SharedLibrary(SharedLibrary &&) = delete;
@@ -33,10 +33,6 @@ private:
 };
 
 class SharedLibraryNotFoundException : public std::runtime_error {
-  using std::runtime_error::runtime_error;
-};
-
-class SharedLibraryFunctionNotFoundException : public std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 

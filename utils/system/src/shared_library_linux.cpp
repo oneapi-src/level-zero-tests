@@ -26,12 +26,7 @@ SharedLibrary::~SharedLibrary() {
 }
 
 void *SharedLibrary::get_function_ptr(const std::string &name) const {
-  void *function = dlsym(handle_, name.c_str());
-  if (function == nullptr) {
-    throw SharedLibraryFunctionNotFoundException(
-        "Failed to load library function: " + name);
-  }
-  return function;
+  return dlsym(handle_, name.c_str());
 }
 
 } // namespace level_zero_tests

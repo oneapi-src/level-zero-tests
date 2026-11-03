@@ -32,13 +32,8 @@ SharedLibrary::~SharedLibrary() {
 }
 
 void *SharedLibrary::get_function_ptr(const std::string &name) const {
-  void *function = reinterpret_cast<void *>(
+  return reinterpret_cast<void *>(
       GetProcAddress(static_cast<HMODULE>(handle_), name.c_str()));
-  if (function == nullptr) {
-    throw SharedLibraryFunctionNotFoundException(
-        "Failed to load library function: " + name);
-  }
-  return function;
 }
 
 } // namespace level_zero_tests
