@@ -1077,34 +1077,45 @@ LZT_TEST_P(
   EXPECT_NE(virtual_memory_0, virtual_memory_2);
   EXPECT_NE(virtual_memory_1, virtual_memory_2);
 
+  auto cleanup = [&](bool unmap_virtual_memory_0) {
+    if (unmap_virtual_memory_0) {
+      lzt::virtual_memory_unmap(context, virtual_memory_0, alloc_size);
+    }
+    lzt::virtual_memory_free(context, virtual_memory_0, alloc_size);
+    lzt::virtual_memory_free(context, virtual_memory_1, alloc_size);
+    lzt::virtual_memory_free(context, virtual_memory_2, alloc_size);
+    lzt::physical_memory_destroy(context, physical_host_memory);
+    lzt::free_memory(context, aux_buffer);
+  };
+
   ze_result_t map_result = ZE_RESULT_SUCCESS;
   lzt::virtual_memory_map(context, virtual_memory_0, alloc_size,
                           physical_host_memory, 0,
                           ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE, map_result);
-  if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-    LOG_WARNING << "Virtual memory access attributes not supported";
-    lzt::virtual_memory_free(context, virtual_memory_0, alloc_size);
-    lzt::virtual_memory_free(context, virtual_memory_1, alloc_size);
-    lzt::virtual_memory_free(context, virtual_memory_2, alloc_size);
-    lzt::physical_memory_destroy(context, physical_host_memory);
-    lzt::free_memory(context, aux_buffer);
-    GTEST_SKIP();
+  if (map_result != ZE_RESULT_SUCCESS) {
+    cleanup(false);
+    if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      GTEST_SKIP() << "zeVirtualMemMap of physical host memory to "
+                      "virtual_memory_0 returned "
+                      "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE";
+    }
+    FAIL() << "Mapping physical host memory to virtual_memory_0 failed: "
+           << lzt::to_string(map_result);
   }
-  EXPECT_ZE_RESULT_SUCCESS(map_result);
   lzt::virtual_memory_map(context, virtual_memory_1, alloc_size,
                           physical_host_memory, 0,
                           ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE, map_result);
-  if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-    LOG_WARNING << "Virtual memory access attributes not supported";
-    lzt::virtual_memory_unmap(context, virtual_memory_0, alloc_size);
-    lzt::virtual_memory_free(context, virtual_memory_0, alloc_size);
-    lzt::virtual_memory_free(context, virtual_memory_1, alloc_size);
-    lzt::virtual_memory_free(context, virtual_memory_2, alloc_size);
-    lzt::physical_memory_destroy(context, physical_host_memory);
-    lzt::free_memory(context, aux_buffer);
-    GTEST_SKIP();
+  if (map_result != ZE_RESULT_SUCCESS) {
+    cleanup(true);
+    if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      GTEST_SKIP() << "zeVirtualMemMap of already mapped physical host "
+                      "memory to virtual_memory_1 returned "
+                      "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE";
+    }
+    FAIL() << "Mapping already mapped physical host memory to "
+              "virtual_memory_1 failed: "
+           << lzt::to_string(map_result);
   }
-  EXPECT_ZE_RESULT_SUCCESS(map_result);
 
   std::fill_n(static_cast<uint8_t *>(virtual_memory_0), alloc_size, 0);
   std::fill_n(static_cast<uint8_t *>(virtual_memory_1), alloc_size, 0);
@@ -1130,13 +1141,13 @@ LZT_TEST_P(
   lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
   lzt::append_memory_copy(bundle.record_list(), virtual_memory_0, aux_buffer,
                           alloc_size, nullptr, 0, nullptr);
-  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(bundle.record_list()));
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::destroy_command_bundle(bundle);
 
   for (size_t i = 0; i < alloc_size; i++) {
     if (static_cast<int8_t *>(virtual_memory_1)[i] != seven) {
-      FAIL() << "Verification failed";
+      ADD_FAILURE() << "Verification failed reading virtual_memory_1 at index "
+                    << i;
       break;
     }
   }
@@ -1154,11 +1165,17 @@ LZT_TEST_P(
   if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
     LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY not supported, "
                    "skipping persistence verification";
+  } else if (map_result != ZE_RESULT_SUCCESS) {
+    ADD_FAILURE() << "Mapping physical host memory to virtual_memory_2 "
+                     "failed: "
+                  << lzt::to_string(map_result);
   } else {
-    EXPECT_ZE_RESULT_SUCCESS(map_result);
     for (size_t i = 0; i < alloc_size; i++) {
       if (static_cast<int8_t *>(virtual_memory_2)[i] != seven) {
-        FAIL() << "Verification failed";
+        ADD_FAILURE()
+            << "Verification failed reading persistent physical memory at "
+               "index "
+            << i;
         break;
       }
     }
@@ -1229,13 +1246,43 @@ LZT_TEST_P(
   EXPECT_NE(virtual_memory_0, virtual_memory_2);
   EXPECT_NE(virtual_memory_1, virtual_memory_2);
 
+  auto cleanup = [&](bool unmap_virtual_memory_0) {
+    if (unmap_virtual_memory_0) {
+      lzt::virtual_memory_unmap(context, virtual_memory_0, alloc_size);
+    }
+    lzt::virtual_memory_free(context, virtual_memory_0, alloc_size);
+    lzt::virtual_memory_free(context, virtual_memory_1, alloc_size);
+    lzt::virtual_memory_free(context, virtual_memory_2, alloc_size);
+    lzt::physical_memory_destroy(context, physical_device_memory);
+    lzt::free_memory(verify_buffer_0);
+    lzt::free_memory(verify_buffer_1);
+    lzt::free_memory(aux_buffer);
+  };
+
   // Map the same physical device memory into two distinct virtual ranges.
+  ze_result_t map_result = ZE_RESULT_SUCCESS;
   lzt::virtual_memory_map(context, virtual_memory_0, alloc_size,
                           physical_device_memory, 0,
-                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE, map_result);
+  if (map_result != ZE_RESULT_SUCCESS) {
+    cleanup(false);
+    FAIL() << "Mapping physical device memory to virtual_memory_0 failed: "
+           << lzt::to_string(map_result);
+  }
   lzt::virtual_memory_map(context, virtual_memory_1, alloc_size,
                           physical_device_memory, 0,
-                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE);
+                          ZE_MEMORY_ACCESS_ATTRIBUTE_READWRITE, map_result);
+  if (map_result != ZE_RESULT_SUCCESS) {
+    cleanup(true);
+    if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+      GTEST_SKIP() << "zeVirtualMemMap of already mapped physical device "
+                      "memory to virtual_memory_1 returned "
+                      "ZE_RESULT_ERROR_UNSUPPORTED_FEATURE";
+    }
+    FAIL() << "Mapping already mapped physical device memory to "
+              "virtual_memory_1 failed: "
+           << lzt::to_string(map_result);
+  }
 
   const int8_t pattern_0 = 7;
   const int8_t pattern_1 = 0x5a;
@@ -1262,19 +1309,20 @@ LZT_TEST_P(
   lzt::append_barrier(bundle.record_list(), nullptr, 0, nullptr);
   lzt::append_memory_copy(bundle.record_list(), verify_buffer_1,
                           virtual_memory_0, alloc_size, nullptr);
-  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(bundle.record_list()));
   lzt::execute_and_sync_command_bundle(bundle, UINT64_MAX);
   lzt::destroy_command_bundle(bundle);
 
   for (size_t i = 0; i < alloc_size; i++) {
     if (static_cast<int8_t *>(verify_buffer_0)[i] != pattern_0) {
-      FAIL() << "Verification failed reading virtual_memory_1 at index " << i;
+      ADD_FAILURE() << "Verification failed reading virtual_memory_1 at index "
+                    << i;
       break;
     }
   }
   for (size_t i = 0; i < alloc_size; i++) {
     if (static_cast<int8_t *>(verify_buffer_1)[i] != pattern_1) {
-      FAIL() << "Verification failed reading virtual_memory_0 at index " << i;
+      ADD_FAILURE() << "Verification failed reading virtual_memory_0 at index "
+                    << i;
       break;
     }
   }
@@ -1289,22 +1337,31 @@ LZT_TEST_P(
   // unmapping the ranges it was written through.
   lzt::virtual_memory_map(context, virtual_memory_2, alloc_size,
                           physical_device_memory, 0,
-                          ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY);
-  auto verify_bundle = lzt::create_command_bundle(device, mode);
-  lzt::append_memory_copy(verify_bundle.record_list(), verify_buffer_0,
-                          virtual_memory_2, alloc_size, nullptr);
-  ASSERT_ZE_RESULT_SUCCESS(zeCommandListClose(verify_bundle.record_list()));
-  lzt::execute_and_sync_command_bundle(verify_bundle, UINT64_MAX);
-  lzt::destroy_command_bundle(verify_bundle);
-  for (size_t i = 0; i < alloc_size; i++) {
-    if (static_cast<int8_t *>(verify_buffer_0)[i] != pattern_1) {
-      FAIL() << "Verification failed reading persistent physical memory at "
-                "index "
-             << i;
-      break;
+                          ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY, map_result);
+  if (map_result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+    LOG_WARNING << "ZE_MEMORY_ACCESS_ATTRIBUTE_READONLY not supported, "
+                   "skipping persistence verification";
+  } else if (map_result != ZE_RESULT_SUCCESS) {
+    ADD_FAILURE() << "Mapping physical device memory to virtual_memory_2 "
+                     "failed: "
+                  << lzt::to_string(map_result);
+  } else {
+    auto verify_bundle = lzt::create_command_bundle(device, mode);
+    lzt::append_memory_copy(verify_bundle.record_list(), verify_buffer_0,
+                            virtual_memory_2, alloc_size, nullptr);
+    lzt::execute_and_sync_command_bundle(verify_bundle, UINT64_MAX);
+    lzt::destroy_command_bundle(verify_bundle);
+    for (size_t i = 0; i < alloc_size; i++) {
+      if (static_cast<int8_t *>(verify_buffer_0)[i] != pattern_1) {
+        ADD_FAILURE()
+            << "Verification failed reading persistent physical memory at "
+               "index "
+            << i;
+        break;
+      }
     }
+    lzt::virtual_memory_unmap(context, virtual_memory_2, alloc_size);
   }
-  lzt::virtual_memory_unmap(context, virtual_memory_2, alloc_size);
   lzt::virtual_memory_free(context, virtual_memory_2, alloc_size);
 
   lzt::physical_memory_destroy(context, physical_device_memory);
