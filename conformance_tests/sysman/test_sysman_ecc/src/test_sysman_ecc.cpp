@@ -6,6 +6,8 @@
  *
  */
 
+#include <algorithm>
+
 #include "gtest/gtest.h"
 
 #include "logging/logging.hpp"
@@ -18,11 +20,37 @@ namespace lzt = level_zero_tests;
 
 namespace {
 
+template <typename Base> class EccTest : public Base {
+protected:
+  void SetUp() override {
+    Base::SetUp();
+    // The ECC API may be unsupported on a device (e.g. when the driver has no
+    // firmware interface to query ECC through), so test only the devices
+    // that support it.
+    auto is_ecc_unsupported = [](zes_device_handle_t device) {
+      ze_bool_t available = false;
+      if (zesDeviceEccAvailable(device, &available) !=
+          ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
+        return false;
+      }
+      LOG_INFO << "ECC is not supported on device, skipping it";
+      return true;
+    };
+    auto &devices = this->devices;
+    devices.erase(
+        std::remove_if(devices.begin(), devices.end(), is_ecc_unsupported),
+        devices.end());
+    if (devices.empty()) {
+      GTEST_SKIP() << "ECC is not supported on any device";
+    }
+  }
+};
+
 #ifdef USE_ZESINIT
-class EccModuleZesTest : public lzt::ZesSysmanCtsClass {};
+class EccModuleZesTest : public EccTest<lzt::ZesSysmanCtsClass> {};
 #define ECC_TEST EccModuleZesTest
 #else // USE_ZESINIT
-class EccModuleTest : public lzt::SysmanCtsClass {};
+class EccModuleTest : public EccTest<lzt::SysmanCtsClass> {};
 #define ECC_TEST EccModuleTest
 #endif // USE_ZESINIT
 

@@ -16,13 +16,13 @@ namespace lzt = level_zero_tests;
 namespace level_zero_tests {
 
 ze_bool_t get_ecc_available(zes_device_handle_t device) {
-  ze_bool_t pAvailable;
+  ze_bool_t pAvailable = false;
   EXPECT_ZE_RESULT_SUCCESS(zesDeviceEccAvailable(device, &pAvailable));
   return pAvailable;
 }
 
 ze_bool_t get_ecc_configurable(zes_device_handle_t device) {
-  ze_bool_t pConfigurable;
+  ze_bool_t pConfigurable = false;
   EXPECT_ZE_RESULT_SUCCESS(zesDeviceEccConfigurable(device, &pConfigurable));
   return pConfigurable;
 }
