@@ -1689,7 +1689,7 @@ LZT_TEST_F(
     zetMetricStreamerTest,
     GivenValidTypeIpMetricGroupWhenTimerBasedStreamerIsCreatedAndBufferOverflowIsTriggeredThenProperErrorIsReturned) {
 
-  samplingPeriod = 100; // use fastest possible rate;
+  samplingPeriod = 1; // use fastest possible rate;
 
   for (auto device : devices) {
     ze_device_properties_t deviceProperties = {
@@ -1755,19 +1755,15 @@ LZT_TEST_F(
       std::vector<uint8_t> rawData;
       ze_result_t result;
       constexpr uint32_t maxAttempts = 6;
-      time_t timeForNextIterationSec = 10;
 
       for (uint32_t i = 0; i < maxAttempts; i++) {
-        // Busy wait before trying to read to increase chanceof  buffer overflow
-        LOG_INFO << "Busy waiting for " << timeForNextIterationSec
-                 << " in iteration " << i;
-        time_t begin = std::time(0);
-        while (1) {
-          time_t end = std::time(0);
-          if (end >= (begin + timeForNextIterationSec)) {
-            break;
-          }
-        }
+        // Wait before trying to read to increase chance of buffer overflow
+        time_t timeForNextIterationSec = 10 * (i + 1);
+        LOG_INFO << "Sleeping for " << timeForNextIterationSec
+                 << " seconds in iteration " << i;
+        std::this_thread::sleep_for(
+            std::chrono::seconds(timeForNextIterationSec));
+
         rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle,
                                                           notifyEveryNReports);
         EXPECT_GT(rawDataSize, 0);
@@ -1791,7 +1787,6 @@ LZT_TEST_F(
           break;
         }
         ASSERT_ZE_RESULT_SUCCESS(result);
-        timeForNextIterationSec += timeForNextIterationSec;
       }
 
       workloadThreadFlag = false;
