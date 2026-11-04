@@ -1753,7 +1753,7 @@ LZT_TEST_F(
 
       size_t rawDataSize = 0;
       std::vector<uint8_t> rawData;
-      ze_result_t result;
+      ze_result_t result = ZE_RESULT_SUCCESS;
       constexpr uint32_t maxAttempts = 6;
 
       for (uint32_t i = 0; i < maxAttempts; i++) {
@@ -1768,26 +1768,51 @@ LZT_TEST_F(
                                                           notifyEveryNReports);
         EXPECT_GT(rawDataSize, 0);
         rawData.resize(rawDataSize);
+        // Overflow may be detected during read
         result =
             zetMetricStreamerReadData(metricStreamerHandle, notifyEveryNReports,
                                       &rawDataSize, rawData.data());
-        LOG_DEBUG << "read data is " << rawDataSize;
+        LOG_DEBUG << "read data size: " << rawDataSize;
 
+        std::vector<zet_typed_value_t> metricValues;
+        std::vector<uint32_t> metricValueSets;
         if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
+          LOG_INFO << "Dropped data detected in zetMetricStreamerReadData() in "
+                      "iteration "
+                   << i;
           break;
         }
 
-        ASSERT_ZE_RESULT_SUCCESS(result);
-        std::vector<zet_typed_value_t> metricValues;
-        std::vector<uint32_t> metricValueSets;
+        if (result != ZE_RESULT_SUCCESS) {
+          ADD_FAILURE() << "zetMetricStreamerReadData failed with " << result;
+          break;
+        }
+
+        // read data may return a smaller size than requested, even after
+        // querying for available size
+        rawData.resize(rawDataSize); //
+
+        // Overflow may be detected during calculation as well
         result = level_zero_tests::metric_calculate_metric_values_from_raw_data(
             groupInfo.metricGroupHandle, rawData, metricValues,
             metricValueSets);
+
         if (result == ZE_RESULT_WARNING_DROPPED_DATA) {
+          LOG_INFO << "Dropped data detected during calculation in iteration "
+                   << i;
           break;
         }
-        ASSERT_ZE_RESULT_SUCCESS(result);
+
+        if (result != ZE_RESULT_SUCCESS) {
+          ADD_FAILURE() << "Metric calculation failed with " << result;
+          break;
+        }
       }
+
+      // The loop only exits early on overflow; make sure it actually happened
+      EXPECT_EQ(ZE_RESULT_WARNING_DROPPED_DATA, result)
+          << "Buffer overflow was not detected after " << maxAttempts
+          << " attempts";
 
       workloadThreadFlag = false;
       thread.join();

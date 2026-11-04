@@ -1153,16 +1153,21 @@ ze_result_t metric_calculate_metric_values_from_raw_data(
   uint32_t setCount = 0;
   uint32_t totalMetricValueCount = 0;
 
-  EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupCalculateMultipleMetricValuesExp(
+  ze_result_t result = zetMetricGroupCalculateMultipleMetricValuesExp(
       hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
       rawData.size(), rawData.data(), &setCount, &totalMetricValueCount,
-      nullptr, nullptr));
+      nullptr, nullptr);
+  if (result != ZE_RESULT_SUCCESS && result != ZE_RESULT_WARNING_DROPPED_DATA) {
+    ADD_FAILURE() << "zetMetricGroupCalculateMultipleMetricValuesExp failed: "
+                  << level_zero_tests::to_string(result);
+    return result;
+  }
 
   // Get metric counts and metric values
   metricValueSets.resize(setCount);
   totalMetricValues.resize(totalMetricValueCount);
 
-  ze_result_t result = zetMetricGroupCalculateMultipleMetricValuesExp(
+  result = zetMetricGroupCalculateMultipleMetricValuesExp(
       hMetricGroup, ZET_METRIC_GROUP_CALCULATION_TYPE_METRIC_VALUES,
       rawData.size(), rawData.data(), &setCount, &totalMetricValueCount,
       metricValueSets.data(), totalMetricValues.data());
