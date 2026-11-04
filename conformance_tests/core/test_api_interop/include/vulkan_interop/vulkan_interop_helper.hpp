@@ -7,7 +7,7 @@
  */
 
 #pragma once
-#include "vulkan_interop/vulkan_library.hpp"
+#include "vulkan_library/vulkan_library.hpp"
 
 #include "test_harness/test_harness.hpp"
 

@@ -6,11 +6,11 @@
  *
  */
 
-#include "vulkan_interop/vulkan_library.hpp"
+#include "vulkan_library/vulkan_library.hpp"
 
 #include "logging/logging.hpp"
 
-namespace vlk {
+namespace level_zero_tests::vlk {
 
 const char *get_platform_external_memory_extension_name() {
   return VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME;
@@ -20,6 +20,11 @@ const char *get_platform_external_semaphore_extension_name() {
 }
 
 bool load_platform_functions(VkInstance instance) {
+  if (vkGetInstanceProcAddr == nullptr) {
+    LOG_WARNING << "The Vulkan loader is not initialized";
+    return false;
+  }
+
   vkGetSemaphoreWin32HandleKHR =
       reinterpret_cast<PFN_vkGetSemaphoreWin32HandleKHR>(
           vkGetInstanceProcAddr(instance, "vkGetSemaphoreWin32HandleKHR"));
@@ -48,4 +53,4 @@ PlatformHandle get_semaphore_platform_handle(VkDevice device,
   return handle;
 }
 
-} // namespace vlk
+} // namespace level_zero_tests::vlk

@@ -15,7 +15,7 @@ import_semaphore(ze_device_handle_t l0_device, VkDevice vk_device,
   external_semaphore_fd_desc.stype =
       ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_FD_EXT_DESC;
   external_semaphore_fd_desc.fd =
-      vlk::get_semaphore_platform_handle(vk_device, vk_semaphore);
+      lzt::vlk::get_semaphore_platform_handle(vk_device, vk_semaphore);
 
   ze_external_semaphore_ext_desc_t external_semaphore_desc = {};
   external_semaphore_desc.stype = ZE_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_EXT_DESC;

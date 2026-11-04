@@ -1,15 +1,6 @@
 # Copyright (C) 2026 Intel Corporation
 # SPDX-License-Identifier: MIT
 
-include(FetchContent)
-
-FetchContent_Declare(
-    VulkanHeaders
-    GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-    GIT_TAG v1.4.351
-)
-FetchContent_MakeAvailable(VulkanHeaders)
-
 add_lzt_test(
   NAME test_api_interop
   GROUP "/conformance_tests/core"
@@ -22,19 +13,15 @@ add_lzt_test(
     $<$<BOOL:${WIN32}>:src/dx11_interop/dx11_helper.cpp>
     $<$<BOOL:${WIN32}>:src/dx12_interop/dx12_helper.cpp>
     $<$<BOOL:${WIN32}>:src/vulkan_interop/vulkan_interop_helper_windows.cpp>
-    $<$<BOOL:${WIN32}>:src/vulkan_interop/vulkan_library_windows.cpp>
     $<$<BOOL:${WIN32}>:src/dx_common.cpp>
 
     $<$<BOOL:${UNIX}>:src/vulkan_interop/vulkan_interop_helper_linux.cpp>
-    $<$<BOOL:${UNIX}>:src/vulkan_interop/vulkan_library_linux.cpp>
 
     include/vulkan_interop/vulkan_interop_fixture.hpp
     include/vulkan_interop/vulkan_interop_helper.hpp
-    include/vulkan_interop/vulkan_library.hpp
     src/dx11_interop/test_dx11_interop.cpp
     src/dx12_interop/test_dx12_interop.cpp
     src/vulkan_interop/test_vulkan_interop.cpp
-    src/vulkan_interop/vulkan_library.cpp
     src/main.cpp
   LINK_LIBRARIES
     $<$<BOOL:${WIN32}>:dxgi.lib>
@@ -43,14 +30,9 @@ add_lzt_test(
     
     level_zero_tests::logging
     level_zero_tests::random
-    level_zero_tests::system
     level_zero_tests::utils
-    Vulkan::Headers
+    level_zero_tests::vulkan_library
   KERNELS
     interop_double
     interop_double_image
-  DEFINES
-    $<$<BOOL:${WIN32}>:VK_USE_PLATFORM_WIN32_KHR>
-    $<$<BOOL:${WIN32}>:WIN32_LEAN_AND_MEAN>
-    $<$<BOOL:${WIN32}>:NOMINMAX>
 )

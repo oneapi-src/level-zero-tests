@@ -6,7 +6,7 @@
  *
  */
 
-#include "vulkan_interop/vulkan_library.hpp"
+#include "vulkan_library/vulkan_library.hpp"
 
 #include "logging/logging.hpp"
 #include "system/shared_library.hpp"
@@ -56,7 +56,16 @@ std::string api_version_to_string(uint32_t version) {
          std::to_string(VK_API_VERSION_PATCH(version));
 }
 
-bool load_instance_level_functions(VkInstance instance) {
+} // namespace
+
+namespace level_zero_tests::vlk {
+
+bool load_instance_functions(VkInstance instance) {
+  if (vkGetInstanceProcAddr == nullptr) {
+    LOG_WARNING << "The Vulkan loader is not initialized";
+    return false;
+  }
+
 #define LOAD_VULKAN_FUNCTION(NAME)                                             \
   NAME = reinterpret_cast<PFN_##NAME>(vkGetInstanceProcAddr(instance, #NAME)); \
   if (NAME == nullptr) {                                                       \
@@ -68,10 +77,6 @@ bool load_instance_level_functions(VkInstance instance) {
 
   return true;
 }
-
-} // namespace
-
-namespace vlk {
 
 bool initialize_loader() {
   try {
@@ -212,7 +217,7 @@ VkInstance create_instance() {
     }
   };
 
-  if (!load_instance_level_functions(instance)) {
+  if (!load_instance_functions(instance)) {
     destroy_partial_instance(instance);
     throw std::runtime_error(
         "Failed to load required Vulkan instance-level functions.");
@@ -392,4 +397,4 @@ void destroy_semaphore(VkDevice device, VkSemaphore semaphore) {
   vkDestroySemaphore(device, semaphore, nullptr);
 }
 
-} // namespace vlk
+} // namespace level_zero_tests::vlk
