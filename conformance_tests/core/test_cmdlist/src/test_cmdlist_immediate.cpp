@@ -1881,4 +1881,114 @@ INSTANTIATE_TEST_SUITE_P(
                           event_type_t::CounterBased),
         ::testing::Values(memory_type_t::Host, memory_type_t::Device,
                           memory_type_t::Shared, memory_type_t::SharedSystem)));
+
+class zeImmediateCommandListGetDescriptorTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<
+          std::tuple<ze_command_queue_flags_t, ze_command_queue_mode_t,
+                     ze_command_queue_priority_t>> {
+protected:
+  void SetUp() override {
+    if (lzt::get_api_version(lzt::get_default_driver()) < ZE_API_VERSION_1_17) {
+      GTEST_SKIP() << "zeCommandListImmediateGet* requires API version 1.17";
+    }
+    ASSERT_NE(nullptr, get_flags_)
+        << "Driver supports API version 1.17 but the loader does not export "
+           "zeCommandListImmediateGetFlags";
+    ASSERT_NE(nullptr, get_mode_)
+        << "Driver supports API version 1.17 but the loader does not export "
+           "zeCommandListImmediateGetMode";
+    ASSERT_NE(nullptr, get_priority_)
+        << "Driver supports API version 1.17 but the loader does not export "
+           "zeCommandListImmediateGetPriority";
+    ze_command_queue_desc_t descriptor = {};
+    descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+    std::tie(descriptor.flags, descriptor.mode, descriptor.priority) =
+        GetParam();
+    const ze_result_t result = zeCommandListCreateImmediate(
+        lzt::get_default_context(), lzt::zeDevice::get_instance()->get_device(),
+        &descriptor, &command_list);
+    if (lzt::is_unsupported_result(result) && descriptor.flags != 0) {
+      GTEST_SKIP() << "Immediate command list creation with flags 0x"
+                   << std::hex << descriptor.flags << std::dec << ", mode "
+                   << descriptor.mode << ", priority " << descriptor.priority
+                   << " refused: " << lzt::to_string(result);
+    }
+    ASSERT_ZE_RESULT_SUCCESS(result);
+  }
+
+  void TearDown() override {
+    if (command_list != nullptr) {
+      lzt::destroy_command_list(command_list);
+    }
+  }
+
+  const decltype(&zeCommandListImmediateGetFlags) get_flags_ =
+      LZT_LOADER_FUNCTION(zeCommandListImmediateGetFlags);
+  const decltype(&zeCommandListImmediateGetMode) get_mode_ =
+      LZT_LOADER_FUNCTION(zeCommandListImmediateGetMode);
+  const decltype(&zeCommandListImmediateGetPriority) get_priority_ =
+      LZT_LOADER_FUNCTION(zeCommandListImmediateGetPriority);
+  ze_command_list_handle_t command_list = nullptr;
+};
+
+class zeImmediateCommandListGetFlagsTests
+    : public zeImmediateCommandListGetDescriptorTests {};
+
+LZT_TEST_P(
+    zeImmediateCommandListGetFlagsTests,
+    GivenImmediateCommandListCreatedWithFlagsWhenGettingFlagsThenCreationFlagsAreReturned) {
+  ze_command_queue_flags_t flags = ZE_COMMAND_QUEUE_FLAG_FORCE_UINT32;
+  EXPECT_ZE_RESULT_SUCCESS(get_flags_(command_list, &flags));
+  EXPECT_EQ(std::get<0>(GetParam()), flags);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ImmediateCommandListFlagCombinations, zeImmediateCommandListGetFlagsTests,
+    ::testing::Combine(
+        ::testing::ValuesIn(lzt::flag_combinations<ze_command_queue_flags_t>(
+            {ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,
+             ZE_COMMAND_QUEUE_FLAG_IN_ORDER,
+             ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT})),
+        ::testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT),
+        ::testing::Values(ZE_COMMAND_QUEUE_PRIORITY_NORMAL)));
+
+class zeImmediateCommandListGetModeTests
+    : public zeImmediateCommandListGetDescriptorTests {};
+
+LZT_TEST_P(
+    zeImmediateCommandListGetModeTests,
+    GivenImmediateCommandListCreatedWithModeWhenGettingModeThenCreationModeIsReturned) {
+  ze_command_queue_mode_t mode = ZE_COMMAND_QUEUE_MODE_FORCE_UINT32;
+  EXPECT_ZE_RESULT_SUCCESS(get_mode_(command_list, &mode));
+  EXPECT_EQ(std::get<1>(GetParam()), mode);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ImmediateCommandListModes, zeImmediateCommandListGetModeTests,
+    ::testing::Combine(::testing::Values(0),
+                       ::testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT,
+                                         ZE_COMMAND_QUEUE_MODE_SYNCHRONOUS,
+                                         ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS),
+                       ::testing::Values(ZE_COMMAND_QUEUE_PRIORITY_NORMAL)));
+
+class zeImmediateCommandListGetPriorityTests
+    : public zeImmediateCommandListGetDescriptorTests {};
+
+LZT_TEST_P(
+    zeImmediateCommandListGetPriorityTests,
+    GivenImmediateCommandListCreatedWithPriorityWhenGettingPriorityThenCreationPriorityIsReturned) {
+  ze_command_queue_priority_t priority = ZE_COMMAND_QUEUE_PRIORITY_FORCE_UINT32;
+  EXPECT_ZE_RESULT_SUCCESS(get_priority_(command_list, &priority));
+  EXPECT_EQ(std::get<2>(GetParam()), priority);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ImmediateCommandListPriorities, zeImmediateCommandListGetPriorityTests,
+    ::testing::Combine(
+        ::testing::Values(0), ::testing::Values(ZE_COMMAND_QUEUE_MODE_DEFAULT),
+        ::testing::Values(ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
+                          ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW,
+                          ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH)));
+
 } // namespace

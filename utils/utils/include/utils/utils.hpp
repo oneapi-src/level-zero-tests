@@ -26,6 +26,7 @@
 #include "utils/utils_system.hpp"
 #include "utils/utils_gtest_helper.hpp"
 #include "utils/utils_command_bundle.hpp"
+#include "utils/utils_loader.hpp"
 
 namespace level_zero_tests {
 
@@ -100,6 +101,25 @@ inline uint32_t nextPowerOfTwo(uint64_t value) {
 
 template <typename T> size_t size_in_bytes(const std::vector<T> &v) {
   return sizeof(T) * v.size();
+}
+
+// Every bitwise OR of a subset of `bits`, the empty subset (0) included.
+template <typename Flags>
+std::vector<Flags> flag_combinations(const std::vector<Flags> &bits) {
+  std::vector<Flags> combinations = {0};
+  for (const Flags bit : bits) {
+    const size_t count = combinations.size();
+    for (size_t i = 0; i < count; ++i) {
+      combinations.push_back(combinations[i] | bit);
+    }
+  }
+  return combinations;
+}
+
+inline bool is_unsupported_result(const ze_result_t result) {
+  return result == ZE_RESULT_ERROR_UNSUPPORTED_FEATURE ||
+         result == ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION ||
+         result == ZE_RESULT_ERROR_UNSUPPORTED_VERSION;
 }
 
 void create_and_execute_function(ze_device_handle_t device,

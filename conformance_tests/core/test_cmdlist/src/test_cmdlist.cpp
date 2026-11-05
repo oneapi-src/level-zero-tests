@@ -18,6 +18,7 @@ namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
 
+#include <algorithm>
 #include <chrono>
 #include <bitset>
 
@@ -114,6 +115,85 @@ INSTANTIATE_TEST_SUITE_P(
         ::testing::Values(ZE_COMMAND_QUEUE_PRIORITY_NORMAL,
                           ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_LOW,
                           ZE_COMMAND_QUEUE_PRIORITY_PRIORITY_HIGH)));
+
+std::vector<ze_command_list_flags_t> command_list_flag_combinations() {
+  std::vector<ze_command_list_flags_t> bits = {
+      ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,
+      ZE_COMMAND_LIST_FLAG_MAXIMIZE_THROUGHPUT,
+      ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY,
+      ZE_COMMAND_LIST_FLAG_IN_ORDER,
+      ZE_COMMAND_LIST_FLAG_EXP_CLONEABLE,
+      ZE_COMMAND_LIST_FLAG_COPY_OFFLOAD_HINT};
+#ifdef ZE_COMMAND_VISIT_EXT_NAME
+  bits.push_back(ZE_COMMAND_LIST_FLAG_ENABLE_COMMAND_VISIT);
+#endif
+  auto combinations = lzt::flag_combinations(bits);
+  static constexpr ze_command_list_flags_t in_order_and_relaxed_ordering =
+      ZE_COMMAND_LIST_FLAG_IN_ORDER | ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING;
+  combinations.erase(std::remove_if(combinations.begin(), combinations.end(),
+                                    [](const ze_command_list_flags_t flags) {
+                                      return (flags &
+                                              in_order_and_relaxed_ordering) ==
+                                             in_order_and_relaxed_ordering;
+                                    }),
+                     combinations.end());
+  return combinations;
+}
+
+class zeCommandListGetFlagsTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<ze_command_list_flags_t> {
+protected:
+  void SetUp() override {
+    if (lzt::get_api_version(lzt::get_default_driver()) < ZE_API_VERSION_1_17) {
+      GTEST_SKIP() << "zeCommandListGetFlags requires API version 1.17";
+    }
+    ASSERT_NE(nullptr, get_flags_)
+        << "Driver supports API version 1.17 but the loader does not export "
+           "zeCommandListGetFlags";
+#ifdef ZE_COMMAND_VISIT_EXT_NAME
+    if ((GetParam() & ZE_COMMAND_LIST_FLAG_ENABLE_COMMAND_VISIT) &&
+        !lzt::check_if_extension_supported(lzt::get_default_driver(),
+                                           ZE_COMMAND_VISIT_EXT_NAME)) {
+      GTEST_SKIP() << "Extension " << ZE_COMMAND_VISIT_EXT_NAME
+                   << " not supported";
+    }
+#endif
+    ze_command_list_desc_t descriptor = {};
+    descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+    descriptor.flags = GetParam();
+    const ze_result_t result = zeCommandListCreate(
+        lzt::get_default_context(), lzt::zeDevice::get_instance()->get_device(),
+        &descriptor, &command_list);
+    if (lzt::is_unsupported_result(result) && descriptor.flags != 0) {
+      GTEST_SKIP() << "Command list creation with flags 0x" << std::hex
+                   << GetParam() << " refused: " << lzt::to_string(result);
+    }
+    ASSERT_ZE_RESULT_SUCCESS(result);
+  }
+
+  void TearDown() override {
+    if (command_list != nullptr) {
+      lzt::destroy_command_list(command_list);
+    }
+  }
+
+  const decltype(&zeCommandListGetFlags) get_flags_ =
+      LZT_LOADER_FUNCTION(zeCommandListGetFlags);
+  ze_command_list_handle_t command_list = nullptr;
+};
+
+LZT_TEST_P(
+    zeCommandListGetFlagsTests,
+    GivenCommandListCreatedWithFlagsWhenGettingFlagsThenCreationFlagsAreReturned) {
+  ze_command_list_flags_t flags = ZE_COMMAND_LIST_FLAG_FORCE_UINT32;
+  EXPECT_ZE_RESULT_SUCCESS(get_flags_(command_list, &flags));
+  EXPECT_EQ(GetParam(), flags);
+}
+
+INSTANTIATE_TEST_SUITE_P(CommandListFlagCombinations,
+                         zeCommandListGetFlagsTests,
+                         ::testing::ValuesIn(command_list_flag_combinations()));
 
 class zeCommandListCloseTests : public ::testing::Test {
 public:

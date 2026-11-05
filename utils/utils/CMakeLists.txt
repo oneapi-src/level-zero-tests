@@ -18,6 +18,7 @@ if(NOT BUILD_ZE_PERF_TESTS_ONLY)
     "include/utils/utils.hpp"
     "include/utils/utils_command_bundle.hpp"
     "include/utils/utils_image.hpp"
+    "include/utils/utils_loader.hpp"
     "include/utils/utils_process.hpp"
     "include/utils/utils_system.hpp"
     "src/utils_process.cpp"
@@ -30,6 +31,7 @@ if(NOT BUILD_ZE_PERF_TESTS_ONLY)
     PUBLIC
     level_zero_tests::utils_string
     level_zero_tests::test_harness
+    level_zero_tests::system
   )
   add_core_library_test(utils
     SOURCE
