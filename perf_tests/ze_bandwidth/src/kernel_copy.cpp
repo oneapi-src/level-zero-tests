@@ -61,6 +61,9 @@ void ZeBandwidth::kernel_init(void) {
   std::stringstream build_flags;
   build_flags << "-D PIPE_DEPTH=" << pipe_depth << "u"
               << " -D STRIPE_ELEMENTS=" << stripe_elements << "u";
+  if (largest_kernel_buffer() >= (size_t{1} << 32)) {
+    build_flags << " -ze-opt-greater-than-4GB-buffer-required";
+  }
   const std::string build_flags_string = build_flags.str();
 
   module_handle.resize(benchmark->_devices.size());
@@ -387,7 +390,7 @@ void ZeBandwidth::kernel_fill_split_patterns(uint32_t device_id,
 void ZeBandwidth::kernel_check_pattern(uint32_t device_id, void *buffer,
                                        size_t bytes) {
   void *staging = nullptr;
-  uint32_t number_of_errors = 0;
+  size_t number_of_errors = 0;
 
   benchmark->memoryAllocHost(device_id, bytes, &staging);
 
@@ -419,7 +422,7 @@ void ZeBandwidth::kernel_check_pattern(uint32_t device_id, void *buffer,
 void ZeBandwidth::kernel_verify_split(size_t bytes_moved, void *host_buffer,
                                       void *device_buffer, uint32_t device_id) {
   const size_t stripe_bytes = stripe_elements * element_size;
-  uint32_t number_of_errors = 0;
+  size_t number_of_errors = 0;
   void *readback = nullptr;
 
   benchmark->memoryAllocHost(device_id, bytes_moved, &readback);
@@ -463,6 +466,11 @@ void ZeBandwidth::test_host2device_kernel(void) {
   }
 
   for (auto size : transfer_size) {
+    if (!device_size_fits(size, size, std::to_string(size).c_str()) ||
+        !host_size_fits((verify ? 2 : 1) * size,
+                        std::to_string(size).c_str())) {
+      continue;
+    }
     for (auto device_id : device_ids) {
       size_t bytes_moved = 0;
       long double device_time_nsec = 0.0L;
@@ -513,6 +521,11 @@ void ZeBandwidth::test_device2host_kernel(void) {
   }
 
   for (auto size : transfer_size) {
+    if (!device_size_fits(size, size, std::to_string(size).c_str()) ||
+        !host_size_fits((verify ? 2 : 1) * size,
+                        std::to_string(size).c_str())) {
+      continue;
+    }
     for (auto device_id : device_ids) {
       size_t bytes_moved = 0;
       long double device_time_nsec = 0.0L;
@@ -573,6 +586,11 @@ void ZeBandwidth::test_bidir_kernel(void) {
   }
 
   for (auto size : transfer_size) {
+    if (!device_size_fits(size, size, std::to_string(size).c_str()) ||
+        !host_size_fits((verify ? 2 : 1) * size,
+                        std::to_string(size).c_str())) {
+      continue;
+    }
     for (auto device_id : device_ids) {
       size_t bytes_moved = 0;
       long double device_time_nsec = 0.0L;

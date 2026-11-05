@@ -632,7 +632,7 @@ void ZeBandwidth::transfer_size_test(
       benchmark->memoryAllocHost(device_id, buffer_size,
                                  &verify_pattern[device_id]);
       char *pattern = static_cast<char *>(verify_pattern[device_id]);
-      for (uint32_t i = 0; i < buffer_size; i++) {
+      for (size_t i = 0; i < buffer_size; i++) {
         pattern[i] = static_cast<char>(i);
       }
       run_verify_copy(device_id, source_buffer[device_id],
@@ -779,7 +779,7 @@ void ZeBandwidth::transfer_size_test(
   }
 
   if (verify) {
-    uint32_t number_of_errors = 0;
+    size_t number_of_errors = 0;
 
     for (auto device_id : device_ids) {
       void *readback = nullptr;
@@ -790,7 +790,7 @@ void ZeBandwidth::transfer_size_test(
       const char *readback_char = static_cast<const char *>(readback);
       const char *pattern =
           static_cast<const char *>(verify_pattern[device_id]);
-      for (uint32_t i = 0; i < buffer_size; i++) {
+      for (size_t i = 0; i < buffer_size; i++) {
         if (readback_char[i] != pattern[i]) {
           number_of_errors++;
         }
@@ -1106,6 +1106,13 @@ void ZeBandwidth::test_host2device(void) {
       device_times_nsec[i] = 0;
     }
 
+    if (!device_size_fits(size, size, std::to_string(size).c_str()) ||
+        !host_size_fits(
+            (verify ? 2 * device_ids.size() + 1 : device_ids.size()) * size,
+            std::to_string(size).c_str())) {
+      continue;
+    }
+
     for (auto device_id : device_ids) {
       benchmark->memoryAlloc(device_id, size, &device_buffers[device_id]);
       allocate_host_buffer(device_id, size, &host_buffers[device_id]);
@@ -1154,6 +1161,13 @@ void ZeBandwidth::test_device2host(void) {
     std::vector<long double> device_times_nsec(benchmark->_devices.size());
     for (size_t i = 0U; i < device_times_nsec.size(); i++) {
       device_times_nsec[i] = 0;
+    }
+
+    if (!device_size_fits(size, size, std::to_string(size).c_str()) ||
+        !host_size_fits(
+            (verify ? 2 * device_ids.size() + 1 : device_ids.size()) * size,
+            std::to_string(size).c_str())) {
+      continue;
     }
 
     for (auto device_id : device_ids) {
@@ -1207,6 +1221,7 @@ bool ZeBandwidth::device_size_fits(size_t largest_allocation,
                 << (largest_allocation >> 20) << " MB exceeds the "
                 << (cap >> 20) << " MB single allocation limit of device "
                 << device_id << "]\n";
+      size_skipped = true;
       return false;
     }
   }
@@ -1224,6 +1239,7 @@ bool ZeBandwidth::device_size_fits(size_t largest_allocation,
   std::cerr << "\t[skipped " << what << ": needs " << (device_bytes >> 20)
             << " MB on a device, budget is " << (budget >> 20) << " MB of "
             << (smallest >> 20) << " MB]\n";
+  size_skipped = true;
   return false;
 }
 
@@ -1261,6 +1277,7 @@ bool ZeBandwidth::host_size_fits(size_t host_bytes, const char *what) {
 
   std::cerr << "\t[skipped " << what << ": needs " << (host_bytes >> 20)
             << " MB of host memory, budget is " << (budget >> 20) << " MB]\n";
+  size_skipped = true;
   return false;
 #else
   (void)host_bytes;
@@ -1282,7 +1299,9 @@ void ZeBandwidth::test_bidir(void) {
 
   for (auto size : transfer_size) {
     long double total_time_nsec = 0;
-    if (!device_size_fits(size, 2 * size, std::to_string(size).c_str())) {
+    if (!device_size_fits(size, 2 * size, std::to_string(size).c_str()) ||
+        !host_size_fits(2 * size * device_ids.size(),
+                        std::to_string(size).c_str())) {
       continue;
     }
     BidirTimings timings;
@@ -1367,7 +1386,9 @@ void ZeBandwidth::test_bidir_measured(bool measure_h2d) {
     long double total_time_nsec = 0;
     const size_t size_interference = 2 * size;
     if (!device_size_fits(size_interference, size + size_interference,
-                          std::to_string(size).c_str())) {
+                          std::to_string(size).c_str()) ||
+        !host_size_fits((size + size_interference) * device_ids.size(),
+                        std::to_string(size).c_str())) {
       continue;
     }
     BidirTimings timings;
@@ -2002,5 +2023,5 @@ int main(int argc, char **argv) {
 
     std::cout << std::flush;
   }
-  return 0;
+  return bw.size_skipped ? 1 : 0;
 }

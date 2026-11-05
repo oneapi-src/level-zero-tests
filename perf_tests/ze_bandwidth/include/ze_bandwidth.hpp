@@ -106,6 +106,12 @@ public:
   uint32_t command_queue_group_ordinal1 = 0;
   uint32_t command_queue_index1 = 0;
   bool csv_output = false;
+  bool size_skipped = false;
+
+  // The all-host kernel tests copy twice the size on the interfering devices.
+  size_t largest_kernel_buffer(void) const {
+    return (run_all_host ? 2 : 1) * transfer_upper_limit;
+  }
   host_numa_mode host_numa = host_numa_mode::automatic;
   std::optional<int> host_numa_fixed_node;
   bool host_numa_explicit = false;

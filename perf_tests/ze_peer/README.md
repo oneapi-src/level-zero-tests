@@ -21,7 +21,7 @@ first compute engine in the device.
   -b                          run bidirectional mode. Default: Not set.
   -c                          run continuously until hitting CTRL+C. Default: Not set.
   -i                          number of iterations to run. Default: 50.
-  -z                          size to run in bytes. Default: 8192(8MB) to 268435456(256MB).
+  -z                          size to run in bytes. Default: 8 B to 268435456 (256 MB)
   -v                          validate data (only 1 iteration is executed). Default: Not set.
   -t                          type of transfer to measure
       transfer_bw             run transfer bandwidth test
@@ -117,6 +117,13 @@ Run default, with BW and latency results, between all available devices, using f
 Run BW test, for only 256 MB
 ```
 ./ze_peer -t transfer_bw -z 268435456
+```
+
+Run bidirectional BW test, for 4 GB. A size that does not fit in device memory,
+or is larger than the single allocation limit of a device (`maxMemAllocSize`),
+stops the run with an error and a non-zero exit status.
+```
+./ze_peer -t transfer_bw -b -z 4294967296 -s 0 -d 1
 ```
 
 Run latency tests, for 64B, between devices 1 and 3 (assuming the system has such devices).

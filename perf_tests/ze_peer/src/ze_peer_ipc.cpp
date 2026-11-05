@@ -77,11 +77,12 @@ void ZePeer::set_up_ipc(size_t number_buffer_elements, uint32_t device_id,
   benchmark->memoryAlloc(device_id, buffer_size, &ze_buffer);
   ze_buffers[device_id] = ze_buffer;
 
+  const size_t host_size = std::min(buffer_size, host_chunk_size);
   void **host_buffer = reinterpret_cast<void **>(&ze_host_buffer);
-  benchmark->memoryAllocHost(buffer_size, host_buffer);
+  benchmark->memoryAllocHost(host_size, host_buffer);
   void **host_validate_buffer =
       reinterpret_cast<void **>(&ze_host_validate_buffer);
-  benchmark->memoryAllocHost(buffer_size, host_validate_buffer);
+  benchmark->memoryAllocHost(host_size, host_validate_buffer);
 
   command_list = ze_peer_devices[device_id].engines[0].second;
   command_queue = ze_peer_devices[device_id].engines[0].first;
@@ -99,6 +100,8 @@ void ZePeer::bandwidth_latency_ipc(peer_test_t test_type,
   ze_command_queue_handle_t command_queue = {};
   ze_command_list_handle_t command_list = {};
 
+  check_sizes(number_buffer_elements,
+              {{local_device_id, 1}, {remote_device_id, 1}});
   set_up_ipc(number_buffer_elements, local_device_id, buffer_size,
              command_queue, command_list);
 

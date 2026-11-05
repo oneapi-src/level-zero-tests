@@ -9,6 +9,7 @@
 #include "ze_bandwidth.hpp"
 
 #include <algorithm>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -46,7 +47,8 @@ static const char *usage_str = R"HELP(
                             [default:  500]
   -w                       set number of warmup iterations
                             [default:  100]
-  -s                       select only one transfer size (bytes) 
+  -s                       select only one transfer size (bytes, 64-bit,
+                            for example 4294967296 for 4 GB)
   -sb                      select beginning transfer size (bytes)
                             [default:  1]
   -se                      select ending transfer size (bytes)
@@ -99,6 +101,26 @@ static uint32_t parse_u32(const std::string &value) {
     return static_cast<uint32_t>(number);
   } catch (const std::exception &) {
     std::cerr << "'" << value << "' is not a valid unsigned 32-bit integer\n";
+    exit(-1);
+  }
+}
+
+//---------------------------------------------------------------------
+// Transfer sizes are 64-bit, so sizes of 4 GB and above can be given.
+//---------------------------------------------------------------------
+static size_t parse_size(const std::string &value) {
+  try {
+    size_t parsed = 0;
+    const unsigned long long number = std::stoull(value, &parsed, 0);
+
+    if (parsed != value.size() || value[0] == '-' ||
+        number > (std::numeric_limits<size_t>::max() >> 1)) {
+      throw std::out_of_range("not a size");
+    }
+
+    return static_cast<size_t>(number);
+  } catch (const std::exception &) {
+    std::cerr << "'" << value << "' is not a valid size in bytes\n";
     exit(-1);
   }
 }
@@ -229,14 +251,14 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
       warmup_iterations = parse_u32(args[++i]);
     } else if (argument == "-s") {
       require_value(i);
-      transfer_lower_limit = parse_u32(args[++i]);
+      transfer_lower_limit = parse_size(args[++i]);
       transfer_upper_limit = transfer_lower_limit;
     } else if (argument == "-sb") {
       require_value(i);
-      transfer_lower_limit = parse_u32(args[++i]);
+      transfer_lower_limit = parse_size(args[++i]);
     } else if (argument == "-se") {
       require_value(i);
-      transfer_upper_limit = parse_u32(args[++i]);
+      transfer_upper_limit = parse_size(args[++i]);
     } else if (argument == "-q") {
       query_engines = true;
     } else if (parse_named_value("--h2dEngine", i, h2d_engine_name)) {
@@ -353,6 +375,15 @@ int ZeBandwidth::parse_arguments(int argc, char **argv) {
 
   if (transfer_lower_limit == 0 || transfer_upper_limit == 0) {
     std::cerr << "Transfer size must be greater than zero\n";
+    exit(-1);
+  }
+
+  // The copy kernels index uint4 elements with 32-bit counters.
+  constexpr size_t kernel_max_size = (static_cast<size_t>(UINT32_MAX) + 1) * 16;
+  if (any_kernel_test() && largest_kernel_buffer() >= kernel_max_size) {
+    std::cerr << "Kernel tests support buffers below " << kernel_max_size
+              << " bytes; the all-host kernel tests use twice the transfer "
+                 "size\n";
     exit(-1);
   }
 

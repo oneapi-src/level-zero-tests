@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2023 Intel Corporation
+ * Copyright (C) 2023-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -1242,9 +1242,6 @@ void ZePeer::bandwidth_latency_parallel_to_pair_targets(
       } else {
         validate_buffer(command_list, command_queue, ze_host_validate_buffer,
                         dst_buffer, ze_host_buffer, buffer_size);
-      }
-      for (size_t k = 0; k < buffer_size; k++) {
-        ze_host_validate_buffer[k] = 0;
       }
     }
   }

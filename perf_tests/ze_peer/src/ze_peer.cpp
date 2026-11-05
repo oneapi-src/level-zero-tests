@@ -1,11 +1,14 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
  */
 #include "ze_peer.h"
+
+#include <cerrno>
+#include <limits>
 
 const std::string version = "2.0";
 
@@ -20,7 +23,27 @@ bool ZePeer::parallel_copy_to_pair_targets = false;
 bool ZePeer::parallel_divide_buffers = false;
 bool ZePeer::use_immediate_cmdlist = true;
 uint32_t ZePeer::number_iterations = 50;
+
 const size_t max_elems = 268435456; /* 256 MB */
+
+// A size in bytes: digits only, no trailing characters, not zero, and within
+// size_t. Anything else stops the run, so a size is never silently changed.
+size_t parse_size(const char *option, int i, int argc, char **argv) {
+  const char *value = (i + 1 < argc) ? argv[i + 1] : "";
+  char *end = nullptr;
+  errno = 0;
+  const unsigned long long size = isdigit(static_cast<unsigned char>(value[0]))
+                                      ? strtoull(value, &end, 10)
+                                      : 0;
+  if (size == 0 || end == nullptr || *end != '\0' || errno == ERANGE ||
+      size > std::numeric_limits<size_t>::max()) {
+    std::cerr << "[ERROR] " << option << ": '" << value
+              << "' is not a valid size in bytes (a whole number greater "
+                 "than 0)\n";
+    exit(-1);
+  }
+  return static_cast<size_t>(size);
+}
 
 template <typename T> inline constexpr uint32_t to_u32(T val) {
   return static_cast<uint32_t>(val);
@@ -82,7 +105,7 @@ void print_results_header(
   std::cout << output_stream.str();
 }
 
-bool run_ipc_test(int size_to_run, uint32_t remote_device_id,
+bool run_ipc_test(size_t size_to_run, uint32_t remote_device_id,
                   uint32_t local_device_id, uint32_t queue,
                   peer_test_t test_type, peer_transfer_t transfer_type) {
 
@@ -107,8 +130,8 @@ bool run_ipc_test(int size_to_run, uint32_t remote_device_id,
                        test_type, transfer_type);
 
   for (size_t num_elems = 8; num_elems <= max_elems; num_elems *= 2) {
-    if (size_to_run != -1) {
-      num_elems = static_cast<size_t>(size_to_run);
+    if (size_to_run != 0) {
+      num_elems = size_to_run;
     }
     pid = fork();
     if (pid == 0) {
@@ -148,7 +171,7 @@ bool run_ipc_test(int size_to_run, uint32_t remote_device_id,
         passed = false;
       }
     }
-    if (size_to_run != -1) {
+    if (size_to_run != 0) {
       break;
     }
   }
@@ -160,7 +183,7 @@ bool run_ipc_test(int size_to_run, uint32_t remote_device_id,
   return passed;
 }
 
-void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
+void run_test(size_t size_to_run, std::vector<uint32_t> &remote_device_ids,
               std::vector<uint32_t> &local_device_ids,
               std::vector<std::pair<uint32_t, uint32_t>> &pair_device_ids,
               std::vector<uint32_t> &queues, peer_test_t test_type,
@@ -169,8 +192,8 @@ void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
                        test_type, transfer_type);
 
   for (size_t num_elems = 8; num_elems <= max_elems; num_elems *= 2) {
-    if (size_to_run != -1) {
-      num_elems = static_cast<size_t>(size_to_run);
+    if (size_to_run != 0) {
+      num_elems = size_to_run;
     }
     ZePeer peer(remote_device_ids, local_device_ids, pair_device_ids, queues);
     if (ZePeer::validate_results) {
@@ -245,7 +268,7 @@ void run_test(int size_to_run, std::vector<uint32_t> &remote_device_ids,
             local_device_ids.front());
       }
     }
-    if (size_to_run != -1) {
+    if (size_to_run != 0) {
       break;
     }
   }
@@ -258,7 +281,7 @@ int main(int argc, char **argv) {
   std::vector<uint32_t> local_device_ids{};
   std::vector<std::pair<uint32_t, uint32_t>> pair_device_ids{};
   std::vector<uint32_t> queues{};
-  int size_to_run = -1;
+  size_t size_to_run = 0;
   peer_transfer_t transfer_type_to_run = PEER_TRANSFER_MAX;
   peer_test_t test_type_to_run = PEER_TEST_MAX;
   uint32_t num_devices = 32;
@@ -456,12 +479,7 @@ int main(int argc, char **argv) {
 
       i++;
     } else if (strcmp(argv[i], "-z") == 0) {
-      if (isdigit(argv[i + 1][0])) {
-        size_to_run = std::min(atoi(argv[i + 1]), static_cast<int>(max_elems));
-      } else {
-        std::cout << usage_str;
-        exit(-1);
-      }
+      size_to_run = parse_size("-z", i, argc, argv);
       i++;
     } else if (strcmp(argv[i], "-v") == 0) {
       ZePeer::validate_results = true;

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2023 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -61,7 +61,7 @@ first compute engine in the device.
   -b                          run bidirectional mode. Default: Not set.
   -c                          run continuously until hitting CTRL+C. Default: Not set.
   -i                          number of iterations to run. Default: 50.
-  -z                          size to run in bytes. Default: 8192(8MB) to 268435456(256MB).
+  -z                          size to run in bytes. Default: 8 B to 268435456 (256 MB)
   -v                          validate data (only 1 iteration is executed). Default: Not set.
   -t                          type of transfer to measure
       transfer_bw             run transfer bandwidth test
@@ -240,6 +240,10 @@ public:
       uint32_t remote_device_id, uint32_t local_device_id, uint32_t queue_index,
       peer_test_t test_type, peer_transfer_t transfer_type, size_t buffer_size);
 
+  void copy_and_wait(ze_command_list_handle_t command_list,
+                     ze_command_queue_handle_t command_queue, void *dst,
+                     const void *src, size_t size);
+
   void initialize_src_buffer(ze_command_list_handle_t command_list,
                              ze_command_queue_handle_t command_queue,
                              void *local_buffer, char *host_buffer,
@@ -266,6 +270,9 @@ public:
   bool validate_buffer_immediate(ze_command_list_handle_t command_list,
                                  char *validate_buffer, void *dst_buffer,
                                  char *host_buffer, size_t buffer_size);
+
+  void check_sizes(size_t buffer_size,
+                   const std::unordered_map<uint32_t, size_t> &device_buffers);
 
   void set_up(size_t number_buffer_elements,
               std::vector<uint32_t> &remote_device_ids,
@@ -330,6 +337,10 @@ public:
   static bool parallel_copy_to_pair_targets;
   static bool parallel_divide_buffers;
   static bool use_immediate_cmdlist;
+
+  // Size of the host buffers that initialize and validate the device
+  // buffers, chunk by chunk.
+  static constexpr size_t host_chunk_size = 64 * 1024 * 1024;
 
   static uint32_t number_iterations;
   uint32_t warm_up_iterations = number_iterations / 5;

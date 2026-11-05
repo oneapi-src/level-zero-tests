@@ -58,7 +58,8 @@ To use command line option features:
                             [default:  500]
   -w                       set number of warmup iterations
                             [default:  100]
-  -s                       select only one transfer size (bytes)
+  -s                       select only one transfer size (bytes, 64-bit,
+                            for example 4294967296 for 4 GB)
   -sb                      select beginning transfer size (bytes)
                             [default:  1]
   -se                      select ending transfer size (bytes)
@@ -81,6 +82,18 @@ To use command line option features:
 For example to run a single Host->Device test for transfer_size = 300 bytes, 100 iterations, verification enabled:
 
  ./ze_bandwidth -t h2d -s 300 -i 100 -v
+```
+
+# Transfer sizes above 4 GB
+
+Sizes are 64-bit. A size that does not fit in device or host memory, or is
+larger than the single allocation limit of the device (`maxMemAllocSize`), is
+skipped with the reason printed, and ze_bandwidth then exits with a non-zero
+status. The kernel tests support sizes below 64 GB, the all-host kernel tests
+below 32 GB.
+
+```
+./ze_bandwidth -t h2d -d 0 -s 4294967296 --hostNuma auto --csv
 ```
 
 # Which options apply to which test

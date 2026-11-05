@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2019-2021 Intel Corporation
+ * Copyright (C) 2019-2026 Intel Corporation
  *
  * SPDX-License-Identifier: MIT
  *
@@ -187,9 +187,6 @@ void ZePeer::bidirectional_bandwidth_latency(peer_test_t test_type,
                       ze_peer_devices[remote_device_id].engines[0].first,
                       ze_host_validate_buffer, ze_dst_buffers[remote_device_id],
                       ze_host_buffer, buffer_size);
-    }
-    for (size_t k = 0; k < buffer_size; k++) {
-      ze_host_validate_buffer[k] = 5;
     }
     if (ZePeer::use_immediate_cmdlist) {
       validate_buffer_immediate(
