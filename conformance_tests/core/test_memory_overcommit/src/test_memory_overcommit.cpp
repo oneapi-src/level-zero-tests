@@ -214,6 +214,7 @@ protected:
       driver_info[i].device_compute_properties =
           new ze_device_compute_properties_t[device_count];
       for (uint32_t j = 0; j < device_count; j++) {
+        driver_info[i].device_compute_properties[j] = {};
         driver_info[i].device_compute_properties[j].stype =
             ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
       }
