@@ -13,6 +13,7 @@
 #include "logging/logging.hpp"
 
 #include <level_zero/ze_api.h>
+#include <algorithm>
 #include <thread>
 #include <chrono>
 
@@ -1123,5 +1124,168 @@ LZT_TEST(
   if (!test_run)
     LOG_WARNING << "Less than two sub devices, skipping test";
 }
+
+class zeEventGetCounterBasedFlagsTests : public lzt::zeEventPoolTests {
+protected:
+  void SetUp() override {
+    if (lzt::get_api_version(lzt::get_default_driver()) < ZE_API_VERSION_1_17) {
+      GTEST_SKIP() << "zeEventGetCounterBasedFlags requires API version 1.17";
+    }
+    ASSERT_NE(nullptr, get_counter_based_flags_)
+        << "Driver supports API version 1.17 but the loader does not export "
+           "zeEventGetCounterBasedFlags";
+  }
+
+  const decltype(&zeEventGetCounterBasedFlags) get_counter_based_flags_ =
+      LZT_LOADER_FUNCTION(zeEventGetCounterBasedFlags);
+};
+
+LZT_TEST_F(
+    zeEventGetCounterBasedFlagsTests,
+    GivenEventCreatedFromEventPoolWhenGettingCounterBasedFlagsThenZeroIsReturned) {
+  ep.InitEventPool(1);
+  ze_event_handle_t event = nullptr;
+  ep.create_event(event);
+  ze_event_counter_based_flags_t flags =
+      ZE_EVENT_COUNTER_BASED_FLAG_FORCE_UINT32;
+  EXPECT_ZE_RESULT_SUCCESS(get_counter_based_flags_(event, &flags));
+  EXPECT_EQ(0u, flags);
+  ep.destroy_event(event);
+}
+
+constexpr ze_event_counter_based_flags_t immediacy_flags =
+    ZE_EVENT_COUNTER_BASED_FLAG_IMMEDIATE |
+    ZE_EVENT_COUNTER_BASED_FLAG_NON_IMMEDIATE;
+constexpr ze_event_counter_based_flags_t timestamp_flags =
+    ZE_EVENT_COUNTER_BASED_FLAG_DEVICE_TIMESTAMP |
+    ZE_EVENT_COUNTER_BASED_FLAG_HOST_TIMESTAMP;
+constexpr ze_event_counter_based_flags_t ipc_bidirectional =
+    ZE_EVENT_COUNTER_BASED_FLAG_IPC_BIDIRECTIONAL;
+// ZE_API_VERSION_1_20 is not declared by pre-1.20 headers.
+constexpr auto api_version_1_20 =
+    static_cast<ze_api_version_t>(ZE_MAKE_VERSION(1, 20));
+
+bool is_valid_counter_based_event_flags(
+    const ze_event_counter_based_flags_t flags) {
+  const bool ipc = (flags & ZE_EVENT_COUNTER_BASED_FLAG_IPC) != 0;
+  if ((flags & timestamp_flags) == timestamp_flags) {
+    return false;
+  }
+  if (ipc && (flags & timestamp_flags) != 0) {
+    return false;
+  }
+  return ipc || (flags & ipc_bidirectional) == 0;
+}
+
+std::vector<ze_event_counter_based_flags_t>
+counter_based_event_flag_combinations() {
+  auto combinations =
+      lzt::flag_combinations(std::vector<ze_event_counter_based_flags_t>{
+          ZE_EVENT_COUNTER_BASED_FLAG_IMMEDIATE,
+          ZE_EVENT_COUNTER_BASED_FLAG_NON_IMMEDIATE,
+          ZE_EVENT_COUNTER_BASED_FLAG_HOST_VISIBLE,
+          ZE_EVENT_COUNTER_BASED_FLAG_IPC,
+          ZE_EVENT_COUNTER_BASED_FLAG_DEVICE_TIMESTAMP,
+          ZE_EVENT_COUNTER_BASED_FLAG_HOST_TIMESTAMP,
+          ZE_EVENT_COUNTER_BASED_FLAG_GRAPH_EXTERNAL,
+          ZE_EVENT_COUNTER_BASED_FLAG_IPC_BIDIRECTIONAL});
+  combinations.erase(
+      std::remove_if(combinations.begin(), combinations.end(),
+                     [](const ze_event_counter_based_flags_t flags) {
+                       return !is_valid_counter_based_event_flags(flags);
+                     }),
+      combinations.end());
+  return combinations;
+}
+
+bool device_supports_counter_based_ipc(ze_device_handle_t device) {
+  ze_device_event_properties_t event_properties = {};
+  event_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_EVENT_PROPERTIES;
+  lzt::get_device_properties(device, ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES,
+                             &event_properties);
+  return (event_properties.flags &
+          ZE_DEVICE_EVENT_PROPERTIES_FLAG_COUNTER_BASED_IPC) != 0;
+}
+
+class zeCounterBasedEventGetCounterBasedFlagsTests
+    : public ::testing::Test,
+      public ::testing::WithParamInterface<ze_event_counter_based_flags_t> {
+protected:
+  void SetUp() override {
+    api_version = lzt::get_api_version(lzt::get_default_driver());
+    if (api_version < ZE_API_VERSION_1_17) {
+      GTEST_SKIP() << "zeEventGetCounterBasedFlags requires API version 1.17";
+    }
+    ASSERT_NE(nullptr, get_counter_based_flags_)
+        << "Driver supports API version 1.17 but the loader does not export "
+           "zeEventGetCounterBasedFlags";
+    const ze_event_counter_based_flags_t flags = GetParam();
+    if ((flags & ipc_bidirectional) != 0 && api_version < ZE_API_VERSION_1_18) {
+      GTEST_SKIP() << "ZE_EVENT_COUNTER_BASED_FLAG_IPC_BIDIRECTIONAL requires "
+                      "API version 1.18";
+    }
+    const auto device = lzt::zeDevice::get_instance()->get_device();
+    if ((flags & ZE_EVENT_COUNTER_BASED_FLAG_IPC) != 0 &&
+        !device_supports_counter_based_ipc(device)) {
+      GTEST_SKIP() << "Device does not support counter-based event IPC";
+    }
+    if ((flags & ZE_EVENT_COUNTER_BASED_FLAG_GRAPH_EXTERNAL) != 0 &&
+        !lzt::check_if_extension_supported(lzt::get_default_driver(),
+                                           ZE_RECORD_REPLAY_GRAPH_EXT_NAME)) {
+      GTEST_SKIP() << "Extension " << ZE_RECORD_REPLAY_GRAPH_EXT_NAME
+                   << " not supported";
+    }
+    ze_event_counter_based_desc_t descriptor = {};
+    descriptor.stype = ZE_STRUCTURE_TYPE_EVENT_COUNTER_BASED_DESC;
+    descriptor.flags = flags;
+    const ze_result_t result = zeEventCounterBasedCreate(
+        lzt::get_default_context(), device, &descriptor, &event);
+    if (lzt::is_unsupported_result(result) && flags != 0) {
+      GTEST_SKIP() << "Counter-based event creation with flags 0x" << std::hex
+                   << flags << " refused by the driver";
+    }
+    ASSERT_ZE_RESULT_SUCCESS(result);
+  }
+
+  void TearDown() override {
+    if (event != nullptr) {
+      lzt::destroy_event(event);
+    }
+  }
+
+  const decltype(&zeEventGetCounterBasedFlags) get_counter_based_flags_ =
+      LZT_LOADER_FUNCTION(zeEventGetCounterBasedFlags);
+  ze_api_version_t api_version = ZE_API_VERSION_1_0;
+  ze_event_handle_t event = nullptr;
+};
+
+LZT_TEST_P(
+    zeCounterBasedEventGetCounterBasedFlagsTests,
+    GivenCounterBasedEventCreatedWithFlagsWhenGettingCounterBasedFlagsThenCreationFlagsAreReturned) {
+  const ze_event_counter_based_flags_t creation_flags = GetParam();
+  ze_event_counter_based_flags_t reported_flags =
+      ZE_EVENT_COUNTER_BASED_FLAG_FORCE_UINT32;
+  ASSERT_ZE_RESULT_SUCCESS(get_counter_based_flags_(event, &reported_flags));
+
+  ze_event_counter_based_flags_t expected_flags = creation_flags;
+  // IMMEDIATE is the default immediacy and may be reported when none was set.
+  if ((creation_flags & immediacy_flags) == 0) {
+    expected_flags |= reported_flags & ZE_EVENT_COUNTER_BASED_FLAG_IMMEDIATE;
+  }
+  // IPC_BIDIRECTIONAL is ignored since 1.20, so reporting it is optional.
+  if ((creation_flags & ipc_bidirectional) != 0 &&
+      api_version >= api_version_1_20) {
+    expected_flags = (expected_flags & ~ipc_bidirectional) |
+                     (reported_flags & ipc_bidirectional);
+  }
+  EXPECT_EQ(expected_flags, reported_flags)
+      << std::hex << "creation flags 0x" << creation_flags
+      << ", reported flags 0x" << reported_flags;
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    CounterBasedEventFlagCombinations,
+    zeCounterBasedEventGetCounterBasedFlagsTests,
+    ::testing::ValuesIn(counter_based_event_flag_combinations()));
 
 } // namespace

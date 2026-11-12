@@ -584,7 +584,8 @@ def assign_test_feature(test_binary: str, test_name: str):
             and test_name.find("SharedMem")== -1 \
             and test_name.find("HostMem")== -1:
             test_feature = "Device Memory"
-        if test_binary == "test_event":
+        if (test_binary == "test_event") \
+            or (test_binary == "test_event_errors"):
             test_feature = "Events"
         if test_binary == "test_copy" and test_name.find("SignalsEvent")!= -1:
             test_feature = "Events"
