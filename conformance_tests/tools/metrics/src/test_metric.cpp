@@ -1439,6 +1439,160 @@ LZT_TEST_F(
 
 LZT_TEST_F(
     zetMetricStreamerTest,
+    GivenConcurrentMetricGroupsWhenActivatedThenCanBeCollectedConcurrently) {
+
+  constexpr uint32_t max_read_attempts = 20;
+  constexpr uint32_t number_of_reports_req = 100;
+  constexpr uint32_t time_before_read_in_nano_sec = 500000000;
+
+  bool any_device_tested = false;
+  for (auto device : devices) {
+    ze_device_properties_t device_properties =
+        lzt::get_device_properties(device);
+
+    LOG_INFO << "test device name " << device_properties.name << " uuid "
+             << lzt::to_string(device_properties.uuid);
+    if (device_properties.flags & ZE_DEVICE_PROPERTY_FLAG_SUBDEVICE) {
+      LOG_INFO << "test subdevice id " << device_properties.subdeviceId;
+    } else {
+      LOG_INFO << "test device is a root device";
+    }
+
+    auto metric_group_info = lzt::get_device_metric_groups_for_sampling_type(
+        device, ZET_METRIC_GROUP_SAMPLING_TYPE_FLAG_TIME_BASED, true);
+    if (metric_group_info.size() < 2) {
+      LOG_INFO << "Skipping device: found " << metric_group_info.size()
+               << " concurrent time based metric group(s), need at least 2";
+      continue;
+    }
+    any_device_tested = true;
+
+    std::vector<zet_metric_group_handle_t> metric_group_handles;
+    for (auto &group_info : metric_group_info) {
+      LOG_INFO << "test metricGroup name " << group_info.metricGroupName
+               << " domain " << group_info.domain;
+      metric_group_handles.push_back(group_info.metricGroupHandle);
+    }
+    const size_t group_count = metric_group_handles.size();
+
+    ze_command_queue_handle_t command_queue = lzt::create_command_queue(device);
+    zet_command_list_handle_t command_list = lzt::create_command_list(device);
+
+    lzt::activate_metric_groups(device, to_u32(group_count),
+                                metric_group_handles.data());
+
+    void *a_buffer, *b_buffer, *c_buffer;
+    ze_group_count_t tg;
+    ze_kernel_handle_t function = get_matrix_multiplication_kernel(
+        device, &tg, &a_buffer, &b_buffer, &c_buffer, 8192);
+    lzt::append_launch_function(command_list, function, &tg, nullptr, 0,
+                                nullptr);
+    lzt::close_command_list(command_list);
+
+    std::vector<uint32_t> notify_every_n_reports(group_count, 9000);
+    std::vector<uint32_t> sampling_period(
+        group_count, time_before_read_in_nano_sec / number_of_reports_req);
+    std::vector<zet_metric_streamer_handle_t> metric_streamer_handles;
+    for (size_t i = 0; i < group_count; i++) {
+      zet_metric_streamer_handle_t metric_streamer_handle =
+          lzt::metric_streamer_open_for_device(
+              device, metric_group_handles[i], nullptr,
+              notify_every_n_reports[i], sampling_period[i]);
+      EXPECT_NE(nullptr, metric_streamer_handle)
+          << "Failed to open streamer for metric group "
+          << metric_group_info[i].metricGroupName;
+      if (metric_streamer_handle == nullptr) {
+        break;
+      }
+      metric_streamer_handles.push_back(metric_streamer_handle);
+    }
+
+    // Collect data only if every streamer opened. Otherwise fall through to
+    // the cleanup below so that the streamers opened so far, the activated
+    // metric groups and the other resources are released.
+    if (metric_streamer_handles.size() == group_count) {
+      // Spawn a thread which continuously runs a workload
+      workloadThreadFlag = true;
+      std::thread thread(workloadThread, command_queue, 1, &command_list,
+                         nullptr);
+
+      // Sleep for time_before_read_in_nano_sec to ensure required reports are
+      // generated
+      std::this_thread::sleep_for(
+          std::chrono::nanoseconds(time_before_read_in_nano_sec));
+
+      // Read the data of each streamer into its own buffer
+      std::vector<std::vector<uint8_t>> raw_data(group_count);
+      std::vector<size_t> raw_data_size(group_count, 0);
+      for (size_t i = 0; i < group_count; i++) {
+        const size_t buffer_size = lzt::metric_streamer_read_data_size(
+            metric_streamer_handles[i], notify_every_n_reports[i]);
+        EXPECT_GT(buffer_size, 0)
+            << "Failed to get the raw data size for metric group "
+            << metric_group_info[i].metricGroupName;
+        if (buffer_size == 0) {
+          continue;
+        }
+        raw_data[i].resize(buffer_size);
+        for (uint32_t count = 0; count < max_read_attempts; count++) {
+          // The driver overwrites raw_data_size[i] with the number of bytes
+          // written, so restore the buffer size before every attempt. A zero
+          // size would only query the maximum size and read no data.
+          raw_data_size[i] = buffer_size;
+          lzt::metric_streamer_read_data(
+              metric_streamer_handles[i], notify_every_n_reports[i],
+              raw_data_size[i], &raw_data[i], metric_group_handles[i]);
+          if (raw_data_size[i] > 0) {
+            break;
+          } else {
+            std::this_thread::sleep_for(
+                std::chrono::nanoseconds(sampling_period[i]));
+          }
+        }
+        EXPECT_GT(raw_data_size[i], 0)
+            << "No data read from streamer for metric group "
+            << metric_group_info[i].metricGroupName;
+        LOG_INFO << "metricGroup " << metric_group_info[i].metricGroupName
+                 << " rawDataSize " << raw_data_size[i];
+      }
+
+      // Stop the worker thread running the workload
+      workloadThreadFlag = false;
+      thread.join();
+
+      for (size_t i = 0; i < group_count; i++) {
+        // A failure has already been recorded for groups with no data
+        if (raw_data_size[i] == 0) {
+          continue;
+        }
+        LOG_INFO << "validating metricGroup "
+                 << metric_group_info[i].metricGroupName;
+        lzt::validate_metrics(metric_group_handles[i], raw_data_size[i],
+                              raw_data[i].data());
+      }
+    }
+
+    for (auto metric_streamer_handle : metric_streamer_handles) {
+      lzt::metric_streamer_close(metric_streamer_handle);
+    }
+
+    lzt::deactivate_metric_groups(device);
+    lzt::destroy_function(function);
+    lzt::free_memory(a_buffer);
+    lzt::free_memory(b_buffer);
+    lzt::free_memory(c_buffer);
+    lzt::destroy_command_queue(command_queue);
+    lzt::destroy_command_list(command_list);
+  }
+
+  if (!any_device_tested) {
+    GTEST_SKIP() << "Not enough concurrent metric groups available on any "
+                    "device to run the test";
+  }
+}
+
+LZT_TEST_F(
+    zetMetricStreamerTest,
     GivenValidMetricGroupWhenTimerBasedStreamerIsCreatedThenExpectStreamerToNotifyEventAtProperTimeAndSucceed) {
   /* This test computes the expected time before which events are generated by
    * multiplying notifyEveryNReports and samplingPeriod. It then loops inside

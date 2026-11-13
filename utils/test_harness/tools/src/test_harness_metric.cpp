@@ -707,6 +707,15 @@ zet_metric_streamer_handle_t metric_streamer_open_for_device(
     ze_device_handle_t device, zet_metric_group_handle_t matchedGroupHandle,
     ze_event_handle_t eventHandle, uint32_t &notifyEveryNReports,
     uint32_t &samplingPeriod) {
+  zet_metric_group_properties_t metric_group_properties = {};
+  metric_group_properties.stype = ZET_STRUCTURE_TYPE_METRIC_GROUP_PROPERTIES;
+  metric_group_properties.pNext = nullptr;
+  EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupGetProperties(
+      matchedGroupHandle, &metric_group_properties));
+  LOG_INFO << "opening metric streamer for metric group "
+           << metric_group_properties.name << " with sampling period "
+           << samplingPeriod << " ns, notify every " << notifyEveryNReports
+           << " reports";
   zet_metric_streamer_handle_t metricStreamerHandle = nullptr;
   zet_metric_streamer_desc_t metricStreamerDesc = {
       ZET_STRUCTURE_TYPE_METRIC_STREAMER_DESC, nullptr, notifyEveryNReports,
