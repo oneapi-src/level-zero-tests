@@ -594,6 +594,7 @@ LZT_TEST(
   const uint32_t buff_size_low = 1 << 20;
   const uint8_t value_high = 0x55;
   const uint8_t value_low = 0x22;
+  const uint64_t high_priority_start_timeout_ns = 5'000'000'000;
   std::vector<ze_device_handle_t> devices;
   std::vector<ze_device_handle_t> sub_devices;
   ze_device_handle_t device0 =
@@ -616,6 +617,8 @@ LZT_TEST(
       } else {
         LOG_INFO << "Testing Sub Device:  Index = " << device_index;
       }
+      const bool high_priority_expected_first =
+          !((devices.size() > 1) && (device_index == 0));
       const ze_context_handle_t context = lzt::get_default_context();
       ze_event_pool_desc_t ep_time_desc = {};
       ep_time_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
@@ -626,7 +629,7 @@ LZT_TEST(
       ze_event_pool_desc_t ep_sync_desc = {};
       ep_sync_desc.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
       ep_sync_desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE;
-      ep_sync_desc.count = 1;
+      ep_sync_desc.count = 2;
       auto ep_sync = lzt::create_event_pool(context, ep_sync_desc);
       ze_event_desc_t event_desc = {};
       event_desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -635,6 +638,11 @@ LZT_TEST(
       event_desc.wait = 0;
       auto event_compute_high = lzt::create_event(ep_time, event_desc);
       auto event_sync = lzt::create_event(ep_sync, event_desc);
+      ze_event_desc_t event_high_started_desc = event_desc;
+      event_high_started_desc.index = 1;
+      event_high_started_desc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
+      auto event_high_started =
+          lzt::create_event(ep_sync, event_high_started_desc);
       std::vector<ze_event_handle_t> event_compute_lows;
 
       auto cmdqueue_compute_high = lzt::create_command_queue(
@@ -667,6 +675,9 @@ LZT_TEST(
       auto cmdlist_compute_high = lzt::create_command_list(device);
       auto buffer_compute_high = lzt::allocate_shared_memory(buff_size_high);
 
+      if (high_priority_expected_first) {
+        lzt::append_signal_event(cmdlist_compute_high, event_high_started);
+      }
       lzt::append_wait_on_events(cmdlist_compute_high, 1, &event_sync);
       lzt::append_memory_set(cmdlist_compute_high, buffer_compute_high,
                              &value_high, buff_size_high, event_compute_high);
@@ -691,6 +702,12 @@ LZT_TEST(
       }
       lzt::execute_command_lists(cmdqueue_compute_high, 1,
                                  &cmdlist_compute_high, nullptr);
+      if (high_priority_expected_first) {
+        // Submission is asynchronous; without this the low-priority queues,
+        // submitted earlier, may finish before the high-priority one starts.
+        lzt::event_host_synchronize(event_high_started,
+                                    high_priority_start_timeout_ns);
+      }
       lzt::signal_event_from_host(event_sync);
 
       for (uint32_t i = 0U; i < num_low_priority_compute_queues; i++) {
@@ -731,14 +748,14 @@ LZT_TEST(
         }
       }
 
-      if ((devices.size() > 1) && (device_index == 0)) {
-        EXPECT_EQ(
-            number_of_low_priority_queues_finished_after_high_priority_queue,
-            0u);
-      } else {
+      if (high_priority_expected_first) {
         EXPECT_GE(
             number_of_low_priority_queues_finished_after_high_priority_queue,
             1u);
+      } else {
+        EXPECT_EQ(
+            number_of_low_priority_queues_finished_after_high_priority_queue,
+            0u);
       }
       LOG_INFO
           << "number_of_low_priority_queues_finished_after_high_priority_queue "
@@ -765,8 +782,10 @@ LZT_TEST(
         auto event_compute_low = event_compute_lows[i];
         lzt::destroy_event(event_compute_low);
       }
+      lzt::destroy_event(event_high_started);
       lzt::destroy_event(event_sync);
       lzt::destroy_event_pool(ep_sync);
+      lzt::destroy_event_pool(ep_time);
       device_index++;
     }
   }
