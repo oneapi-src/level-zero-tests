@@ -12,7 +12,7 @@
 void ZePeak::ze_peak_global_bw(L0Context &context) {
   long double timed_lo, timed_go, timed, gbps;
   ze_result_t result = ZE_RESULT_SUCCESS;
-  uint64_t temp_global_size, max_total_work_items;
+  uint64_t temp_global_size;
   struct ZeWorkGroups workgroup_info;
   TimingMeasurement type = is_bandwidth_with_event_timer();
 
@@ -277,19 +277,14 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
   // go -- global_size offset
   temp_global_size = (numItems / FETCH_PER_WI);
 
-  max_total_work_items =
-      set_workgroups(context, temp_global_size, &workgroup_info);
+  set_workgroups(context, temp_global_size, &workgroup_info);
 
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed_lo += run_kernel(context, lo_offset_v1[i], workgroup_info, type);
-      i++;
     }
-    i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed_go += run_kernel(context, gl_offset_v1[i], workgroup_info, type);
-      i++;
     }
     timed = (timed_lo < timed_go) ? timed_lo : timed_go;
     gbps = calculate_gbps(timed,
@@ -314,19 +309,14 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
 
   temp_global_size = (numItems / 2 / FETCH_PER_WI);
 
-  max_total_work_items =
-      set_workgroups(context, temp_global_size, &workgroup_info);
+  set_workgroups(context, temp_global_size, &workgroup_info);
 
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed_lo += run_kernel(context, lo_offset_v2[i], workgroup_info, type);
-      i++;
     }
-    i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed_go += run_kernel(context, gl_offset_v2[i], workgroup_info, type);
-      i++;
     }
     timed = (timed_lo < timed_go) ? timed_lo : timed_go;
     gbps = calculate_gbps(timed,
@@ -352,19 +342,14 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
 
   temp_global_size = (numItems / 4 / FETCH_PER_WI);
 
-  max_total_work_items =
-      set_workgroups(context, temp_global_size, &workgroup_info);
+  set_workgroups(context, temp_global_size, &workgroup_info);
 
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed_lo += run_kernel(context, lo_offset_v4[i], workgroup_info, type);
-      i++;
     }
-    i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed_go += run_kernel(context, gl_offset_v4[i], workgroup_info, type);
-      i++;
     }
     timed = (timed_lo < timed_go) ? timed_lo : timed_go;
     gbps = calculate_gbps(timed,
@@ -389,19 +374,14 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
 
   temp_global_size = (numItems / 8 / FETCH_PER_WI);
 
-  max_total_work_items =
-      set_workgroups(context, temp_global_size, &workgroup_info);
+  set_workgroups(context, temp_global_size, &workgroup_info);
 
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed_lo += run_kernel(context, lo_offset_v8[i], workgroup_info, type);
-      i++;
     }
-    i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed_go += run_kernel(context, gl_offset_v8[i], workgroup_info, type);
-      i++;
     }
     timed = (timed_lo < timed_go) ? timed_lo : timed_go;
     gbps = calculate_gbps(timed,
@@ -425,19 +405,14 @@ void ZePeak::ze_peak_global_bw(L0Context &context) {
   std::cout << "float16 : ";
   temp_global_size = (numItems / 16 / FETCH_PER_WI);
 
-  max_total_work_items =
-      set_workgroups(context, temp_global_size, &workgroup_info);
+  set_workgroups(context, temp_global_size, &workgroup_info);
 
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed_lo += run_kernel(context, lo_offset_v16[i], workgroup_info, type);
-      i++;
     }
-    i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed_go += run_kernel(context, gl_offset_v16[i], workgroup_info, type);
-      i++;
     }
     timed = (timed_lo < timed_go) ? timed_lo : timed_go;
     gbps = calculate_gbps(timed,

@@ -199,7 +199,6 @@ LZT_TEST_F(
           continue;
         }
         EXPECT_ZE_RESULT_SUCCESS(status);
-        auto pProperties = lzt::get_power_properties(p_power_handle);
         if ((pBurst.enabled != 0) && (pSustained.enabled != 0)) {
           EXPECT_LE(pSustained.power, pBurst.power);
         }

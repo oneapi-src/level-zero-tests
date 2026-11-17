@@ -587,7 +587,7 @@ bool find_multi_event_stopped_threads(
   bool foundAll = true;
 
   LOG_DEBUG << "[Debugger] Expecting " << threadsToCheck.size() << " events.";
-  for (auto threadToCheck : threadsToCheck) {
+  for (size_t i = 0; i < threadsToCheck.size(); i++) {
     do {
       lzt::debug_read_event(debugSession, debugEvent, eventsTimeoutMS / 10,
                             true);

@@ -678,7 +678,6 @@ LZT_TEST_F(
     GivenValidModuleWhenGettingNativeBinaryFileThenRetrieveFileAndReturnSuccessful) {
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
   size_t size = 0;
-  ze_module_build_log_handle_t build_log;
   // Note: Only one example shown here, as subset of functionality of
   // "create_module_vector"
 
@@ -832,10 +831,7 @@ protected:
     host_buff = lzt::allocate_host_memory_with_allocator_selector(
         sizeof(int), is_shared_system);
 
-    int *host_addval_offset = static_cast<int *>(host_buff);
-
     const uint32_t addval = 10;
-    const int host_offset = 200;
     int *input_a_int = static_cast<int *>(input_a);
 
     if (signal_to_host) {
@@ -898,7 +894,6 @@ protected:
     } else if (type == MULTIPLE_INDIRECT) {
       int *mult_out_int = static_cast<int *>(mult_out);
       int *mult_in_int = static_cast<int *>(mult_in);
-      ze_group_count_t *tg_dim = static_cast<ze_group_count_t *>(args_buff);
       memcpy(mult_out_int, inpa.data(), 16 * sizeof(int));
       memcpy(mult_in_int, inpb.data(), 16 * sizeof(int));
       std::vector<ze_kernel_handle_t> function_list;
@@ -1134,7 +1129,6 @@ LZT_TEST_F(
       zeDeviceGetComputeProperties(device_, &dev_compute_properties));
 
   ze_kernel_handle_t function;
-  uint32_t attribute_val;
 
   for (auto mod : module_) {
     function = lzt::create_function(mod, "module_add_constant");
@@ -1326,13 +1320,6 @@ void zeKernelLaunchTests::RunGivenBufferLargerThan4GBWhenExecutingFunction() {
         << "size exceeds device max allocation size and driver does not "
            "support relaxed allocations, skipping test";
   }
-
-  ze_relaxed_allocation_limits_exp_desc_t relaxed_allocation_limits_desc = {};
-  relaxed_allocation_limits_desc.stype =
-      ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC;
-  relaxed_allocation_limits_desc.flags =
-      ZE_RELAXED_ALLOCATION_LIMITS_EXP_FLAG_MAX_SIZE;
-  void *pNext = &relaxed_allocation_limits_desc;
 
   const auto mem_properties = lzt::get_memory_properties(device);
   const uint64_t total_mem = mem_properties[0].totalSize;

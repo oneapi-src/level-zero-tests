@@ -151,7 +151,6 @@ LZT_TEST(
     GivenValidDeviceWhenRetrievingPropertiesThenValidPropertiesAreReturned) {
 
   auto devices = lzt::get_ze_devices();
-  ze_structure_type_t stype;
   for (auto device : devices) {
     ze_device_properties_t properties1 =
         lzt::get_device_properties(device, ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES);
@@ -340,7 +339,7 @@ LZT_TEST(
 
   ASSERT_GT(devices.size(), 0);
   for (auto device : devices) {
-    ze_device_image_properties_t properties = lzt::get_image_properties(device);
+    lzt::get_image_properties(device);
   }
 }
 
@@ -830,8 +829,11 @@ LZT_TEST_F(DevicePropertiesTest,
 
     for (ze_device_handle_t iterDeviceHandle :
          iterSkuHandles->deviceHandlesForSku) {
-      ze_device_p2p_properties_t iterDeviceProperties =
+      ze_device_p2p_properties_t a2b_properties =
           lzt::get_p2p_properties(firstDeviceHandle, iterDeviceHandle);
+      ze_device_p2p_properties_t b2a_properties =
+          lzt::get_p2p_properties(iterDeviceHandle, firstDeviceHandle);
+      EXPECT_EQ(a2b_properties.flags, b2a_properties.flags);
       ze_bool_t a2b, b2a;
       a2b = lzt::can_access_peer(firstDeviceHandle, iterDeviceHandle);
       b2a = lzt::can_access_peer(iterDeviceHandle, firstDeviceHandle);
@@ -1070,7 +1072,7 @@ LZT_TEST(
     GivenValidDeviceHandlesWhenRequestingQueueGroupPropertiesMultipleTimesThenPropertiesAreInSameOrder) {
 
   for (auto device : lzt::get_ze_devices()) {
-    ze_result_t ret = lzt::get_device_status(device);
+    lzt::get_device_status(device);
     auto cmd_q_group_properties_0 =
         lzt::get_command_queue_group_properties(device);
     auto cmd_q_group_properties_1 =
@@ -1097,7 +1099,7 @@ LZT_TEST(
         lzt::get_ze_sub_devices(device);
 
     for (auto sub_device : sub_devices) {
-      ze_result_t ret = lzt::get_device_status(sub_device);
+      lzt::get_device_status(sub_device);
       auto cmd_q_group_properties_0 =
           lzt::get_command_queue_group_properties(sub_device);
       auto cmd_q_group_properties_1 =

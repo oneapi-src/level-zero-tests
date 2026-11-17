@@ -149,7 +149,6 @@ int main(int argc, char **argv) {
       LOG_DEBUG << "[Child Debugger] Verifying Events";
       process_synchro synchro0(true, false, 0);
 
-      zet_debug_event_t debug_event;
       std::vector<zet_debug_event_type_t> expectedEvents = {
           ZET_DEBUG_EVENT_TYPE_PROCESS_ENTRY, ZET_DEBUG_EVENT_TYPE_MODULE_LOAD};
 

@@ -25,7 +25,6 @@ int main(int argc, char **argv) {
     std::vector<ze_pci_ext_properties_t> pciPropertiesVec(devices.size());
     uint32_t count = 0U;
     for (auto device : devices) {
-      ze_pci_ext_properties_t pciProperties{};
       EXPECT_ZE_RESULT_SUCCESS(
           zeDevicePciGetPropertiesExt(device, &pciPropertiesVec[count]));
       std::cout << pciPropertiesVec[count].address.domain << ":"

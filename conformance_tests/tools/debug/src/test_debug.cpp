@@ -2166,7 +2166,6 @@ void MultiDeviceDebugTest::
   auto device0 = devices[0];
   auto device1 = devices[1];
 
-  auto device_properties_0 = lzt::get_device_properties(device0);
   auto device_properties_1 = lzt::get_device_properties(device1);
 
   debugHelper = launch_process(USE_TWO_DEVICES, nullptr, use_sub_devices);

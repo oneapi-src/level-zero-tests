@@ -136,7 +136,6 @@ void ZeImageCopy::measureHost2Device2Host() {
   long double total_time_s;
   long double total_data_transfer;
 
-  ze_result_t result = ZE_RESULT_SUCCESS;
   this->test_initialize();
 
   // Copy from srcBuffer->Image->dstBuffer, so at the end dstBuffer = srcBuffer
@@ -192,7 +191,6 @@ void ZeImageCopy::measureParallelHost2Device() {
   long double total_time_s;
   long double total_data_transfer;
 
-  ze_result_t result = ZE_RESULT_SUCCESS;
   this->test_initialize();
 
   // Copy from srcBuffer->Image->dstBuffer, so at the end dstBuffer = srcBuffer
@@ -260,7 +258,6 @@ void ZeImageCopy::measureParallelDevice2Host() {
   long double total_time_s;
   long double total_data_transfer;
 
-  ze_result_t result = ZE_RESULT_SUCCESS;
   this->test_initialize();
 
   // Copy from srcBuffer->Image->dstBuffer, so at the end dstBuffer = srcBuffer
@@ -327,8 +324,6 @@ void ZeImageCopy::measureSerialHost2Device() {
   long double total_time_usec = 0;
   long double total_time_s;
   long double total_data_transfer;
-
-  ze_result_t result = ZE_RESULT_SUCCESS;
 
   this->test_initialize();
   benchmark->commandListReset(command_list_a);
@@ -423,7 +418,6 @@ void ZeImageCopy::measureSerialDevice2Host() {
   long double total_time_s;
   long double total_data_transfer;
 
-  ze_result_t result = ZE_RESULT_SUCCESS;
   this->test_initialize();
   benchmark->commandListReset(command_list_a);
   benchmark->commandListReset(command_list_b);

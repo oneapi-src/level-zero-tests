@@ -600,7 +600,6 @@ LZT_TEST_F(zeMemFreeExtTests,
 
   const size_t size = 1;
   const size_t alignment = 1;
-  void *base = nullptr;
 
   void *memory = lzt::allocate_host_memory(size, alignment);
 
@@ -618,7 +617,6 @@ LZT_TEST_F(zeMemFreeExtTests,
 
   const size_t size = 1;
   const size_t alignment = 1;
-  void *base = nullptr;
 
   void *memory = lzt::allocate_shared_memory(size, alignment);
 
@@ -636,7 +634,6 @@ LZT_TEST_F(zeMemFreeExtTests,
 
   const size_t size = 1;
   const size_t alignment = 1;
-  void *base = nullptr;
 
   void *memory = lzt::allocate_device_memory(size, alignment);
 
@@ -654,7 +651,6 @@ LZT_TEST_F(zeMemFreeExtTests,
 
   const size_t size = 1;
   const size_t alignment = 1;
-  void *base = nullptr;
 
   void *memory = lzt::allocate_host_memory(size, alignment);
 
@@ -672,7 +668,6 @@ LZT_TEST_F(zeMemFreeExtTests,
 
   const size_t size = 1;
   const size_t alignment = 1;
-  void *base = nullptr;
 
   void *memory = lzt::allocate_shared_memory(size, alignment);
 
@@ -690,7 +685,6 @@ LZT_TEST_F(zeMemFreeExtTests,
 
   const size_t size = 1;
   const size_t alignment = 1;
-  void *base = nullptr;
 
   void *memory = lzt::allocate_device_memory(size, alignment);
 
@@ -714,7 +708,6 @@ LZT_TEST_P(
   const size_t num_buffers_max = 100;
   const size_t size = std::get<0>(GetParam());
   const size_t alignment = 1;
-  void *base = nullptr;
   uint32_t num_buffers = std::get<1>(GetParam());
   if (num_buffers > num_buffers_max) {
     num_buffers = num_buffers_max;

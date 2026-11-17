@@ -253,9 +253,8 @@ LZT_TEST_F(
     auto device_uuid = lzt::get_sysman_device_uuid(device);
     ze_bool_t on_sub_device = false;
     uint32_t sub_device_id = 0;
-    zes_device_handle_t device_handle_from_uuid =
-        lzt::get_sysman_device_by_uuid(driver, device_uuid, on_sub_device,
-                                       sub_device_id);
+    lzt::get_sysman_device_by_uuid(driver, device_uuid, on_sub_device,
+                                   sub_device_id);
     EXPECT_FALSE(on_sub_device);
     if (num_sub_devices) {
       auto sub_device_properties =
@@ -263,8 +262,8 @@ LZT_TEST_F(
       for (uint32_t sub_device_index = 0; sub_device_index < num_sub_devices;
            sub_device_index++) {
         auto sub_device_uuid = sub_device_properties[sub_device_index].uuid;
-        device_handle_from_uuid = lzt::get_sysman_device_by_uuid(
-            driver, sub_device_uuid, on_sub_device, sub_device_id);
+        lzt::get_sysman_device_by_uuid(driver, sub_device_uuid, on_sub_device,
+                                       sub_device_id);
         EXPECT_TRUE(on_sub_device);
         EXPECT_EQ(sub_device_properties[sub_device_index].subdeviceId,
                   sub_device_id);
@@ -557,7 +556,6 @@ bool compute_workload_and_validate(device_handles_t device) {
 
   uint32_t m, k, n;
   m = k = n = 512;
-  uint32_t count = 0;
   std::vector<float> a(m * k, 1);
   std::vector<float> b(k * n, 1);
   std::vector<float> c(m * n, 0);

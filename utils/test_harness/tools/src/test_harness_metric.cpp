@@ -653,8 +653,6 @@ metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle,
 
 zet_metric_query_handle_t
 metric_query_create(zet_metric_query_pool_handle_t metricQueryPoolHandle) {
-  zet_metric_query_handle_t metricQueryHandle;
-
   return metric_query_create(metricQueryPoolHandle, 0);
 }
 
@@ -1336,7 +1334,6 @@ void generate_device_list_with_activatable_metric_group_handles(
   LOG_DEBUG << "ENTER generate_activatable_devices_list";
 
   for (auto device : devices) {
-    ze_result_t result;
     lzt::display_device_properties(device);
 
     auto metric_group_info = lzt::get_device_metric_groups_for_sampling_type(
@@ -1381,7 +1378,6 @@ void generate_device_list_with_metric_programmable_handles(
             << metric_programmable_handle_limit;
 
   for (auto device : devices) {
-    ze_result_t result;
     std::string device_description;
 
     collect_device_properties(device, device_description);
@@ -1615,8 +1611,6 @@ void generate_param_info_exp_list_from_metric_programmable(
     std::vector<zet_metric_programmable_param_info_exp_t> &param_infos,
     uint32_t metric_programmable_param_info_limit) {
 
-  ze_result_t result;
-
   LOG_DEBUG << "ENTER generate_param_info_exp_list_from_metric_Programmable, "
                "metric_programmable_param_info_limit "
                "metric_programmable_limit "
@@ -1775,7 +1769,6 @@ void generate_metric_handles_list_from_param_values(
     std::vector<zet_metric_handle_t> &metric_handles,
     uint32_t metric_handles_limit) {
 
-  ze_result_t result;
   uint32_t metric_handles_count = 0;
 
   LOG_DEBUG << "ENTER generate_metric_handles_list_from_param_values, "
@@ -1858,8 +1851,6 @@ void destroy_metric_group_handles_list(
   LOG_DEBUG << "ENTER destroy_metric_group_handles_list of size "
             << metric_group_handles_list.size();
   for (auto metric_group_handle : metric_group_handles_list) {
-    ze_result_t result;
-
     EXPECT_ZE_RESULT_SUCCESS(zetMetricGroupDestroyExp(metric_group_handle));
   }
   metric_group_handles_list.resize(0);

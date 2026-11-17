@@ -16,8 +16,6 @@ long double ZePeak::_transfer_bw_gpu_copy(L0Context &context,
                                           void *source_buffer,
                                           size_t buffer_size) {
   Timer<std::chrono::nanoseconds::period> timer;
-  long double gbps = 0;
-  ze_result_t result = ZE_RESULT_SUCCESS;
 
   auto cmd_l = context.command_list;
   auto cmd_q = context.command_queue;
@@ -61,8 +59,6 @@ long double ZePeak::_transfer_bw_gpu_copy_with_shared_system(
     MemoryAdvice advice) {
   Timer<std::chrono::nanoseconds::period> timer;
   Timer<std::chrono::nanoseconds::period> host_timer;
-  long double gbps = 0;
-  ze_result_t result = ZE_RESULT_SUCCESS;
 
   auto cmd_l = context.command_list;
   auto cmd_q = context.command_queue;

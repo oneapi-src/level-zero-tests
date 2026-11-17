@@ -16,7 +16,6 @@ namespace level_zero_tests {
 ze_event_pool_handle_t create_event_pool(ze_context_handle_t context,
                                          uint32_t count,
                                          ze_event_pool_flags_t flags) {
-  ze_event_pool_handle_t event_pool;
   ze_event_pool_desc_t descriptor = {};
   descriptor.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
 
@@ -166,8 +165,6 @@ get_timestamp_global_duration(const ze_kernel_timestamp_result_t *timestamp,
 
   auto device_properties = lzt::get_device_properties(device, property_type);
   uint64_t timestamp_freq = device_properties.timerResolution;
-  uint64_t timestamp_max_val =
-      ~(to_u64(-1) << device_properties.kernelTimestampValidBits);
 
   return lzt::get_timestamp_time(&timestamp->global, timestamp_freq,
                                  device_properties.kernelTimestampValidBits,
@@ -181,8 +178,6 @@ get_timestamp_context_duration(const ze_kernel_timestamp_result_t *timestamp,
                                const ze_structure_type_t property_type) {
   auto device_properties = lzt::get_device_properties(device, property_type);
   uint64_t timestamp_freq = device_properties.timerResolution;
-  uint64_t timestamp_max_val =
-      ~(to_u64(-1) << device_properties.kernelTimestampValidBits);
 
   return lzt::get_timestamp_time(&timestamp->context, timestamp_freq,
                                  device_properties.kernelTimestampValidBits,

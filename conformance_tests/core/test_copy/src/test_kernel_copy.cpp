@@ -373,7 +373,6 @@ protected:
       shared_memory_type dst_ptr_shr_type = SHARED_LOCAL,
       lzt::command_list_mode_t mode = lzt::command_list_mode_t::regular) {
 
-    auto driver = drivers[driver_index];
     auto device = devices[driver_index][device_index];
     auto context = contexts[device_index];
 

@@ -190,7 +190,6 @@ LZT_TEST_P(
   std::vector<uint8_t> val(num_cmdq, 0);
   ze_command_list_flags_t cmdlist_flag = 0;
   ze_command_queue_flags_t cmdq_flag = 0;
-  uint32_t ordinal = 0;
 
   uint32_t group_ordinal = 0;
   uint32_t queue_index = 0;

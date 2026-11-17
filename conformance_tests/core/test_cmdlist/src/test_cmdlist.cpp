@@ -91,12 +91,6 @@ LZT_TEST_P(
     zeCommandListCreateImmediateTests,
     GivenImplicitCommandQueueWhenCreatingCommandListThenSuccessIsReturned) {
 
-  ze_command_queue_desc_t descriptor = {};
-  descriptor.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
-  descriptor.flags = std::get<0>(GetParam());
-  descriptor.mode = std::get<1>(GetParam());
-  descriptor.priority = std::get<2>(GetParam());
-
   ze_command_list_handle_t command_list = nullptr;
   command_list = lzt::create_immediate_command_list(
       lzt::zeDevice::get_instance()->get_device(), std::get<0>(GetParam()),
@@ -781,7 +775,6 @@ static void
 RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedTest(
     bool is_shared_system_scratch_kernel, bool is_shared_system_src,
     bool is_shared_system_dst) {
-  auto context = lzt::get_default_context();
   auto driver = lzt::get_default_driver();
   auto device = lzt::get_default_device(driver);
 
@@ -912,9 +905,7 @@ RunGivenTwoCommandQueuesHavingCommandListsWithScratchSpaceThenSuccessIsReturnedT
 
     // Validate
     auto dst_buffer_uint = static_cast<uint32_t *>(dst_buffer);
-    bool outputValidationSuccessful = true;
     if (memcmp(dst_buffer, expected_memory, expected_memory_size)) {
-      outputValidationSuccessful = false;
       for (size_t i = 0; i < expected_memory_size / type_size; i++) {
         if (dst_buffer_uint[i] != expected_memory_uint[i]) {
           std::cout << "dstBuffer[" << i << "] = " << dst_buffer_uint[i]

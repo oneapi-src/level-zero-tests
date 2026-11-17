@@ -118,7 +118,7 @@ LZT_TEST_F(
     PCI_TEST,
     GivenSysmanHandleWhenRetrievingPCIBarsThenNonZeroCountValueIsReturned) {
   for (auto device : devices) {
-    auto p_count = lzt::get_pci_bar_count(device);
+    lzt::get_pci_bar_count(device);
   }
 }
 LZT_TEST_F(

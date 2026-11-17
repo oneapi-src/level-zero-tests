@@ -303,7 +303,6 @@ static void run_ipc_host_mem_access_test_opaque(size_t size,
 
   auto driver = lzt::get_default_driver();
   auto context = lzt::create_context(driver);
-  auto device = lzt::zeDevice::get_instance()->get_device();
 
   void *buffer = lzt::allocate_host_memory(size, 1, context);
   memset(buffer, 0, size);

@@ -34,7 +34,6 @@ int main(int argc, char **argv) {
   }
   size_t deviceIndex = proc_number % devices.size();
   auto device = devices[deviceIndex];
-  auto device_properties = lzt::get_device_properties(device);
   auto cmd_bundle = lzt::create_command_bundle(device, mode);
 
   auto module =

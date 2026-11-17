@@ -134,10 +134,8 @@ void ZePeak::ze_peak_hp_compute(L0Context &context) {
   // Vector width 1
   std::cout << "half : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed += run_kernel(context, hp_v1[i], workgroup_info, type);
-      i++;
     }
     gflops =
         calculate_gbps(timed, number_of_work_items * context.sub_device_count *
@@ -154,10 +152,8 @@ void ZePeak::ze_peak_hp_compute(L0Context &context) {
   // Vector width 2
   std::cout << "half2 : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed += run_kernel(context, hp_v2[i], workgroup_info, type);
-      i++;
     }
     gflops =
         calculate_gbps(timed, number_of_work_items * context.sub_device_count *
@@ -174,10 +170,8 @@ void ZePeak::ze_peak_hp_compute(L0Context &context) {
   // Vector width 4
   std::cout << "half4 : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed += run_kernel(context, hp_v4[i], workgroup_info, type);
-      i++;
     }
     gflops =
         calculate_gbps(timed, number_of_work_items * context.sub_device_count *
@@ -195,10 +189,8 @@ void ZePeak::ze_peak_hp_compute(L0Context &context) {
   // Vector width 8
   std::cout << "half8 : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed += run_kernel(context, hp_v8[i], workgroup_info, type);
-      i++;
     }
     gflops =
         calculate_gbps(timed, number_of_work_items * context.sub_device_count *
@@ -216,10 +208,8 @@ void ZePeak::ze_peak_hp_compute(L0Context &context) {
   // Vector width 16
   std::cout << "half16 : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed += run_kernel(context, hp_v16[i], workgroup_info, type);
-      i++;
     }
     gflops =
         calculate_gbps(timed, number_of_work_items * context.sub_device_count *

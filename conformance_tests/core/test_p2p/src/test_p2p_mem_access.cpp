@@ -29,8 +29,6 @@ class zeP2PMemAccessTests
 protected:
   void SetUp() override {
 
-    ze_bool_t can_access;
-
     auto drivers = lzt::get_all_driver_handles();
     ASSERT_GE(drivers.size(), 1);
 

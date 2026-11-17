@@ -75,7 +75,6 @@ LZT_TEST_F(
 
   const uint32_t numIters = 2000;
   std::vector<void *> ipcPointers(numIters);
-  ze_ipc_memory_flags_t ipcMemFlags;
   for (uint32_t i = 0; i < numIters; i++) {
     EXPECT_ZE_RESULT_SUCCESS(zeMemOpenIpcHandle(
         context_, device, ipc_mem_handle_, 0, &ipcPointers[i]));

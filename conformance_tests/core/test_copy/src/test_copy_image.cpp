@@ -1254,7 +1254,6 @@ void RunGivenDeviceImageWhenAppendingImageCopyWithHEventTest(
     zeCommandListAppendImageCopyTests &test) {
   auto cmd_bundle = lzt::create_command_bundle<Mode>();
   test.img_ptr = new zeImageCreateCommon;
-  ze_event_handle_t hEvent = nullptr;
 
   ze_event_desc_t desc = {};
   desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;
@@ -1299,7 +1298,6 @@ void RunGivenDeviceImageWhenAppendingImageCopyWithWaitEventTest(
   auto cmd_bundle = lzt::create_command_bundle<Mode>();
 
   test.img_ptr = new zeImageCreateCommon;
-  ze_event_handle_t hEvent = nullptr;
 
   ze_event_desc_t desc = {};
   desc.stype = ZE_STRUCTURE_TYPE_EVENT_DESC;

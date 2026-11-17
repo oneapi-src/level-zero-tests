@@ -227,10 +227,8 @@ std::vector<long double> ZePeak::ze_peak_dp_compute(L0Context &context) {
   // Vector width 1
   std::cout << "double : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed += run_kernel(context, dp_v1[i], workgroup_info, type);
-      i++;
     }
     gflops =
         calculate_gbps(timed, number_of_work_items * context.sub_device_count *
@@ -250,10 +248,8 @@ std::vector<long double> ZePeak::ze_peak_dp_compute(L0Context &context) {
   // Vector width 2
   std::cout << "double2 : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed += run_kernel(context, dp_v2[i], workgroup_info, type);
-      i++;
     }
     gflops =
         calculate_gbps(timed, number_of_work_items * context.sub_device_count *
@@ -273,10 +269,8 @@ std::vector<long double> ZePeak::ze_peak_dp_compute(L0Context &context) {
   // Vector width 4
   std::cout << "double4 : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed += run_kernel(context, dp_v4[i], workgroup_info, type);
-      i++;
     }
     gflops =
         calculate_gbps(timed, number_of_work_items * context.sub_device_count *
@@ -296,10 +290,8 @@ std::vector<long double> ZePeak::ze_peak_dp_compute(L0Context &context) {
   // Vector width 8
   std::cout << "double8 : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed += run_kernel(context, dp_v8[i], workgroup_info, type);
-      i++;
     }
     gflops =
         calculate_gbps(timed, number_of_work_items * context.sub_device_count *
@@ -319,10 +311,8 @@ std::vector<long double> ZePeak::ze_peak_dp_compute(L0Context &context) {
   // Vector width 16
   std::cout << "double16 : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       timed += run_kernel(context, dp_v16[i], workgroup_info, type);
-      i++;
     }
     gflops =
         calculate_gbps(timed, number_of_work_items * context.sub_device_count *

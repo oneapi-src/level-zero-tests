@@ -536,7 +536,6 @@ void ZeApp::commandQueueExecuteCommandList(
 }
 ze_event_pool_handle_t ZeApp::create_event_pool(uint32_t count,
                                                 ze_event_pool_flags_t flags) {
-  ze_event_pool_handle_t event_pool;
   ze_event_pool_desc_t descriptor = {};
   descriptor.stype = ZE_STRUCTURE_TYPE_EVENT_POOL_DESC;
 

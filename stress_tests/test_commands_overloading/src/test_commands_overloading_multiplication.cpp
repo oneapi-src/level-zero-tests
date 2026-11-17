@@ -178,11 +178,6 @@ LZT_TEST_P(zeDriverMultiplyObjectsStressTest,
   uint64_t number_of_all_allocations =
       used_vectors_in_test * requested_dispatches;
 
-  double total_memory_size_limit =
-      test_arguments.base_arguments.total_memory_size_limit;
-  double one_allocation_size_limit =
-      test_arguments.base_arguments.one_allocation_size_limit;
-
   uint64_t test_single_allocation_memory_size = 0;
   uint64_t test_total_memory_size = 0;
   bool relax_memory_capability = false;

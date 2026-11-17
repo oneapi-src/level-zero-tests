@@ -122,11 +122,9 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
   ///////////////////////////////////////////////////////////////////////////
   std::cout << "Kernel launch latency : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       latency += run_kernel(context, compute_local_offset_v1[i], workgroup_info,
                             TimingMeasurement::KERNEL_LAUNCH_LATENCY, true);
-      i++;
     }
     std::cout << latency << " (us)\n";
   } else {
@@ -139,12 +137,10 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
   ///////////////////////////////////////////////////////////////////////////
   std::cout << "Kernel launch latency with Immediate Command List : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       latency +=
           run_kernel(context, compute_local_offset_v1[i], workgroup_info,
                      TimingMeasurement::IMMEDIATE_KERNEL_LAUNCH_LATENCY, true);
-      i++;
     }
     std::cout << latency << " (us)\n";
   } else {
@@ -158,11 +154,9 @@ void ZePeak::ze_peak_kernel_latency(L0Context &context) {
   ///////////////////////////////////////////////////////////////////////////
   std::cout << "Kernel duration : ";
   if (context.sub_device_count) {
-    uint32_t i = 0;
-    for (auto device : context.sub_devices) {
+    for (uint32_t i = 0; i < context.sub_device_count; i++) {
       latency += run_kernel(context, compute_local_offset_v1[i], workgroup_info,
                             TimingMeasurement::KERNEL_COMPLETE_RUNTIME, true);
-      i++;
     }
     std::cout << latency << " (us)\n";
   } else {

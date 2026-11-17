@@ -479,7 +479,6 @@ LZT_TEST_F(
   alloc_props.pNext = &export_fd;
   lzt::get_mem_alloc_properties(context_, memory_, &alloc_props);
 
-  uint64_t fd_handle = 0;
   EXPECT_ZE_RESULT_SUCCESS(zeMemGetIpcHandleFromFileDescriptorExp(
       context_, to_u64(export_fd.fd), &ipc_mem_handle_));
   void *memory = nullptr;

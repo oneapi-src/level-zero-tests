@@ -65,10 +65,6 @@ LZT_TEST_P(zeDriverAtomicsStressTest, RunAtomicWithMemoryLimit) {
       lzt::get_memory_properties(device);
 
   uint64_t number_of_all_allocations = 2;
-  double total_memory_size_limit =
-      test_arguments.base_arguments.total_memory_size_limit;
-  double one_allocation_size_limit =
-      test_arguments.base_arguments.one_allocation_size_limit;
   uint64_t test_single_allocation_memory_size = 0;
   uint64_t test_total_memory_size = 0;
   bool relax_memory_capability = false;

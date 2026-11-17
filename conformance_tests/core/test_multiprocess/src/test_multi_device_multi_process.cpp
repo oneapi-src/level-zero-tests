@@ -35,7 +35,6 @@ void RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
     }
   }
 
-  std::array<int, num_processes> process_results;
   boost::asio::io_context io_ctx;
   std::vector<bp::process> processes;
   fs::path helper_path(fs::current_path() / "process");

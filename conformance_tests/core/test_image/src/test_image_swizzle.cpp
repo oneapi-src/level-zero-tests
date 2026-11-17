@@ -136,9 +136,6 @@ void zeCommandListAppendImageCopyWithSwizzleTests::run_test(
   lzt::free_memory_with_allocator_selector(inbuff, is_shared_system);
   lzt::destroy_function(kernel);
   lzt::destroy_command_bundle(bundle);
-
-  static const bool skip_array_type = false;
-  static const bool skip_buffer_type = true;
 }
 
 void zeCommandListAppendImageCopyWithSwizzleTests::create_in_out_images(

@@ -23,7 +23,6 @@ struct SharedSystemRemoteDeviceTests
     : public ::testing::TestWithParam<lzt::command_list_mode_t> {
   void SetUp() override {
     auto driver = lzt::get_default_driver();
-    auto context = lzt::get_default_context();
     auto devices = lzt::get_ze_devices(driver);
 
     devices.erase(
@@ -159,7 +158,6 @@ struct SharedSystemRemoteDeviceTests
     auto png_img_src = lzt::ImagePNG32Bit("test_input.png");
     auto image_width = png_img_src.width();
     auto image_height = png_img_src.height();
-    auto image_size = image_width * image_height * sizeof(uint32_t);
     auto png_img_dest = lzt::ImagePNG32Bit(image_width, image_height);
 
     ze_image_desc_t img_desc = {};

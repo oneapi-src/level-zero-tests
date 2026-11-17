@@ -386,7 +386,6 @@ void ZePingPong::setup_commandlist(L0Context &context, enum TestType test) {
 
 double ZePingPong::measure_benchmark(L0Context &context, enum TestType test) {
 
-  int *ping = static_cast<int *>(context.device_input);
   int *pong = static_cast<int *>(context.host_output);
   int *ping_shared = static_cast<int *>(context.shared_output);
 

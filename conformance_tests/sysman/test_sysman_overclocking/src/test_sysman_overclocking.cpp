@@ -289,7 +289,6 @@ LZT_TEST_F(
         ASSERT_NE(nullptr, freq_handle);
         auto capabilities = lzt::get_oc_capabilities(freq_handle);
         if (capabilities.isOcSupported) {
-          auto initialMode = lzt::get_oc_mode(freq_handle);
           zes_oc_mode_t setMode = ZES_OC_MODE_OFF;
           auto getMode = lzt::get_oc_mode(freq_handle);
           EXPECT_EQ(setMode, getMode);

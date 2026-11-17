@@ -464,7 +464,6 @@ public:
                 host_found_output_buffer + output_count_, 0);
 
       uint16_t pattern_base = lzt::generate_value<uint16_t>();
-      uint16_t pattern_base_1 = lzt::generate_value<uint16_t>();
 
       LOG_DEBUG << "PREPARE TO RUN START for device " << i;
       LOG_DEBUG << "totalSize " << totalSize;

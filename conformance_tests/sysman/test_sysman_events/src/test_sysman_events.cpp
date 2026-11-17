@@ -86,9 +86,6 @@ LZT_TEST_F(
         }
         ASSERT_ZE_RESULT_SUCCESS(
             lzt::set_temp_config(temp_handle, temp_config));
-        zes_event_type_flags_t setEvents = ZES_EVENT_TYPE_FLAG_TEMP_CRITICAL |
-                                           ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD1 |
-                                           ZES_EVENT_TYPE_FLAG_TEMP_THRESHOLD2;
       }
     } else {
       LOG_INFO << "No temperature handles found for this device!";

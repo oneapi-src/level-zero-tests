@@ -151,7 +151,6 @@ void get_mem_page_size(const ze_driver_handle_t &driver,
                        ze_memory_type_t mem_type, size_t &page_size) {
 
   auto context = lzt::create_context(driver);
-  auto device = lzt::get_default_device(driver);
   ze_memory_allocation_properties_t mem_props = {};
   mem_props.pNext = nullptr;
   mem_props.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;

@@ -32,7 +32,6 @@ protected:
     p2p_memory_ = std::get<0>(GetParam());
     offset_ = std::get<1>(GetParam());
     mode = std::get<2>(GetParam());
-    ze_bool_t can_access;
     auto driver = lzt::get_default_driver();
     auto context = lzt::get_default_context();
     auto devices = lzt::get_ze_devices(driver);

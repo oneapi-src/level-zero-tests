@@ -158,8 +158,6 @@ protected:
 #ifdef __linux__
 
     lzt::zeEventPool ep;
-    ze_device_handle_t device =
-        lzt::get_default_device(lzt::get_default_driver());
 
     ze_event_pool_desc_t defaultEventPoolDesc = {
         ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,

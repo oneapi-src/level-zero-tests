@@ -265,7 +265,6 @@ LZT_TEST_P(
   size_t mem_size = img_height * img_width * sizeof(uint32_t);
   if (std::get<0>(GetParam()) == ZE_MEMORY_TYPE_DEVICE) {
     ze_device_mem_alloc_flags_t d_flags = 0;
-    ze_host_mem_alloc_flags_t h_flags = 0;
     target_mem = lzt::allocate_device_memory(mem_size, 1, d_flags, dev1,
                                              lzt::get_default_context());
   } else {
@@ -325,7 +324,6 @@ LZT_TEST_P(
   size_t mem_size = img_height * img_width * sizeof(uint32_t);
   if (std::get<0>(GetParam()) == ZE_MEMORY_TYPE_DEVICE) {
     ze_device_mem_alloc_flags_t d_flags = 0;
-    ze_host_mem_alloc_flags_t h_flags = 0;
     target_mem = lzt::allocate_device_memory(mem_size, 1, d_flags, dev1,
                                              lzt::get_default_context());
   } else {
@@ -383,7 +381,6 @@ LZT_TEST_P(
   size_t mem_size = img_height * img_width * sizeof(uint32_t);
   if (std::get<0>(GetParam()) == ZE_MEMORY_TYPE_DEVICE) {
     ze_device_mem_alloc_flags_t d_flags = 0;
-    ze_host_mem_alloc_flags_t h_flags = 0;
     target_mem = lzt::allocate_device_memory(mem_size, 1, d_flags, dev1,
                                              lzt::get_default_context());
   } else {
@@ -443,7 +440,6 @@ LZT_TEST_P(
   size_t mem_size = img_height * img_width * sizeof(uint32_t);
   if (std::get<0>(GetParam()) == ZE_MEMORY_TYPE_DEVICE) {
     ze_device_mem_alloc_flags_t d_flags = 0;
-    ze_host_mem_alloc_flags_t h_flags = 0;
     target_mem = lzt::allocate_device_memory(mem_size, 1, d_flags, dev1,
                                              lzt::get_default_context());
   } else {

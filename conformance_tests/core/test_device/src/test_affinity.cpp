@@ -264,10 +264,8 @@ LZT_TEST(
     if (devices.empty()) {
       continue;
     }
-    int root_device_index = 0;
     for (auto device : devices) {
       num_leaf_devices += get_leaf_device_count(device);
-      root_device_index++;
     }
 
     // in each mask, either a device is present or it is not,

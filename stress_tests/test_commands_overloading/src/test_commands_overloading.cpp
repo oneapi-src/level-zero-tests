@@ -282,10 +282,6 @@ LZT_TEST_P(
   const uint32_t used_vectors_in_test = 3;
   const uint32_t multiplier = to_u32(test_arguments.base_arguments.multiplier);
   uint64_t number_of_all_allocations = used_vectors_in_test * multiplier;
-  double total_memory_size_limit =
-      test_arguments.base_arguments.total_memory_size_limit;
-  double one_allocation_size_limit =
-      test_arguments.base_arguments.one_allocation_size_limit;
   uint64_t test_single_allocation_memory_size = 0;
   uint64_t test_total_memory_size = 0;
   bool relax_memory_capability = false;
@@ -300,7 +296,6 @@ LZT_TEST_P(
   uint64_t test_single_allocation_count =
       tmp_count - tmp_count % workgroup_size_x_;
 
-  uint64_t max_allocation_size = device_properties.maxMemAllocSize;
   uint32_t number_of_requested_dispatches = multiplier;
   bool memory_test_failure = false;
 

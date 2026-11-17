@@ -60,7 +60,6 @@ LZT_TEST_P(zeCommandQueueCreateTests,
   descriptor.priority = std::get<2>(GetParam());
 
   const ze_device_handle_t device = lzt::zeDevice::get_instance()->get_device();
-  const ze_driver_handle_t driver = lzt::get_default_driver();
   const ze_context_handle_t context = lzt::get_default_context();
 
   ze_device_properties_t properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES,
@@ -125,7 +124,6 @@ protected:
   void SetUp() override {
     const ze_device_handle_t device =
         lzt::zeDevice::get_instance()->get_device();
-    const ze_driver_handle_t driver = lzt::get_default_driver();
     const ze_context_handle_t context = lzt::get_default_context();
     EXPECT_GT(params.num_command_lists, 0);
 
@@ -248,7 +246,6 @@ class zeImmediateCommandListAppendCommandListsExpTests
 protected:
   void SetUp() override {
 
-    const ze_driver_handle_t driver = lzt::get_default_driver();
     const ze_context_handle_t context = lzt::get_default_context();
     EXPECT_GT(params.num_command_lists, 0);
 
@@ -894,7 +891,6 @@ LZT_TEST_P(CommandQueueCopyOnlyTestQueueMode,
   png_img_src = lzt::ImagePNG32Bit("test_input.png");
   auto image_width = png_img_src.width();
   auto image_height = png_img_src.height();
-  auto image_size = image_width * image_height * sizeof(uint32_t);
   png_img_dest = lzt::ImagePNG32Bit(image_width, image_height);
 
   ze_image_desc_t img_desc = {};

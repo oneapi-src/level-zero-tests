@@ -190,7 +190,6 @@ LZT_TEST_F(LED_TEST,
       auto led_handles = lzt::get_led_handles(device, count);
       for (auto led_handle : led_handles) {
         ASSERT_NE(nullptr, led_handle);
-        auto properties = lzt::get_led_properties(led_handle);
         auto state = lzt::get_led_state(led_handle);
         if (state.isOn == false) {
           ASSERT_DOUBLE_EQ(state.color.red, 0.0);

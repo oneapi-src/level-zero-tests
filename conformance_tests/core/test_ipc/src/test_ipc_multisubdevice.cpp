@@ -175,9 +175,6 @@ void multi_sub_device_receiver(size_t size) {
   auto dev_properties_0 = lzt::get_device_properties(device_0);
   auto dev_properties_1 = lzt::get_device_properties(device_1);
 
-  auto select = memcmp(&dev_properties_0.uuid, &dev_properties_1.uuid,
-                       ZE_MAX_DEVICE_UUID_SIZE);
-
   ze_device_handle_t device = device_0;
   if (dev_properties_0.subdeviceId < dev_properties_1.subdeviceId) {
     device = device_0;

@@ -197,9 +197,6 @@ LZT_TEST_F(
     module = lzt::create_module(device, "residency_tests.spv");
     kernel = lzt::create_function(module, "residency_function");
 
-    auto device_flags = 0;
-    auto host_flags = 0;
-
     node *data = new node;
     data->value = 0;
     node *temp = data;
@@ -371,9 +368,6 @@ void RunGivenSharedSystemMemoryWhenMakingMemoryResidentUsingKernelFlagTest() {
 
     lzt::kernel_set_indirect_access(kernel,
                                     ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED);
-
-    auto device_flags = 0;
-    auto host_flags = 0;
 
     node *data = new node;
     data->value = 0;

@@ -1045,8 +1045,8 @@ void multidevice_resource_stress_test(ze_context_handle_t &context,
                           0, nullptr);
   lzt::close_command_list(command_list_1);
 
-  auto exec_result = zeCommandQueueExecuteCommandLists(
-      command_queue_1, 1, &command_list_1, fence_1);
+  result = zeCommandQueueExecuteCommandLists(command_queue_1, 1,
+                                             &command_list_1, fence_1);
   if (ZE_RESULT_SUCCESS != result) {
     LOG_ERROR << "[Application] " << __LINE__ << " FAIL: " << result;
     exit(1);
@@ -1194,8 +1194,6 @@ int main(int argc, char **argv) {
     devices.erase(
         std::remove_if(devices.begin(), devices.end(),
                        [](ze_device_handle_t &device) {
-                         auto device_properties =
-                             lzt::get_device_properties(device);
                          auto properties = lzt::get_debug_properties(device);
 
                          return !(ZET_DEVICE_DEBUG_PROPERTY_FLAG_ATTACH &

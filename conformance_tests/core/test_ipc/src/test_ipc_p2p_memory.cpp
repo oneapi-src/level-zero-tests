@@ -141,11 +141,6 @@ inline void init_process(ze_context_handle_t &context,
   }
 
   for (uint32_t ordinal : ordinals) {
-    ze_command_queue_desc_t cmdQueueDesc = {};
-    cmdQueueDesc.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
-    cmdQueueDesc.ordinal = ordinal;
-    cmdQueueDesc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
-
     for (uint32_t i = 0; i < queue_properties[ordinal].numQueues; i++) {
       auto cmd_bundle = lzt::create_command_bundle(
           context, device, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY,

@@ -128,7 +128,6 @@ protected:
                  "metric_group_handles_limit "
               << metric_group_handles_limit;
 
-    ze_result_t result;
     uint32_t metric_group_handles_count = 0;
 
     ASSERT_ZE_RESULT_SUCCESS(zetDeviceCreateMetricGroupsFromMetricsExp(
@@ -208,7 +207,6 @@ LZT_TEST_F(zetMetricMetricProgrammableTest,
     for (auto &metric_programmable_handle :
          device_with_metric_programmable_groups
              .metric_programmable_handles_for_device) {
-      ze_result_t result;
       zet_metric_programmable_exp_properties_t metric_programmable_properties{
           ZET_STRUCTURE_TYPE_METRIC_PROGRAMMABLE_EXP_PROPERTIES, nullptr};
       ASSERT_ZE_RESULT_SUCCESS(zetMetricProgrammableGetPropertiesExp(

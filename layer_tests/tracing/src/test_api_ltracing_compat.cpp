@@ -163,8 +163,6 @@ protected:
 #ifdef __linux__
 
     lzt::zeEventPool ep;
-    ze_device_handle_t device =
-        lzt::get_default_device(lzt::get_default_driver());
 
     ze_event_pool_desc_t defaultEventPoolDesc = {
         ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr,
@@ -1674,7 +1672,6 @@ LZT_TEST_F(
 
   auto command_list = lzt::create_command_list();
   uint64_t dst_timestamp;
-  ze_event_handle_t wait_event_before, wait_event_after;
   auto wait_event_initial = event;
 
   lzt::enable_ltracer(tracer_handle);
@@ -3246,7 +3243,6 @@ LZT_TEST_F(
   size_t pageSize = 0;
   size_t allocationSize = (1024 * 1024);
   void *reservedVirtualMemory = nullptr;
-  ze_physical_mem_handle_t reservedPhysicalMemory;
 
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
@@ -3271,7 +3267,6 @@ LZT_TEST_F(
   size_t pageSize = 0;
   size_t allocationSize = (1024 * 1024);
   void *reservedVirtualMemory = nullptr;
-  ze_physical_mem_handle_t reservedPhysicalMemory;
 
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
@@ -3297,9 +3292,7 @@ LZT_TEST_F(
   size_t pageSize = 0;
   size_t allocationSize = (1024 * 1024);
   void *reservedVirtualMemory = nullptr;
-  ze_physical_mem_handle_t reservedPhysicalMemory;
 
-  ze_memory_access_attribute_t previousAccess;
   size_t memorySize = 0;
   lzt::query_page_size(context, device, allocationSize, &pageSize);
   allocationSize = lzt::create_page_aligned_size(allocationSize, pageSize);
@@ -3356,7 +3349,6 @@ LZT_TEST_F(
   zelTracerVirtualMemSetAccessAttributeRegisterCallback(
       tracer_handle, ZEL_REGISTER_EPILOGUE, lzt::lepilogue_callback);
 
-  size_t memorySize = 0;
   size_t pageSize = 0;
   size_t allocationSize = (1024 * 1024);
   void *reservedVirtualMemory = nullptr;

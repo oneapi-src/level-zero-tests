@@ -26,7 +26,6 @@ int main(int argc, char **argv) {
 
   std::string test_type_string = argv[1];
 
-  ze_result_t result;
   if (zeInit(0) != ZE_RESULT_SUCCESS) {
     LOG_DEBUG << "Child exit due to zeInit failure";
     exit(EXIT_FAILURE);

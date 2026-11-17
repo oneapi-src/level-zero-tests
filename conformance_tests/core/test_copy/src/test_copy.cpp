@@ -2898,8 +2898,6 @@ LZT_TEST_P(
   size_t size = std::get<0>(GetParam());
   lzt::command_list_mode_t mode = std::get<1>(GetParam());
 
-  auto context = lzt::get_default_context();
-
   for (auto driver : lzt::get_all_driver_handles()) {
     for (auto device : lzt::get_devices(driver)) {
 
