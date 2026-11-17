@@ -104,7 +104,7 @@ LZT_TEST(
   ASSERT_GT(drivers.size(), 0);
   std::vector<ze_device_handle_t> devices;
   for (auto driver : drivers) {
-    devices = lzt::get_ze_devices();
+    devices = lzt::get_ze_devices(driver);
     if (devices.size() > 1)
       break;
   }

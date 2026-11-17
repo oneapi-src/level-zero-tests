@@ -324,7 +324,7 @@ LZT_TEST(
   for (auto device : devices) {
     auto sub_devices = lzt::get_ze_sub_devices(device);
     for (auto subdevice : sub_devices) {
-      auto properties = lzt::get_cache_properties(device);
+      auto properties = lzt::get_cache_properties(subdevice);
       for (auto cache_props : properties) {
         EXPECT_GE(cache_props.cacheSize, 0);
       }

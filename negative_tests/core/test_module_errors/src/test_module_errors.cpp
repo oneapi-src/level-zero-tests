@@ -163,7 +163,6 @@ LZT_TEST_F(
 
   ze_kernel_handle_t function = lzt::create_function(module_, kernel_name);
   ze_command_list_handle_t cmdlist = lzt::create_command_list(device_);
-  ze_command_queue_handle_t cmdq = lzt::create_command_queue(device_);
   uint32_t group_size_x = 1;
   uint32_t group_size_y = 1;
   uint32_t group_size_z = 1;
@@ -191,6 +190,8 @@ LZT_TEST_F(
                                             &thread_group_dimensions, nullptr,
                                             0, nullptr));
 
+  lzt::destroy_command_list(cmdlist);
+  lzt::destroy_function(function);
   lzt::free_memory(buff);
 }
 

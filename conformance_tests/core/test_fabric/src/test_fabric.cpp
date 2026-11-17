@@ -494,7 +494,7 @@ fabric_edge_get_minimum_bandwidth(std::vector<ze_fabric_edge_handle_t> &edges,
                                   uint32_t &bandwidth) {
 
   for (auto &edge : edges) {
-    auto edge_property = lzt::get_ze_fabric_edge_properties(edges[0]);
+    auto edge_property = lzt::get_ze_fabric_edge_properties(edge);
     if (edge_property.bandwidth == 0) {
       continue;
     }

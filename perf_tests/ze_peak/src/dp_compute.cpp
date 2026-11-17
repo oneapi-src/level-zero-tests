@@ -137,7 +137,6 @@ std::vector<long double> ZePeak::ze_peak_dp_compute(L0Context &context) {
         throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
                                  std::to_string(result));
       }
-      i++;
     }
   } else {
 

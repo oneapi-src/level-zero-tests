@@ -119,7 +119,6 @@ void ZePeak::ze_peak_sp_compute(L0Context &context) {
         throw std::runtime_error("zeCommandListAppendMemoryCopy failed: " +
                                  std::to_string(result));
       }
-      i++;
     }
   } else {
     result = zeCommandListAppendMemoryCopy(context.command_list,

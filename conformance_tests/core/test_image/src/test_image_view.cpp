@@ -27,12 +27,11 @@ public:
     }
   }
 
-  void validate_view(ze_image_handle_t img, ze_image_handle_t view) {
-    if (view == nullptr) {
-      lzt::destroy_ze_image(img);
-      FAIL();
+  void validate_view(ze_image_handle_t view) {
+    EXPECT_NE(nullptr, view);
+    if (view != nullptr) {
+      lzt::destroy_ze_image(view);
     }
-    lzt::destroy_ze_image(view);
   }
 
   virtual bool check_view_support() = 0;
@@ -122,13 +121,13 @@ void zeImageViewCreateTests::run_test(ze_image_type_t img_type,
   case ZE_IMAGE_FORMAT_LAYOUT_NV12: {
     // Get Y-plane view, same image size, elements are u8's
     ze_image_handle_t view_Y = create_image_view(ZE_IMAGE_FORMAT_LAYOUT_8, 0);
-    validate_view(img, view_Y);
+    validate_view(view_Y);
 
     // Get UV-plane view, half image size, elements are (u8, u8)'s
     ze_image_handle_t view_UV = create_image_view(
         ZE_IMAGE_FORMAT_LAYOUT_8_8, 1,
         {img_desc.width / 2, img_desc.height / 2, img_desc.depth});
-    validate_view(img, view_UV);
+    validate_view(view_UV);
 
     lzt::destroy_ze_image(img);
     break;
@@ -137,15 +136,16 @@ void zeImageViewCreateTests::run_test(ze_image_type_t img_type,
     // Get R, G, B planes views, same image size, elements are u8's
     std::array<uint32_t, 3> planes = {0, 1, 2};
     for (auto &plane : planes) {
-      ze_image_handle_t view = create_image_view(ZE_IMAGE_FORMAT_LAYOUT_8, 0);
-      validate_view(img, view);
+      ze_image_handle_t view =
+          create_image_view(ZE_IMAGE_FORMAT_LAYOUT_8, plane);
+      validate_view(view);
     }
     lzt::destroy_ze_image(img);
     break;
   }
   case ZE_IMAGE_FORMAT_LAYOUT_8: {
     ze_image_handle_t view = create_image_view(ZE_IMAGE_FORMAT_LAYOUT_8, 0);
-    validate_view(img, view);
+    validate_view(view);
     lzt::destroy_ze_image(img);
     break;
   }

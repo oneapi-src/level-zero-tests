@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
   level_zero_tests::print_platform_overview();
 
   try {
-    auto result = RUN_ALL_TESTS();
+    return RUN_ALL_TESTS();
   } catch (const std::runtime_error &e) {
     LOG_ERROR << "Failed to run tests: " << e.what();
     return 1;
