@@ -126,7 +126,7 @@ typedef testing::Types<level_zero_tests::ImagePNG32Bit,
                        level_zero_tests::ImageBMP8Bit,
                        level_zero_tests::ImageBMP32Bit>
     ImageTypes;
-TYPED_TEST_CASE(SizeInBytes, ImageTypes);
+TYPED_TEST_SUITE(SizeInBytes, ImageTypes);
 
 TYPED_TEST(SizeInBytes, EmptyImage) {
   const TypeParam image(0, 0);

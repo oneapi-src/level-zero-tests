@@ -26,14 +26,14 @@ protected:
   const int iterations = 100;
   const int seed = 0;
 };
-TYPED_TEST_CASE(GenerateValue, StandardTypes);
+TYPED_TEST_SUITE(GenerateValue, StandardTypes);
 
 template <typename T> class GenerateIntegerValue : public GenerateValue<T> {};
-TYPED_TEST_CASE(GenerateIntegerValue, IntegerTypes);
+TYPED_TEST_SUITE(GenerateIntegerValue, IntegerTypes);
 
 template <typename T>
 class GenerateFloatingPointValue : public GenerateValue<T> {};
-TYPED_TEST_CASE(GenerateFloatingPointValue, FloatingPointTypes);
+TYPED_TEST_SUITE(GenerateFloatingPointValue, FloatingPointTypes);
 
 TYPED_TEST(GenerateIntegerValue, WithinGivenMinAndMaxValue) {
   const TypeParam min = 1;
@@ -70,14 +70,14 @@ protected:
   const size_t size = 100;
   const int seed = 0;
 };
-TYPED_TEST_CASE(GenerateVector, StandardTypes);
+TYPED_TEST_SUITE(GenerateVector, StandardTypes);
 
 template <typename T> class GenerateIntegerVector : public GenerateVector<T> {};
-TYPED_TEST_CASE(GenerateIntegerVector, IntegerTypes);
+TYPED_TEST_SUITE(GenerateIntegerVector, IntegerTypes);
 
 template <typename T>
 class GenerateFloatingPointVector : public GenerateVector<T> {};
-TYPED_TEST_CASE(GenerateFloatingPointVector, FloatingPointTypes);
+TYPED_TEST_SUITE(GenerateFloatingPointVector, FloatingPointTypes);
 
 TYPED_TEST(GenerateIntegerVector, WithinGivenMinAndMaxValue) {
   const TypeParam min = 1;

@@ -351,8 +351,8 @@ LZT_TEST_P(
   }
 }
 
-INSTANTIATE_TEST_CASE_P(TestCasesforComputePerformanceFactorVerification,
-                        PERFORMANCE_COMPUTE_TEST,
-                        testing::Values(0, 25, 49, 50, 51, 75, 99, 100));
+INSTANTIATE_TEST_SUITE_P(TestCasesforComputePerformanceFactorVerification,
+                         PERFORMANCE_COMPUTE_TEST,
+                         testing::Values(0, 25, 49, 50, 51, 75, 99, 100));
 
 } // namespace

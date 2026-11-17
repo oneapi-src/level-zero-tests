@@ -445,7 +445,7 @@ LZT_TEST_P(
   dev_access_.clear();
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestP2PAtomicAccess, zeP2PMemAccessTestsAtomicAccess,
     testing::Combine(testing::Values("atomic_access"),
                      testing::Values(LZT_P2P_MEMORY_TYPE_DEVICE,
@@ -527,7 +527,7 @@ LZT_TEST_P(
   lzt::free_memory(dev_access_[0].device_mem_validation);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestP2PConcurrentAccess, zeP2PMemAccessTestsConcurrentAccess,
     testing::Combine(testing::Values("concurrent_access"),
                      testing::Values(LZT_P2P_MEMORY_TYPE_DEVICE,
@@ -620,7 +620,7 @@ LZT_TEST_P(
   lzt::free_memory(dev_access_[0].device_mem_validation);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestP2PAtomicAndConcurrentAccess,
     zeP2PMemAccessTestsAtomicAndConcurrentAccess,
     testing::Combine(testing::Values("atomic_access"),

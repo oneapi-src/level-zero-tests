@@ -202,7 +202,7 @@ LZT_TEST_P(
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestCasesforCommandListCreateCloseAndDestroyWithValidFlagValues,
     zeCommandListCreateDestroyValidFlagsMultithreadTest,
     testing::Values(ZE_COMMAND_LIST_FLAG_RELAXED_ORDERING,

@@ -386,7 +386,7 @@ std::vector<uint64_t> multiple_modules = input_values;
 std::vector<bool> is_immediate_command_list = {true, false};
 std::vector<bool> is_registered_on_immediate_command_list = {true, false};
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     zeDriverMultiplyObjectsStressTestMinMemory,
     zeDriverMultiplyObjectsStressTest,
     ::testing::Combine(
@@ -399,7 +399,7 @@ INSTANTIATE_TEST_CASE_P(
         ::testing::ValuesIn(is_immediate_command_list),
         ::testing::ValuesIn(is_registered_on_immediate_command_list)),
     CombinationsTestNameSuffix());
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     zeDriverMultiplyObjectsStressTestMaxMemory,
     zeDriverMultiplyObjectsStressTest,
     ::testing::Combine(

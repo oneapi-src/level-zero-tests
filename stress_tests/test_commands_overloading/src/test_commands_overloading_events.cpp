@@ -429,14 +429,14 @@ struct CombinationsTestNameSuffix {
 std::vector<uint64_t> multiple_events = {1,    32,   64,   128,   256,  512,
                                          1024, 5000, 9000, 10000, 50000};
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestEventsMatrixMinMemory, zeDriverMultiplyEventsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(one_percent),
                        testing::ValuesIn(multiple_events),
                        testing::Values(ZE_MEMORY_TYPE_DEVICE)),
     CombinationsTestNameSuffix());
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestEventsMatrixMaxMemory, zeDriverMultiplyEventsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(hundred_percent),

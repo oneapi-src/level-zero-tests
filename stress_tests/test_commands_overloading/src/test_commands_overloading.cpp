@@ -411,7 +411,7 @@ std::vector<bool> use_separate_command_queues = {true, false};
 std::vector<bool> is_immediate_command_list = {true, false};
 std::vector<bool> is_registered_on_immediate_command_list = {true, false};
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     zeDriverSpreadKernelsStressTestMaxMemory, zeDriverSpreadKernelsStressTest,
     ::testing::Combine(
         ::testing::Values(hundred_percent), ::testing::Values(hundred_percent),
@@ -422,7 +422,7 @@ INSTANTIATE_TEST_CASE_P(
         ::testing::ValuesIn(is_immediate_command_list),
         ::testing::ValuesIn(is_registered_on_immediate_command_list)),
     CombinationsTestNameSuffix());
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     zeDriverSpreadKernelsStressTestMinMemory, zeDriverSpreadKernelsStressTest,
     ::testing::Combine(
         ::testing::Values(hundred_percent), ::testing::Values(five_percent),

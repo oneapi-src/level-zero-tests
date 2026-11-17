@@ -95,9 +95,9 @@ LZT_TEST_P(LTRACING_CREATE_MULTIPLE_TEST_NAME,
   delete[] user_data;
 }
 
-INSTANTIATE_TEST_CASE_P(CreateMultipleTracerTest,
-                        LTRACING_CREATE_MULTIPLE_TEST_NAME,
-                        ::testing::Values(1, 10, 100, 1000));
+INSTANTIATE_TEST_SUITE_P(CreateMultipleTracerTest,
+                         LTRACING_CREATE_MULTIPLE_TEST_NAME,
+                         ::testing::Values(1, 10, 100, 1000));
 
 #ifdef USE_RUNTIME_TRACING
 class LDynamicTracingDestroyTests : public ::testing::Test {

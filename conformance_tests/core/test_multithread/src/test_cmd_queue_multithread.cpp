@@ -141,7 +141,7 @@ LZT_TEST_P(
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAllInputPermuations, zeCommandQueueCreateDestroyRandomMultithreadTest,
     ::testing::Combine(
         ::testing::Values(static_cast<ze_command_queue_flag_t>(0),

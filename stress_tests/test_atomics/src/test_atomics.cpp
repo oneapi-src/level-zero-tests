@@ -198,7 +198,7 @@ AtomicCases_t multi_operations_memory_non_overlap_10 = {
     {9, 10, 11, 12, 13, 14, 15, 16}};
 
 // min memory
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsAllMustPass, zeDriverAtomicsStressTest,
     ::testing::Combine(
         ::testing::Values(hundred_percent), ::testing::Values(one_percent),
@@ -207,28 +207,28 @@ INSTANTIATE_TEST_CASE_P(
                           one_operation_memory_non_overlap_10,
                           multi_operations_memory_overlap_10,
                           multi_operations_memory_non_overlap_10)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsOneOperationMemoryOverlap10LoopsMinMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(ten_percent), ::testing::Values(1),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::Values(one_operation_memory_overlap_10)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsOneOperationMemoryNonOverlap10LoopsMinMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(ten_percent), ::testing::Values(1),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::Values(one_operation_memory_non_overlap_10)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsMultiOperationsMemoryOverlap10LoopsMinMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(ten_percent), ::testing::Values(1),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::Values(multi_operations_memory_overlap_10)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsMultiOperationsMemoryNonOverlap10LoopsMinMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(
@@ -237,28 +237,28 @@ INSTANTIATE_TEST_CASE_P(
         ::testing::Values(multi_operations_memory_non_overlap_10)));
 
 // max memory
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsOneOperationMemoryOverlap10LoopsMaxMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(hundred_percent), ::testing::Values(1),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::Values(one_operation_memory_overlap_10)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsOneOperationMemoryNonOverlap10LoopsMaxMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(hundred_percent), ::testing::Values(1),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::Values(one_operation_memory_non_overlap_10)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsMultiOperationsMemoryOverlap10LoopsMaxMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(hundred_percent), ::testing::Values(1),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::Values(multi_operations_memory_overlap_10)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsMultiOperationsMemoryNonOverlap10LoopsMaxMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(
@@ -280,28 +280,28 @@ AtomicCases_t multi_operations_memory_non_overlap_100 = {
     {9, 10, 11, 12, 13, 14, 15, 16}};
 
 // min memory
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsOneOperationMemoryOverlap100LoopsMinMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(ten_percent), ::testing::Values(1),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::Values(one_operation_memory_overlap_100)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsOneOperationMemoryNonOverlap100LoopsMinMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(
         ::testing::Values(hundred_percent), ::testing::Values(ten_percent),
         ::testing::Values(1), ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
         ::testing::Values(one_operation_memory_non_overlap_100)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsMultiOperationsMemoryOverlap100LoopsMinMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(ten_percent), ::testing::Values(1),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::Values(multi_operations_memory_overlap_100)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsMultiOperationsMemoryNonOverlap100LoopsMinMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(
@@ -310,28 +310,28 @@ INSTANTIATE_TEST_CASE_P(
         ::testing::Values(multi_operations_memory_non_overlap_100)));
 
 // max memory
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsOneOperationMemoryOverlap100LoopsMaxMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(hundred_percent), ::testing::Values(1),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::Values(one_operation_memory_overlap_100)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsOneOperationMemoryNonOverlap100LoopsMaxMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(
         ::testing::Values(hundred_percent), ::testing::Values(hundred_percent),
         ::testing::Values(1), ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
         ::testing::Values(one_operation_memory_non_overlap_100)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsMultiOperationsMemoryOverlap100LoopsMaxMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(hundred_percent), ::testing::Values(1),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::Values(multi_operations_memory_overlap_100)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsMultiOperationsMemoryNonOverlap100LoopsMaxMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(
@@ -353,28 +353,28 @@ AtomicCases_t multi_operations_memory_non_overlap_1000 = {
     {9, 10, 11, 12, 13, 14, 15, 16}};
 
 // min memory
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsOneOperationMemoryOverlap1000LoopsMinMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(ten_percent), ::testing::Values(1),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::Values(one_operation_memory_overlap_1000)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsOneOperationMemoryNonOverlap1000LoopsMinMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(
         ::testing::Values(hundred_percent), ::testing::Values(ten_percent),
         ::testing::Values(1), ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
         ::testing::Values(one_operation_memory_non_overlap_1000)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsMultiOperationsMemoryOverlap1000LoopsMinMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(
         ::testing::Values(hundred_percent), ::testing::Values(ten_percent),
         ::testing::Values(1), ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
         ::testing::Values(multi_operations_memory_overlap_1000)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsMultiOperationsMemoryNonOverlap1000LoopsMinMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(
@@ -383,28 +383,28 @@ INSTANTIATE_TEST_CASE_P(
         ::testing::Values(multi_operations_memory_non_overlap_1000)));
 
 // max memory
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsOneOperationMemoryOverlap1000LoopsMaxMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(::testing::Values(hundred_percent),
                        ::testing::Values(hundred_percent), ::testing::Values(1),
                        ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
                        ::testing::Values(one_operation_memory_overlap_1000)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsOneOperationMemoryNonOverlap1000LoopsMaxMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(
         ::testing::Values(hundred_percent), ::testing::Values(hundred_percent),
         ::testing::Values(1), ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
         ::testing::Values(one_operation_memory_non_overlap_1000)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsMultiOperationsMemoryOverlap1000LoopsMaxMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(
         ::testing::Values(hundred_percent), ::testing::Values(hundred_percent),
         ::testing::Values(1), ::testing::Values(ZE_MEMORY_TYPE_DEVICE),
         ::testing::Values(multi_operations_memory_overlap_1000)));
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TestAtomicsMultiOperationsMemoryNonOverlap1000LoopsMaxMemory,
     zeDriverAtomicsStressTest,
     ::testing::Combine(

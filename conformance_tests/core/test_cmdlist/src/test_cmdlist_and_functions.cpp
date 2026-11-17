@@ -203,11 +203,11 @@ auto kernel_function_types =
                       TestTypes::test_get_group_id);
 auto immediate_types = ::testing::Values(lzt::command_list_mode_t::immediate,
                                          lzt::command_list_mode_t::regular);
-INSTANTIATE_TEST_CASE_P(zeCheckMiscFunctionsTestsInstantiate,
-                        zeCheckMiscFunctionsTests,
-                        ::testing::Combine(kernel_function_types,
-                                           immediate_types),
-                        CombinationsTestNameSuffix());
+INSTANTIATE_TEST_SUITE_P(zeCheckMiscFunctionsTestsInstantiate,
+                         zeCheckMiscFunctionsTests,
+                         ::testing::Combine(kernel_function_types,
+                                            immediate_types),
+                         CombinationsTestNameSuffix());
 
 LZT_TEST_P(
     zeCheckMiscFunctionsTests,

@@ -93,8 +93,8 @@ LZT_TEST_P(zeFenceSynchronizeTests,
   lzt::free_memory(context_, output_buffer);
 }
 
-INSTANTIATE_TEST_CASE_P(FenceSyncParameterizedTest, zeFenceSynchronizeTests,
-                        ::testing::Values(UINT32_MAX - 1, UINT64_MAX));
+INSTANTIATE_TEST_SUITE_P(FenceSyncParameterizedTest, zeFenceSynchronizeTests,
+                         ::testing::Values(UINT32_MAX - 1, UINT64_MAX));
 
 LZT_TEST_F(zeFenceSynchronizeTests,
            GivenSignaledFenceWhenQueryingThenSuccessIsReturned) {
@@ -253,7 +253,7 @@ LZT_TEST_P(
   context = nullptr;
 }
 
-INSTANTIATE_TEST_CASE_P(TestMultipleFenceWithAndWithoutEvent,
-                        zeMultipleFenceTests, testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(TestMultipleFenceWithAndWithoutEvent,
+                         zeMultipleFenceTests, testing::Values(false, true));
 
 } // namespace
