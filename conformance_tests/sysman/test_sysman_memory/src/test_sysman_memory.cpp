@@ -253,26 +253,6 @@ LZT_TEST_F(MEMORY_TEST,
   }
 }
 
-uint64_t get_free_memory_state(ze_device_handle_t device) {
-  uint32_t count = 0;
-  uint64_t total_free_memory = 0;
-  uint64_t total_alloc = 0;
-
-  std::vector<zes_mem_handle_t> mem_handles =
-      lzt::get_mem_handles(device, count);
-  if (count == 0) {
-    std::cout << "No handles found: "
-              << _ze_result_t(ZE_RESULT_ERROR_UNSUPPORTED_FEATURE);
-  }
-  for (zes_mem_handle_t mem_handle : mem_handles) {
-    auto state = lzt::get_mem_state(mem_handle);
-    total_free_memory += state.free;
-    total_alloc += state.size;
-  }
-
-  return total_free_memory;
-}
-
 ze_result_t copy_workload(ze_device_handle_t device,
                           ze_device_mem_alloc_desc_t *device_desc,
                           void *src_ptr, void *dst_ptr, uint32_t local_size) {

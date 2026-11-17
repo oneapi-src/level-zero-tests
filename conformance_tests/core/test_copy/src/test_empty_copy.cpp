@@ -29,27 +29,6 @@ enum class operation_t {
   append_memory_fill
 };
 
-std::string to_string(operation_t operation) {
-  switch (operation) {
-  case operation_t::append_memory_copy:
-    return "append_memory_copy";
-  case operation_t::append_memory_copy_region:
-    return "append_memory_copy_region";
-  case operation_t::append_image_copy:
-    return "append_image_copy";
-  case operation_t::append_image_copy_region:
-    return "append_image_copy_region";
-  case operation_t::append_image_copy_to_memory:
-    return "append_image_copy_to_memory";
-  case operation_t::append_image_copy_from_memory:
-    return "append_image_copy_from_memory";
-  case operation_t::append_memory_fill:
-    return "append_memory_fill";
-  default:
-    throw std::runtime_error("Not implemented 'to_string'");
-  }
-}
-
 static const auto operations = {operation_t::append_memory_copy,
                                 operation_t::append_memory_copy_region,
                                 operation_t::append_memory_fill,

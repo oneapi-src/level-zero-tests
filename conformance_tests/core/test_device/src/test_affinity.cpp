@@ -92,17 +92,6 @@ static void run_child_process(std::string driver_id, std::string affinity_mask,
   EXPECT_EQ(child_result.exit_code, 0);
 }
 
-void print_devices(ze_device_handle_t device, int level) {
-  if (lzt::get_ze_sub_device_count(device)) {
-    for (auto &subdevice : lzt::get_ze_sub_devices(device)) {
-      print_devices(subdevice, level + 1);
-    }
-    std::cout << " Parent Device - lvl: " << level << "\n";
-  } else {
-    std::cout << level << "\n";
-  }
-}
-
 uint16_t get_device_count(ze_device_handle_t device) {
   if (lzt::get_ze_sub_device_count(device)) {
     uint16_t sum = 1; // 1 for this device

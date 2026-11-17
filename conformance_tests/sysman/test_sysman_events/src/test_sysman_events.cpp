@@ -54,12 +54,6 @@ public:
 #define EVENTS_TEST EventsTest
 #endif // USE_ZESINIT
 
-void register_unknown_event(zes_device_handle_t device,
-                            zes_event_type_flags_t events) {
-  EXPECT_EQ(ZE_RESULT_ERROR_INVALID_ENUMERATION,
-            zesDeviceEventRegister(device, events));
-}
-
 LZT_TEST_F(
     EVENTS_TEST,
     GivenValidEventHandleWhenListeningTemperatureEventsForCriticalOrThresholdTempThenEventsAreTriggered) {
