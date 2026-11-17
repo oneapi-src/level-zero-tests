@@ -10,7 +10,6 @@ add_lzt_test(
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils
-    Boost::serialization
 )
 add_lzt_test(
   NAME test_sysman_firmware_zesinit
@@ -21,6 +20,5 @@ add_lzt_test(
   LINK_LIBRARIES
     level_zero_tests::logging
     level_zero_tests::utils
-    Boost::serialization
   DEFINES USE_ZESINIT   
 )

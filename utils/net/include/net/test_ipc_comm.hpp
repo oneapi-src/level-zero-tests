@@ -7,7 +7,6 @@
  */
 
 #pragma once
-#include <boost/asio.hpp>
 #include <utility>
 #include <level_zero/ze_api.h>
 #include <cstddef>
@@ -17,13 +16,12 @@
 #include <thread>
 #ifdef __linux__
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 #endif
 
 #include "logging/logging.hpp"
 #include "utils/utils_gtest_helper.hpp"
-
-namespace boost_ip = boost::asio::ip;
 
 namespace level_zero_tests {
 
