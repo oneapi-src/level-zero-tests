@@ -85,6 +85,8 @@ static ze_event_pool_handle_t get_event_pool(bool multi_device,
   case MAPPED_KERNEL_TIMESTAMP:
     eventPoolDesc = &mappedTimestampEventPoolDesc;
     break;
+  case NO_TIMESTAMP:
+    break;
   }
   return lzt::create_event_pool(context, *eventPoolDesc, devices);
 }

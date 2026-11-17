@@ -1280,7 +1280,7 @@ void zetDebugReadWriteRegistersTest::run_read_write_registers_test(
 
     zet_debug_memory_space_desc_t memorySpaceDesc;
     memorySpaceDesc.type = ZET_DEBUG_MEMORY_SPACE_TYPE_DEFAULT;
-    int sizeToRead = 512;
+    size_t sizeToRead = 512;
     uint8_t *kernel_buffer = new uint8_t[sizeToRead];
     // set buffer[0] to 0 to break the loop. See debug_loop.cl
     kernel_buffer[0] = 0;

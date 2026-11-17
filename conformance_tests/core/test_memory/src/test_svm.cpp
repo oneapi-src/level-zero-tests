@@ -105,6 +105,10 @@ LZT_TEST_P(
       lzt::append_memory_prefetch(cmd_bundle.record_list(), source,
                                   buffer_size);
       break;
+    case MemoryHint::None:
+    case MemoryHint::AdviseDestinationToSystem:
+    case MemoryHint::PrefetchDestination:
+      break;
     }
   }
 
@@ -120,6 +124,10 @@ LZT_TEST_P(
     case MemoryHint::PrefetchBoth:
       lzt::append_memory_prefetch(cmd_bundle.record_list(), result,
                                   buffer_size);
+      break;
+    case MemoryHint::None:
+    case MemoryHint::AdviseSourceToSystem:
+    case MemoryHint::PrefetchSource:
       break;
     }
   }
@@ -187,6 +195,10 @@ struct SharedSystemMemoryTestsNameSuffix {
       case MemoryHint::PrefetchSource:
       case MemoryHint::PrefetchBoth:
         return "prefetched";
+      case MemoryHint::None:
+      case MemoryHint::AdviseDestinationToSystem:
+      case MemoryHint::PrefetchDestination:
+        break;
       }
       return "";
     }(alloc_params.memory_hint);
@@ -199,6 +211,10 @@ struct SharedSystemMemoryTestsNameSuffix {
       case MemoryHint::PrefetchDestination:
       case MemoryHint::PrefetchBoth:
         return "prefetched";
+      case MemoryHint::None:
+      case MemoryHint::AdviseSourceToSystem:
+      case MemoryHint::PrefetchSource:
+        break;
       }
       return "";
     }(alloc_params.memory_hint);

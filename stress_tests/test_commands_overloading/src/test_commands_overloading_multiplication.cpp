@@ -131,15 +131,15 @@ LZT_TEST_P(zeDriverMultiplyObjectsStressTest,
            MultiplyKernelsModulsCommandsListsAndCommandQueues) {
 
   OverloadingMTestArguments_t test_arguments = {
-      std::get<0>(GetParam()), // total memory size limit
-      std::get<1>(GetParam()), // one allocation size limit
-      std::get<2>(GetParam()), // dispatch multiplier
-      std::get<3>(GetParam()), // memory type
-      std::get<4>(GetParam()), // multiply kernels
-      std::get<5>(GetParam()), // multiply modules
-      std::get<6>(GetParam()), // multiply command lists
-      std::get<7>(GetParam()), // multiply command queues
-      std::get<8>(GetParam()), // is immediate command list
+      {std::get<0>(GetParam()),  // total memory size limit
+       std::get<1>(GetParam()),  // one allocation size limit
+       std::get<2>(GetParam()),  // dispatch multiplier
+       std::get<3>(GetParam())}, // memory type
+      std::get<4>(GetParam()),   // multiply kernels
+      std::get<5>(GetParam()),   // multiply modules
+      std::get<6>(GetParam()),   // multiply command lists
+      std::get<7>(GetParam()),   // multiply command queues
+      std::get<8>(GetParam()),   // is immediate command list
       std::get<9>(
           GetParam()) // is registerd command lists on immediate command list
 

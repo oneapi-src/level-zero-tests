@@ -196,7 +196,7 @@ bool BmpUtils::save_image_as_bmp_8u(uint8_t *ptr, uint32_t width,
 
   for (uint32_t y = 0U; y < height; y++) {
     for (uint32_t x = 0U; x < width; x++) {
-      uint8_t uc_data = ptr[y * width + x];
+      uint32_t uc_data = ptr[y * width + x];
 
       uint32_t ui_data =
           0xFF000000 + (uc_data << 16) + (uc_data << 8) + (uc_data);

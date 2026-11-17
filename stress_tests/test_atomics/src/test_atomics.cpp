@@ -47,11 +47,11 @@ protected:
 LZT_TEST_P(zeDriverAtomicsStressTest, RunAtomicWithMemoryLimit) {
 
   AtomicsTestArguments_t test_arguments = {
-      std::get<0>(GetParam()), // total memory size limit
-      std::get<1>(GetParam()), // one allocation size limit
-      std::get<2>(GetParam()), // dispatch multiplier
-      std::get<3>(GetParam()), // memory type
-      std::get<4>(GetParam())  // Atomics subcase parameters
+      {std::get<0>(GetParam()),  // total memory size limit
+       std::get<1>(GetParam()),  // one allocation size limit
+       std::get<2>(GetParam()),  // dispatch multiplier
+       std::get<3>(GetParam())}, // memory type
+      std::get<4>(GetParam())    // Atomics subcase parameters
   };
 
   auto driver = lzt::get_default_driver();

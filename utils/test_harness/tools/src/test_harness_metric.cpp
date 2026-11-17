@@ -867,13 +867,13 @@ void verify_typed_metric_value(zet_typed_value_t result,
     EXPECT_GE(result.value.fp32, std::numeric_limits<float>::lowest());
     EXPECT_LE(result.value.fp32, std::numeric_limits<float>::max());
     LOG_DEBUG << ". fp32     " << result.value.fp32
-              << (result.value.fp32 ? " OK " : "\t ZERO");
+              << (result.value.fp32 != 0.0f ? " OK " : "\t ZERO");
     break;
   case zet_value_type_t::ZET_VALUE_TYPE_FLOAT64:
     EXPECT_GE(result.value.fp64, std::numeric_limits<double>::lowest());
     EXPECT_LE(result.value.fp64, std::numeric_limits<double>::max());
     LOG_DEBUG << ". fp64     " << result.value.fp64
-              << (result.value.fp64 ? " OK " : "\t ZERO");
+              << (result.value.fp64 != 0.0 ? " OK " : "\t ZERO");
     break;
   case zet_value_type_t::ZET_VALUE_TYPE_UINT32:
     EXPECT_GE(result.value.ui32, 0);

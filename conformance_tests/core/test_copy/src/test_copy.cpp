@@ -1004,6 +1004,8 @@ protected:
       case MemoryHint::Prefetch:
         lzt::append_memory_prefetch(cmd_bundle.record_list(), src_memory, size);
         break;
+      case MemoryHint::None:
+        break;
       }
     }
 
@@ -1016,6 +1018,8 @@ protected:
         break;
       case MemoryHint::Prefetch:
         lzt::append_memory_prefetch(cmd_bundle.record_list(), dst_memory, size);
+        break;
+      case MemoryHint::None:
         break;
       }
     }

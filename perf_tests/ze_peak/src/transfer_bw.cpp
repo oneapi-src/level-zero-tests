@@ -85,6 +85,8 @@ long double ZePeak::_transfer_bw_gpu_copy_with_shared_system(
         cmd_l, device, destination_buffer, buffer_size,
         ZE_MEMORY_ADVICE_SET_SYSTEM_MEMORY_PREFERRED_LOCATION));
     break;
+  case MemoryAdvice::None:
+    break;
   }
   SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(cmd_l, destination_buffer,
                                                      source_buffer, buffer_size,
@@ -126,6 +128,8 @@ long double ZePeak::_transfer_bw_gpu_copy_with_shared_system(
     SUCCESS_OR_TERMINATE(zeCommandListAppendMemAdvise(
         cmd_l, device, destination_buffer, buffer_size,
         ZE_MEMORY_ADVICE_CLEAR_SYSTEM_MEMORY_PREFERRED_LOCATION));
+    break;
+  case MemoryAdvice::None:
     break;
   }
 

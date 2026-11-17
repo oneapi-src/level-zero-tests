@@ -238,14 +238,14 @@ LZT_TEST_P(
     MultiplyKernelDispatchesSpreadAmongModulesCommandsListsAndCommandQueues) {
 
   OverloadingTestArguments test_arguments = {
-      std::get<0>(GetParam()), // total memory size limit
-      std::get<1>(GetParam()), // one allocation size limit
-      std::get<2>(GetParam()), // dispatch multiplier
-      std::get<3>(GetParam()), // memory type
-      std::get<4>(GetParam()), // separated modules mode
-      std::get<5>(GetParam()), // separated command lists mode
-      std::get<6>(GetParam()), // separated command queues mode
-      std::get<7>(GetParam()), // is immediate command list
+      {std::get<0>(GetParam()),  // total memory size limit
+       std::get<1>(GetParam()),  // one allocation size limit
+       std::get<2>(GetParam()),  // dispatch multiplier
+       std::get<3>(GetParam())}, // memory type
+      std::get<4>(GetParam()),   // separated modules mode
+      std::get<5>(GetParam()),   // separated command lists mode
+      std::get<6>(GetParam()),   // separated command queues mode
+      std::get<7>(GetParam()),   // is immediate command list
       std::get<8>(
           GetParam()) // is registerd command lists on immediate command list
   };

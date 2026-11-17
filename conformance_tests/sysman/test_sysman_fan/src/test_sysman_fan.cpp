@@ -217,9 +217,6 @@ LZT_TEST_F(
         if (config.speedFixed.speed == -1) {
           LOG_INFO << "No fixed fan speed setting ";
         }
-        if (config.speedFixed.units == -1) {
-          LOG_INFO << "Units should be ignored";
-        }
         if (config.speedFixed.units == ZES_FAN_SPEED_UNITS_RPM) {
           EXPECT_LE(config.speedFixed.speed, properties.maxRPM);
         }

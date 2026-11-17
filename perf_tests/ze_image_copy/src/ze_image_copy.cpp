@@ -332,9 +332,9 @@ void ZeImageCopy::measureSerialHost2Device() {
   // Queue all image copies where it depends on the previously queued event
   // to start executing. When the first event is signaled, the entire batch
   // of commands starts running.
-  assert(("num_wait_events is greater than num_image_copies by 1 as the"
-          " last event is used to indicate all commands have completed.",
-          num_image_copies + 1 == num_wait_events));
+  assert(num_image_copies + 1 == num_wait_events &&
+         "num_wait_events is greater than num_image_copies by 1 as the"
+         " last event is used to indicate all commands have completed.");
   ze_event_handle_t *first_event = &hdevice_event[0];
   ze_event_handle_t *last_event = &hdevice_event[num_wait_events - 1];
   benchmark->commandListAppendWaitOnEvents(command_list_a, 1, first_event);
@@ -432,9 +432,9 @@ void ZeImageCopy::measureSerialDevice2Host() {
   // Queue all image copies where it depends on the previously queued event
   // to start executing. When the first event is signaled, the entire batch
   // of commands starts running.
-  assert(("num_wait_events is greater than num_image_copies by 1 as the"
-          " last event is used to indicate all commands have completed.",
-          num_image_copies + 1 == num_wait_events));
+  assert(num_image_copies + 1 == num_wait_events &&
+         "num_wait_events is greater than num_image_copies by 1 as the"
+         " last event is used to indicate all commands have completed.");
   ze_event_handle_t *first_event = &hdevice_event[0];
   ze_event_handle_t *last_event = &hdevice_event[num_wait_events - 1];
   benchmark->commandListAppendWaitOnEvents(command_list_b, 1, first_event);

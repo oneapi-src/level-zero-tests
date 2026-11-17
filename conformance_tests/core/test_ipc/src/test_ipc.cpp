@@ -104,7 +104,7 @@ protected:
                                          ZE_MEMORY_TYPE_DEVICE);
   }
 
-  void TearDown() {
+  void TearDown() override {
     lzt::free_memory(context_, memory_);
     lzt::destroy_context(context_);
   }

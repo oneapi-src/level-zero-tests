@@ -81,7 +81,7 @@ protected:
     lzt::enable_ltracer(tracer);
   }
 
-  void TearDown() {
+  void TearDown() override {
     lzt::disable_ltracer(tracer);
     lzt::destroy_ltracer_handle(tracer);
 #ifdef USE_RUNTIME_TRACING
