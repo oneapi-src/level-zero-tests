@@ -72,18 +72,6 @@ int ClImageCopy::parse_command_line(int argc, char **argv) {
   if (vm.count("help")) {
     std::cout << desc << "\n";
     return 1;
-  } else if (clChannelDataType == -1) {
-    std::cout << "unknown channel datatype" << endl;
-    std::cout << desc << "\n";
-    return 1;
-  } else if (clImageChannelOrder == -1) {
-    std::cout << "unknown  channel order" << endl;
-    std::cout << desc << "\n";
-    return 1;
-  } else if (clImagetype == -1) {
-    std::cout << "unknown  Imagetype" << endl;
-    std::cout << desc << "\n";
-    return 1;
   }
 
   return 0;

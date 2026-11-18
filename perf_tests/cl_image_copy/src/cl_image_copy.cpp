@@ -84,7 +84,7 @@ void ClImageCopy::create_resources(void) {
   src = new uint8_t[imagesize];
   dst = new uint8_t[imagesize];
   for (size_t i = 0; i < imagesize; ++i) {
-    src[i] = static_cast<cl_int>(i);
+    src[i] = static_cast<uint8_t>(i);
     dst[i] = 0xff;
   }
   // By default it will create 2D Image unless updated from cmdline
@@ -155,7 +155,7 @@ void ClImageCopy::measureHost2Device2Host() {
   }
 
   total_time_usec = 0;
-  for (int i = 0; i < number_iterations; i++) {
+  for (uint32_t i = 0; i < number_iterations; i++) {
     this->host2Device2HostEnqueue();
 
     timer.start();
@@ -187,7 +187,7 @@ void ClImageCopy::measureHost2Device2Host() {
 
 void ClImageCopy::parallelHost2DeviceEnqueueAll(size_t dst_origin[3],
                                                 size_t region[3]) {
-  for (int i = 0; i < num_image_copy; i++) {
+  for (uint32_t i = 0; i < num_image_copy; i++) {
     SUCCESS_OR_TERMINATE(clEnqueueWriteImage(clCommandQueueA, clImage, CL_FALSE,
                                              dst_origin, region, 0, 0, src, 0,
                                              nullptr, nullptr));
@@ -225,7 +225,7 @@ void ClImageCopy::measureParallelHost2Device() {
 
   // Measure the bandwidth of copy from host to device only
   total_time_usec = 0;
-  for (int i = 0; i < number_iterations; i++) {
+  for (uint32_t i = 0; i < number_iterations; i++) {
     this->parallelHost2DeviceEnqueueAll(dst_origin, region);
 
     timer.start();
@@ -275,7 +275,7 @@ void ClImageCopy::parallelDevice2HostEnqueue(size_t dst_origin[3],
 }
 void ClImageCopy::parallelDevice2HostEnqueueAll(size_t dst_origin[3],
                                                 size_t region[3]) {
-  for (int i = 0; i < num_image_copy; i++) {
+  for (uint32_t i = 0; i < num_image_copy; i++) {
     this->parallelDevice2HostEnqueue(dst_origin, region);
   }
 }
@@ -307,7 +307,7 @@ void ClImageCopy::measureParallelDevice2Host() {
 
   // Measure bandwidth for copy from device to host only
   total_time_usec = 0;
-  for (int i = 0; i < number_iterations; i++) {
+  for (uint32_t i = 0; i < number_iterations; i++) {
     this->parallelDevice2HostEnqueueAll(dst_origin, region);
     timer.start();
     SUCCESS_OR_TERMINATE(clFinish(clCommandQueueB));
