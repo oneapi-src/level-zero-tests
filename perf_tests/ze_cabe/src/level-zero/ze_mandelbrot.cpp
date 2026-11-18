@@ -12,8 +12,8 @@ namespace compute_api_bench {
 
 ZeMandelbrot::ZeMandelbrot(unsigned int width, unsigned int height,
                            unsigned int num_iterations)
-    : ZeWorkload(), width(width), height(height),
-      num_iterations(num_iterations) {
+    : ZeWorkload(), num_iterations(num_iterations), width(width),
+      height(height) {
 
   workload_name = "Mandelbrot";
   result.assign(width * height, 0);

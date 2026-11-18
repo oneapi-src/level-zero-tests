@@ -77,10 +77,10 @@ int main(int argc, char *argv[]) {
       exit(0);
     } else if (!strcmp(argv[argIndex], "-api") && (argIndex + 1 < argc)) {
       api = argv[argIndex + 1];
-      if (std::find(valid_apis.begin(), valid_apis.end(), scenario) ==
+      if (std::find(valid_apis.begin(), valid_apis.end(), api) ==
           valid_apis.end()) {
         std::cout << "Invalid api!" << std::endl;
-        exit(0);
+        exit(EXIT_FAILURE);
       }
       argIndex++;
     } else if (!strcmp(argv[argIndex], "-scenario") && (argIndex + 1 < argc)) {
@@ -90,15 +90,15 @@ int main(int argc, char *argv[]) {
       if (std::find(valid_scenarios.begin(), valid_scenarios.end(), scenario) ==
           valid_scenarios.end()) {
         std::cout << "Invalid scenario!" << std::endl;
-        exit(0);
+        exit(EXIT_FAILURE);
       }
       argIndex++;
     } else if (!strcmp(argv[argIndex], "-iterations") &&
                (argIndex + 1 < argc)) {
       iterations = std::stoi(argv[argIndex + 1]);
-      if (iterations < 1 && iterations > 200) {
+      if (iterations < 1 || iterations > 200) {
         std::cout << "Invalid number of iterations!" << std::endl;
-        exit(0);
+        exit(EXIT_FAILURE);
       }
       argIndex++;
     } else if (!strcmp(argv[argIndex], "-csv") && (argIndex + 1 < argc)) {
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
       useMedian = true;
     } else {
       std::cout << "Invalid parameters!" << std::endl;
-      exit(0);
+      exit(EXIT_FAILURE);
     }
   }
 

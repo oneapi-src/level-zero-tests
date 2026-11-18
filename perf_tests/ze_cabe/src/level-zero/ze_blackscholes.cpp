@@ -13,8 +13,8 @@ namespace compute_api_bench {
 template <class T>
 ZeBlackScholes<T>::ZeBlackScholes(BlackScholesData<T> *bs_io_data,
                                   unsigned int num_iterations)
-    : ZeWorkload(), num_options(bs_io_data->num_options),
-      num_iterations(num_iterations) {
+    : ZeWorkload(), num_iterations(num_iterations),
+      num_options(bs_io_data->num_options) {
 
   buffer_size = num_options * sizeof(T);
   option_years = bs_io_data->option_years;

@@ -108,7 +108,6 @@ template <typename T> inline T cnd(T d) {
 template <typename T>
 inline void black_scholes_cpu(const T riskfree, const T volatility, const T t,
                               const T x, const T s, T &call, T &put) {
-  const T sqrt1_2 = 0.70710678118654752440084436210485;
   const T c_half = 0.5;
 
   T sqrtT = sqrt(t);
