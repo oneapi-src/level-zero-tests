@@ -166,7 +166,7 @@ protected:
           } else {
             lzt::execute_command_lists(command_queue, 1, &current_command_list,
                                        nullptr);
-            lzt::synchronize(current_command_queue, UINT64_MAX);
+            lzt::synchronize(command_queue, UINT64_MAX);
           }
         }
       } else {
