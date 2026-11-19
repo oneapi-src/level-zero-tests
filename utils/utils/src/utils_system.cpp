@@ -142,15 +142,15 @@ child_environment(const std::map<std::string, std::string> &overrides) {
   return environment;
 }
 
-boost::filesystem::path find_helper_executable(
-    const boost::filesystem::path &name,
-    const std::vector<boost::filesystem::path> &directories) {
+std::filesystem::path
+find_helper_executable(const std::filesystem::path &name,
+                       const std::vector<std::filesystem::path> &directories) {
   for (const auto &directory : directories) {
     const auto environment = child_environment({{"PATH", directory.string()}});
-    auto executable =
-        boost::process::v2::environment::find_executable(name, environment);
+    const auto executable = boost::process::v2::environment::find_executable(
+        name.native(), environment);
     if (!executable.empty()) {
-      return executable;
+      return std::filesystem::path(executable.native());
     }
   }
   throw std::runtime_error("Could not find helper executable: " +

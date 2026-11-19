@@ -7,11 +7,12 @@
  */
 
 #include <algorithm>
+#include <filesystem>
+#include <random>
 #include <stdexcept>
 
 #include <boost/process.hpp>
 #include <boost/process/v2/ext/exe.hpp>
-#include <boost/filesystem.hpp>
 
 #include "utils/utils.hpp"
 #include "utils/utils_command_bundle.hpp"
@@ -675,17 +676,21 @@ LZT_TEST(ChildEnvironment, UnrelatedInheritedEntriesArePreserved) {
 
 namespace {
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
+
+std::string unique_directory_name() {
+  return "lzt helper-" + std::to_string(level_zero_tests::get_process_id()) +
+         "-" + std::to_string(std::random_device{}());
+}
 
 class HelperExecutable : public ::testing::Test {
 protected:
   void SetUp() override {
     original_path = level_zero_tests::getenv("PATH");
-    directory =
-        fs::temp_directory_path() / fs::unique_path("lzt helper-%%%%-%%%%");
+    directory = fs::temp_directory_path() / unique_directory_name();
     fs::create_directories(directory / "first");
     fs::create_directories(directory / "second");
-    const auto self = bp::ext::exe(bp::current_pid());
+    const fs::path self(bp::ext::exe(bp::current_pid()).native());
     filename = "lookup_helper" + self.extension().string();
     fs::copy_file(self, directory / "second" / filename);
   }

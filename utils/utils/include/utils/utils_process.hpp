@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include <boost/filesystem/path.hpp>
 #include <boost/process/v2/process.hpp>
 #include <chrono>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -35,7 +35,7 @@ enum class process_stderr { inherit, capture };
 // Drain the selected streams and wait for exit under one deadline. On timeout,
 // return partial output after terminating and reaping the child.
 process_output run_process_with_timeout(
-    const boost::filesystem::path &executable,
+    const std::filesystem::path &executable,
     const std::vector<std::string> &arguments,
     const std::vector<std::string> &environment,
     std::chrono::steady_clock::duration timeout = default_process_timeout,

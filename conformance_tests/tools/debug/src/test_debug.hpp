@@ -13,10 +13,12 @@
 #include "test_debug_common.hpp"
 #include "utils/utils_process.hpp"
 
+#include <filesystem>
+
 #include <boost/process.hpp>
 
 namespace lzt = level_zero_tests;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace bp = boost::process::v2;
 namespace bi = boost::interprocess;
 
@@ -73,7 +75,7 @@ public:
     // The returned process outlives this scope, so its execution context must
     // outlive it too.
     static boost::asio::io_context io_ctx;
-    bp::process debug_helper(io_ctx, helper, args);
+    bp::process debug_helper(io_ctx, helper.native(), args);
 
     return debug_helper;
   }

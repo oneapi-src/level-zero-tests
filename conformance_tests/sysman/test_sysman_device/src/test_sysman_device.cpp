@@ -16,13 +16,13 @@
 #include "test_harness/test_harness.hpp"
 
 #include <boost/process.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <thread>
 #include <cctype>
 #include <sstream>
 
 namespace bp = boost::process::v2;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace lzt = level_zero_tests;
 
@@ -79,7 +79,7 @@ void run_device_hierarchy_child_process() {
 #endif
 
   boost::asio::io_context io_ctx;
-  bp::popen enumerate_devices_process(io_ctx, helper, {});
+  bp::popen enumerate_devices_process(io_ctx, helper.native(), {});
   std::string child_output;
   boost::system::error_code ec;
   boost::asio::read(enumerate_devices_process,
@@ -110,7 +110,7 @@ static void run_child_process(const std::string &device_hierarchy) {
       "test_sysman_device_helper_zesinit", {helper_path});
 
   boost::asio::io_context io_ctx;
-  bp::popen validate_deviceUUID_process(io_ctx, helper, {},
+  bp::popen validate_deviceUUID_process(io_ctx, helper.native(), {},
                                         bp::process_environment{child_env});
   std::string output;
   boost::system::error_code ec;

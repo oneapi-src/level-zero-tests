@@ -11,7 +11,6 @@
 #ifdef _WIN32
 #define BOOST_INTERPROCESS_SHARED_DIR_FUNC
 #endif
-#include <boost/filesystem.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/named_condition.hpp>
@@ -23,7 +22,6 @@
 #include "test_harness/test_harness.hpp"
 
 namespace lzt = level_zero_tests;
-namespace fs = boost::filesystem;
 namespace bi = boost::interprocess;
 
 constexpr auto device_id_string = "device_id";

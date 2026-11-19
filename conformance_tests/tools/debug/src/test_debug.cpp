@@ -16,7 +16,7 @@ namespace lzt = level_zero_tests;
 #include <mutex>
 #include <thread>
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace bp = boost::process::v2;
 namespace bi = boost::interprocess;
 
@@ -178,7 +178,7 @@ bp::process launch_child_debugger_process(debug_test_type_t test_type,
   // The returned process outlives this scope, so its execution context must
   // outlive it too.
   static boost::asio::io_context io_ctx;
-  bp::process debugger(io_ctx, helper, args);
+  bp::process debugger(io_ctx, helper.native(), args);
 
   return debugger;
 }

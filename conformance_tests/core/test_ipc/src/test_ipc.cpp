@@ -12,8 +12,6 @@
 #include <vector>
 #include <algorithm>
 #include <boost/process.hpp>
-#include <boost/filesystem.hpp>
-namespace fs = boost::filesystem;
 namespace bp = boost::process::v2;
 
 #include "utils/utils.hpp"

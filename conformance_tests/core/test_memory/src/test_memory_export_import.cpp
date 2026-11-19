@@ -6,7 +6,7 @@
  *
  */
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/readable_pipe.hpp>
 #include <boost/asio/writable_pipe.hpp>
@@ -37,7 +37,7 @@
 #include <type_traits>
 
 namespace bp = boost::process::v2;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace lzt = level_zero_tests;
 
@@ -343,7 +343,7 @@ static int get_imported_fd(std::string driver_id,
   fs::path helper =
       lzt::find_helper_executable("test_import_helper", {helper_path});
   bp::process import_memory_helper(
-      io_ctx, helper,
+      io_ctx, helper.native(),
       {driver_id, mode == lzt::command_list_mode_t::immediate ? "1" : "0",
        memory_type != memory_type_t::host ? "1" : "0"},
       bp::process_stdio{child_input, {}, {}});
@@ -408,7 +408,7 @@ static int send_handle(std::string driver_id, boost::asio::io_context &io_ctx,
   fs::path helper_path(fs::current_path() / "memory");
   fs::path helper =
       lzt::find_helper_executable("test_import_helper", {helper_path});
-  child = bp::popen(io_ctx, helper,
+  child = bp::popen(io_ctx, helper.native(),
                     {driver_id,
                      mode == lzt::command_list_mode_t::immediate ? "1" : "0",
                      memory_type != memory_type_t::host ? "1" : "0"});

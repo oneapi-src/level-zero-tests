@@ -14,10 +14,10 @@
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/process.hpp>
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace bp = boost::process::v2;
 
 #include <level_zero/ze_api.h>
@@ -78,7 +78,7 @@ LZT_TEST(
   fs::path helper =
       lzt::find_helper_executable("test_fabric_helper", {helper_path});
   boost::asio::io_context io_ctx;
-  bp::process fabric_helper(io_ctx, helper, {},
+  bp::process fabric_helper(io_ctx, helper.native(), {},
                             bp::process_environment{child_env});
 
   fabric_helper.wait();

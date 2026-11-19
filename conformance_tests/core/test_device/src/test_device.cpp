@@ -17,11 +17,11 @@
 #include "logging/logging.hpp"
 
 #include <boost/process.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <sstream>
 
 namespace bp = boost::process::v2;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace lzt = level_zero_tests;
 
@@ -84,7 +84,7 @@ static void run_child_process(uint32_t device_count,
                                                 {helper_path});
 
   boost::asio::io_context io_ctx;
-  bp::popen get_devices_process(io_ctx, helper, {},
+  bp::popen get_devices_process(io_ctx, helper.native(), {},
                                 bp::process_environment{child_env});
   std::string output;
   boost::system::error_code ec;

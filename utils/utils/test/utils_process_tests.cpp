@@ -11,6 +11,7 @@
 #include <boost/process.hpp>
 #include <boost/process/v2/ext/exe.hpp>
 #include <chrono>
+#include <filesystem>
 
 #ifdef _WIN32
 #include <boost/process/v2/windows/creation_flags.hpp>
@@ -29,10 +30,11 @@ using namespace std::chrono_literals;
 
 namespace {
 
-boost::filesystem::path helper_path() {
+std::filesystem::path helper_path() {
   return lzt::find_helper_executable(
       "utils_process_test_helper",
-      {bp::ext::exe(bp::current_pid()).parent_path()});
+      {std::filesystem::path(
+          bp::ext::exe(bp::current_pid()).parent_path().native())});
 }
 
 lzt::process_output run_helper(const std::string &mode,
@@ -92,7 +94,7 @@ LZT_TEST(ProcessTermination, AcceptsUnlaunchedProcess) {
 
 LZT_TEST(ProcessTermination, PreservesNormalExitAndAllowsRepeatedCleanup) {
   boost::asio::io_context io;
-  bp::process child(io, helper_path(), {mode::empty});
+  bp::process child(io, helper_path().native(), {mode::empty});
   child.wait();
   ASSERT_EQ(child.exit_code(), helper::to_int(exit_code::success));
   EXPECT_NO_THROW(lzt::request_process_termination(child));
@@ -103,7 +105,7 @@ LZT_TEST(ProcessTermination, PreservesNormalExitAndAllowsRepeatedCleanup) {
 
 LZT_TEST(ProcessTermination, KillsAndReapsLiveProcess) {
   boost::asio::io_context io;
-  bp::process child(io, helper_path(), {mode::silent});
+  bp::process child(io, helper_path().native(), {mode::silent});
   lzt::terminate_process(child);
   EXPECT_FALSE(child.running());
   EXPECT_NE(child.exit_code(), helper::to_int(exit_code::success));
@@ -112,7 +114,7 @@ LZT_TEST(ProcessTermination, KillsAndReapsLiveProcess) {
 
 LZT_TEST(ProcessTermination, RequestLeavesHandleAvailableForExplicitWait) {
   boost::asio::io_context io;
-  bp::process child(io, helper_path(), {mode::silent});
+  bp::process child(io, helper_path().native(), {mode::silent});
   lzt::request_process_termination(child);
   EXPECT_TRUE(child.is_open());
   child.wait();
@@ -123,7 +125,7 @@ LZT_TEST(ProcessTermination, RequestLeavesHandleAvailableForExplicitWait) {
 #ifdef _WIN32
 LZT_TEST(ProcessTermination, AcceptsNativeExitNotYetObservedByBoost) {
   boost::asio::io_context io;
-  bp::process child(io, helper_path(), {mode::empty});
+  bp::process child(io, helper_path().native(), {mode::empty});
   ASSERT_EQ(WaitForSingleObject(child.native_handle(), 5000), WAIT_OBJECT_0);
   EXPECT_NO_THROW(lzt::terminate_process(child));
   EXPECT_EQ(child.exit_code(), helper::to_int(exit_code::success));
@@ -131,7 +133,7 @@ LZT_TEST(ProcessTermination, AcceptsNativeExitNotYetObservedByBoost) {
 
 LZT_TEST(ProcessTermination, PreservesAccessDeniedForLiveProcess) {
   boost::asio::io_context io;
-  bp::process child(io, helper_path(), {mode::silent});
+  bp::process child(io, helper_path().native(), {mode::silent});
   HANDLE handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE,
                               FALSE, child.id());
   ASSERT_NE(handle, nullptr);
@@ -146,7 +148,7 @@ LZT_TEST(ProcessTermination, PreservesAccessDeniedForLiveProcess) {
 LZT_TEST(ProcessTermination, RequestReturnsWithPendingWindowsDebugEvent) {
   boost::asio::io_context io;
   bp::process child(
-      io, helper_path(), {mode::silent},
+      io, helper_path().native(), {mode::silent},
       bp::windows::process_creation_flags<DEBUG_ONLY_THIS_PROCESS>{});
   // Detach before the process destructor on assertion failure as well.
   struct debug_guard {

@@ -11,7 +11,6 @@
 #include <thread>
 #include <atomic>
 
-#include <boost/filesystem.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/named_condition.hpp>
@@ -24,7 +23,6 @@
 #include "test_metric_utils.hpp"
 
 namespace lzt = level_zero_tests;
-namespace fs = boost::filesystem;
 namespace bi = boost::interprocess;
 
 #include <level_zero/ze_api.h>

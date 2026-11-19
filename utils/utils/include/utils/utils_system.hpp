@@ -10,13 +10,13 @@
 
 #include <cassert>
 #include <cstdint>
+#include <filesystem>
 #include <limits>
 #include <map>
 #include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
-#include <boost/filesystem/path.hpp>
 
 #include "utils/utils_type_convert.hpp"
 
@@ -49,8 +49,8 @@ void clearenv(const std::string &name);
 std::vector<std::string>
 child_environment(const std::map<std::string, std::string> &overrides);
 
-boost::filesystem::path
-find_helper_executable(const boost::filesystem::path &name,
-                       const std::vector<boost::filesystem::path> &directories);
+std::filesystem::path
+find_helper_executable(const std::filesystem::path &name,
+                       const std::vector<std::filesystem::path> &directories);
 
 } // namespace level_zero_tests

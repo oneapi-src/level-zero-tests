@@ -74,7 +74,7 @@ void terminate_process(boost::process::v2::process &process) {
 }
 
 process_output
-run_process_with_timeout(const boost::filesystem::path &executable,
+run_process_with_timeout(const std::filesystem::path &executable,
                          const std::vector<std::string> &arguments,
                          const std::vector<std::string> &environment,
                          std::chrono::steady_clock::duration timeout,
@@ -90,11 +90,12 @@ run_process_with_timeout(const boost::filesystem::path &executable,
   const bool capture_stderr = stderr_mode == process_stderr::capture;
   bp::process child(io);
   if (capture_stderr) {
-    child = bp::process(
-        io, executable, arguments, bp::process_environment{environment},
-        bp::process_stdio{stdin_pipe, stdout_pipe, stderr_pipe});
+    child =
+        bp::process(io, executable.native(), arguments,
+                    bp::process_environment{environment},
+                    bp::process_stdio{stdin_pipe, stdout_pipe, stderr_pipe});
   } else {
-    child = bp::process(io, executable, arguments,
+    child = bp::process(io, executable.native(), arguments,
                         bp::process_environment{environment},
                         bp::process_stdio{stdin_pipe, stdout_pipe});
   }

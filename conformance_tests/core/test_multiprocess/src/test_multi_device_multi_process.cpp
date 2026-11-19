@@ -7,7 +7,7 @@
  */
 #include <boost/asio/io_context.hpp>
 #include <boost/process.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "gtest/gtest.h"
 
@@ -16,7 +16,7 @@
 #include "logging/logging.hpp"
 
 namespace bp = boost::process::v2;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 #include <level_zero/ze_api.h>
 
@@ -45,7 +45,7 @@ void RunGivenMultipleProcessesUsingMultipleDevicesKernelsTest(
     const auto child_env =
         lzt::child_environment({{"ZE_ENABLE_PCI_ID_DEVICE_ORDER", "1"}});
     bp::process execute_kernel_process(
-        io_ctx, helper,
+        io_ctx, helper.native(),
         {std::to_string(i), to_string(mode), std::to_string(is_stress_test)},
         bp::process_environment{child_env});
     processes.push_back(std::move(execute_kernel_process));

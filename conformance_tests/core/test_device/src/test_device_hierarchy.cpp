@@ -15,13 +15,13 @@
 #include <regex>
 
 #include <sstream>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 namespace lzt = level_zero_tests;
 
 #include <level_zero/ze_api.h>
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace {
 

@@ -10,7 +10,7 @@
 #include <algorithm>
 
 #include <sstream>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "gtest/gtest.h"
 
@@ -19,7 +19,7 @@
 #include "test_harness/test_harness.hpp"
 #include "logging/logging.hpp"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace lzt = level_zero_tests;
 

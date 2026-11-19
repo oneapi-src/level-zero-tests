@@ -17,7 +17,7 @@
 #include <atomic>
 #include <cmath>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/named_condition.hpp>
@@ -31,7 +31,7 @@
 #include "test_metric_utils.hpp"
 
 namespace lzt = level_zero_tests;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace bp = boost::process::v2;
 namespace bi = boost::interprocess;
 
@@ -2471,7 +2471,7 @@ LZT_TEST(
   fs::path helper = lzt::find_helper_executable(
       "test_metric_helper", {helper_path, fs::current_path()});
   boost::asio::io_context io_ctx;
-  bp::process metric_helper(io_ctx, helper, {});
+  bp::process metric_helper(io_ctx, helper.native(), {});
 
   // start monitor
   do {
@@ -2567,7 +2567,7 @@ LZT_TEST(
   boost::asio::io_context io_ctx;
   boost::asio::writable_pipe child_input(io_ctx);
   // Only redirect stdin; capturing unread stdout can block a verbose helper.
-  bp::process metric_helper(io_ctx, helper, {"-i"},
+  bp::process metric_helper(io_ctx, helper.native(), {"-i"},
                             bp::process_stdio{child_input, {}, {}});
 
   // start monitor
