@@ -16,7 +16,6 @@ target_link_libraries(image
     PUBLIC
     level_zero_tests::logging
     PRIVATE
-    Boost::boost
     PNG::PNG
 )
 

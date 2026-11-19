@@ -9,24 +9,129 @@
 #include "image/image.hpp"
 #include "logging/logging.hpp"
 
-#define png_infopp_NULL (png_infopp) NULL
-#define int_p_NULL (int *)NULL
+#include <png.h>
 
-#include <boost/gil/extension/io/png.hpp>
-
-namespace gil = boost::gil;
+#include <algorithm>
+#include <csetjmp>
+#include <fstream>
+#include <limits>
+#include <memory>
+#include <stdexcept>
+#include <string>
 
 #include "bmp.hpp"
 
 namespace level_zero_tests {
 
-template <typename T> inline constexpr uint8_t to_u8(T val) {
-  return static_cast<uint8_t>(val);
-}
-
 template <typename T> inline constexpr uint32_t to_u32(T val) {
   return static_cast<uint32_t>(val);
 }
+
+namespace {
+
+constexpr size_t png_rgba_channels = 4;
+
+[[noreturn]] void on_png_error(png_structp png, png_const_charp message) {
+  *static_cast<std::string *>(png_get_error_ptr(png)) = message;
+  png_longjmp(png, 1);
+}
+
+void on_png_warning(png_structp, png_const_charp message) {
+  LOG_WARNING << "libpng: " << message;
+}
+
+void on_png_read(png_structp png, png_bytep data, png_size_t length) {
+  auto *stream = static_cast<std::istream *>(png_get_io_ptr(png));
+  if (!stream->read(reinterpret_cast<char *>(data),
+                    static_cast<std::streamsize>(length))) {
+    png_error(png, "unexpected end of file");
+  }
+}
+
+class png_reader {
+public:
+  explicit png_reader(std::string &error)
+      : png_(png_create_read_struct(PNG_LIBPNG_VER_STRING, &error, on_png_error,
+                                    on_png_warning)),
+        info_(png_ ? png_create_info_struct(png_) : nullptr) {
+    if (info_ == nullptr) {
+      png_destroy_read_struct(&png_, nullptr, nullptr);
+      throw std::runtime_error("cannot create libpng read structures");
+    }
+  }
+  ~png_reader() { png_destroy_read_struct(&png_, &info_, nullptr); }
+  png_reader(const png_reader &) = delete;
+  png_reader &operator=(const png_reader &) = delete;
+
+  png_structp png() const { return png_; }
+  png_infop info() const { return info_; }
+
+private:
+  png_structp png_;
+  png_infop info_;
+};
+
+bool decode_rgba8(png_structp png, png_infop info, std::vector<uint8_t> &rgba,
+                  uint32_t &width, uint32_t &height) {
+  if (setjmp(png_jmpbuf(png))) {
+    return false;
+  }
+
+  png_read_info(png, info);
+
+  const png_byte color_type = png_get_color_type(png, info);
+  if (color_type == PNG_COLOR_TYPE_PALETTE) {
+    png_set_palette_to_rgb(png);
+  }
+  if (color_type == PNG_COLOR_TYPE_GRAY && png_get_bit_depth(png, info) < 8) {
+    png_set_expand_gray_1_2_4_to_8(png);
+  }
+  if (png_get_valid(png, info, PNG_INFO_tRNS)) {
+    png_set_tRNS_to_alpha(png);
+  }
+  png_set_scale_16(png);
+  if (color_type == PNG_COLOR_TYPE_GRAY ||
+      color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+    png_set_gray_to_rgb(png);
+  }
+  png_set_filler(png, 0xFF, PNG_FILLER_AFTER);
+  const int passes = png_set_interlace_handling(png);
+  png_read_update_info(png, info);
+
+  width = png_get_image_width(png, info);
+  height = png_get_image_height(png, info);
+  const size_t stride = static_cast<size_t>(width) * png_rgba_channels;
+  if (png_get_rowbytes(png, info) != stride) {
+    png_error(png, "unexpected row size after RGBA8 conversion");
+  }
+  rgba.assign(stride * height, 0);
+  for (int pass = 0; pass < passes; ++pass) {
+    for (uint32_t y = 0; y < height; ++y) {
+      png_read_row(png, rgba.data() + y * stride, nullptr);
+    }
+  }
+  png_read_end(png, nullptr);
+  return true;
+}
+
+std::vector<uint8_t> read_png_rgba8(const std::string &path, uint32_t &width,
+                                    uint32_t &height) {
+  std::ifstream file(path, std::ios::binary);
+  if (!file) {
+    throw std::runtime_error("cannot open file for reading");
+  }
+  std::string error;
+  png_reader reader(error);
+  png_set_read_fn(reader.png(), static_cast<std::istream *>(&file),
+                  on_png_read);
+  std::vector<uint8_t> rgba;
+  if (!decode_rgba8(reader.png(), reader.info(), rgba, width, height)) {
+    throw std::runtime_error(error);
+  }
+  return rgba;
+}
+
+} // namespace
 
 template <typename T> ImagePNG<T>::ImagePNG() : width_(0U), height_(0U) {}
 
@@ -46,39 +151,25 @@ ImagePNG<T>::ImagePNG(const uint32_t width, const uint32_t height,
     : pixels_(data), width_(width), height_(height) {}
 
 template <> bool ImagePNG<uint32_t>::read(const std::string &image_path) {
-  gil::rgba8_image_t image;
-  gil::read_and_convert_image(image_path, image, gil::png_tag());
-  gil::rgba8_view_t view = gil::view(image);
-  for (gil::rgba8_pixel_t pixel : view) {
-    uint32_t raw_pixel = (to_u32(pixel[0]) << 24) + (to_u32(pixel[1]) << 16) +
-                         (to_u32(pixel[2]) << 8) + to_u32(pixel[3]);
-    pixels_.push_back(raw_pixel);
+  uint32_t width = 0;
+  uint32_t height = 0;
+  std::vector<uint8_t> rgba;
+  try {
+    rgba = read_png_rgba8(image_path, width, height);
+  } catch (const std::exception &e) {
+    throw std::runtime_error("Failed to read PNG image " + image_path + ": " +
+                             e.what());
   }
-  width_ = static_cast<uint32_t>(view.width());
-  height_ = static_cast<uint32_t>(view.height());
-  return false;
-}
-
-template <> bool ImagePNG<uint32_t>::write(const std::string &image_path) {
-  gil::rgba8_image_t image(width(), height());
-  gil::rgba8_view_t view = gil::view(image);
-  for (size_t idx = 0; idx < pixels_.size(); ++idx) {
-    uint32_t raw_pixel = pixels_[idx];
-    gil::rgba8_pixel_t pixel;
-    pixel[3] = to_u8(raw_pixel & 0xFF);
-    pixel[2] = to_u8((raw_pixel >> 8) & 0xFF);
-    pixel[1] = to_u8((raw_pixel >> 16) & 0xFF);
-    pixel[0] = to_u8((raw_pixel >> 24) & 0xFF);
-    view[static_cast<long>(idx)] = pixel;
+  pixels_.clear();
+  pixels_.reserve(rgba.size() / png_rgba_channels);
+  for (size_t idx = 0; idx < rgba.size(); idx += png_rgba_channels) {
+    pixels_.push_back((to_u32(rgba[idx]) << 24) |
+                      (to_u32(rgba[idx + 1]) << 16) |
+                      (to_u32(rgba[idx + 2]) << 8) | to_u32(rgba[idx + 3]));
   }
-  gil::write_view(image_path, view, gil::png_tag());
+  width_ = width;
+  height_ = height;
   return false;
-}
-
-template <typename T>
-bool ImagePNG<T>::write(const std::string &image_path, const T *data) {
-  copy_raw_data(data);
-  return write(image_path);
 }
 
 template <typename T> uint32_t ImagePNG<T>::width() const { return width_; }
@@ -189,22 +280,6 @@ template <> bool ImageBMP<uint8_t>::read(const std::string &image_path) {
     copy_raw_data(data.get());
   }
   return error;
-}
-
-template <typename T> bool ImageBMP<T>::write(const std::string &image_path) {
-  return !BmpUtils::save_image_as_bmp(pixels_.data(), width(), height(),
-                                      image_path.c_str());
-}
-
-template <> bool ImageBMP<uint8_t>::write(const std::string &image_path) {
-  return !BmpUtils::save_image_as_bmp_8u(pixels_.data(), width(), height(),
-                                         image_path.c_str());
-}
-
-template <typename T>
-bool ImageBMP<T>::write(const std::string &image_path, const T *data) {
-  copy_raw_data(data);
-  return write(image_path);
 }
 
 template <typename T> uint32_t ImageBMP<T>::width() const { return width_; }

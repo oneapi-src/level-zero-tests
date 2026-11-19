@@ -17,8 +17,6 @@ template <typename T> class Image {
 public:
   virtual ~Image() = default;
   virtual bool read(const std::string &image_path) = 0;
-  virtual bool write(const std::string &image_path) = 0;
-  virtual bool write(const std::string &image_path, const T *data) = 0;
   virtual uint32_t width() const = 0;
   virtual uint32_t height() const = 0;
   virtual uint16_t number_of_channels() const = 0;
@@ -42,8 +40,6 @@ public:
   ImagePNG(const uint32_t width, const uint32_t height,
            const std::vector<T> &data);
   bool read(const std::string &image_path) override;
-  bool write(const std::string &image_path) override;
-  bool write(const std::string &image_path, const T *data) override;
   uint32_t width() const override;
   uint32_t height() const override;
   uint16_t number_of_channels() const override;
@@ -77,8 +73,6 @@ public:
   ImageBMP(const uint32_t width, const uint32_t height,
            const std::vector<T> &data);
   bool read(const std::string &image_path) override;
-  bool write(const std::string &image_path) override;
-  bool write(const std::string &image_path, const T *data) override;
   uint32_t width() const override;
   uint32_t height() const override;
   uint16_t number_of_channels() const override;
