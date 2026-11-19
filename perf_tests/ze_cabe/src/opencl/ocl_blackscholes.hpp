@@ -10,11 +10,15 @@
 
 #include <vector>
 #include <string>
+#include <type_traits>
 #include "ocl_workload.hpp"
 
 namespace compute_api_bench {
 
 template <class T> class OCLBlackScholes : public OCLWorkload {
+  static_assert(std::is_floating_point_v<T>,
+                "OCLBlackScholes needs a floating-point type");
+
 public:
   OCLBlackScholes(BlackScholesData<T> *data, unsigned int num_iterations);
   ~OCLBlackScholes();
@@ -35,8 +39,8 @@ private:
   cl_mem mem_put_result = NULL;
   unsigned int num_iterations;
   unsigned int num_options;
-  const T riskfree = 0.02;
-  const T volatility = 0.3;
+  const T riskfree = static_cast<T>(0.02);
+  const T volatility = static_cast<T>(0.3);
   T max_delta;
   std::vector<T> option_years;
   std::vector<T> option_strike;

@@ -11,7 +11,7 @@
 namespace compute_api_bench {
 
 OCLSimpleAdd::OCLSimpleAdd(unsigned int num_elements)
-    : OCLWorkload(), num(num_elements) {
+    : OCLWorkload(), num(static_cast<int>(num_elements)) {
   workload_name = "SimpleAdd";
   x.assign(num_elements, 1);
   y.assign(num_elements, 0);
@@ -23,11 +23,11 @@ OCLSimpleAdd::~OCLSimpleAdd() {}
 void OCLSimpleAdd::build_program() { prepare_program_from_binary(); }
 
 void OCLSimpleAdd::create_buffers() {
-  memobjX =
-      clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int) * num, NULL, &ret);
+  memobjX = clCreateBuffer(context, CL_MEM_READ_ONLY,
+                           sizeof(int) * static_cast<size_t>(num), NULL, &ret);
   CL_CHECK_RESULT(ret);
-  memobjY =
-      clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int) * num, NULL, &ret);
+  memobjY = clCreateBuffer(context, CL_MEM_READ_WRITE,
+                           sizeof(int) * static_cast<size_t>(num), NULL, &ret);
   CL_CHECK_RESULT(ret);
 }
 
@@ -43,12 +43,12 @@ void OCLSimpleAdd::create_cmdlist() {
 
 void OCLSimpleAdd::execute_work() {
   CL_CHECK_RESULT(clEnqueueWriteBuffer(command_queue, memobjX, CL_TRUE, 0,
-                                       sizeof(int) * num, x.data(), 0, NULL,
-                                       NULL));
+                                       sizeof(int) * static_cast<size_t>(num),
+                                       x.data(), 0, NULL, NULL));
   CL_CHECK_RESULT(clEnqueueTask(command_queue, kernel, 0, NULL, NULL));
   CL_CHECK_RESULT(clEnqueueReadBuffer(command_queue, memobjY, CL_TRUE, 0,
-                                      sizeof(int) * num, y.data(), 0, NULL,
-                                      NULL));
+                                      sizeof(int) * static_cast<size_t>(num),
+                                      y.data(), 0, NULL, NULL));
 }
 
 bool OCLSimpleAdd::verify_results() {

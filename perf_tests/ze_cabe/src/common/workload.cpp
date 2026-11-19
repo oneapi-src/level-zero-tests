@@ -70,20 +70,22 @@ void Workload::calculate_results() {
   for (unsigned int i = 0; i < Stages::COUNT; ++i) {
     result[i].time_mean =
         std::accumulate(result[i].times.begin(), result[i].times.end(), 0.0f) /
-        result[i].times.size();
+        static_cast<float>(result[i].times.size());
 
     double error = 0.0;
     for (double time : result[i].times) {
       error += pow(time - result[i].time_mean, 2);
     }
 
-    result[i].time_standard_deviation = sqrt(error / result[i].times.size());
+    result[i].time_standard_deviation =
+        sqrt(error / static_cast<double>(result[i].times.size()));
 
     std::sort(result[i].times.begin(), result[i].times.end());
     result[i].time_min = result[i].times.front();
     result[i].time_max = result[i].times.back();
 
-    unsigned int middleIdx = result[i].times.size() / 2;
+    unsigned int middleIdx =
+        static_cast<unsigned int>(result[i].times.size() / 2);
 
     if (result[i].times.size() % 2) {
       result[i].time_median = result[i].times[middleIdx];

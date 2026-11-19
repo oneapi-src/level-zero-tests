@@ -16,6 +16,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <type_traits>
 #include "logging/logging.hpp"
 #include "image/image.hpp"
 #include "random/random.hpp"
@@ -51,6 +52,9 @@ static std::string StagesList[Stages::COUNT] = {
     "Work Execution"};
 
 template <class T> class BlackScholesData {
+  static_assert(std::is_floating_point_v<T>,
+                "BlackScholesData needs a floating-point type");
+
 public:
   BlackScholesData(){};
   BlackScholesData(unsigned int num_options) : num_options(num_options) {}
@@ -62,7 +66,7 @@ public:
   }
 
   void generate_data() {
-    int buffer_size = num_options * sizeof(T);
+    size_t buffer_size = num_options * sizeof(T);
 
     option_years.assign(buffer_size, 0);
     option_strike.assign(buffer_size, 0);
@@ -71,7 +75,7 @@ public:
     put_result.assign(buffer_size, 0);
 
     srand(5347);
-    for (int i = 0; i < num_options; ++i) {
+    for (unsigned int i = 0; i < num_options; ++i) {
       option_years[i] = get_random(0.25f, 10.0f);
       option_strike[i] = get_random(1.0f, 100.0f);
       stock_price[i] = get_random(5.0f, 30.0f);
@@ -87,20 +91,22 @@ public:
 };
 
 template <typename T> inline T cnd(T d) {
-  const T A1 = 0.31938153;
-  const T A2 = -0.356563782;
-  const T A3 = 1.781477937;
-  const T A4 = -1.821255978;
-  const T A5 = 1.330274429;
-  const T RSQRT2PI = 0.39894228040143267793994605993438;
+  static_assert(std::is_floating_point_v<T>,
+                "cnd() needs a floating-point type");
+  const T A1 = static_cast<T>(0.31938153);
+  const T A2 = static_cast<T>(-0.356563782);
+  const T A3 = static_cast<T>(1.781477937);
+  const T A4 = static_cast<T>(-1.821255978);
+  const T A5 = static_cast<T>(1.330274429);
+  const T RSQRT2PI = static_cast<T>(0.39894228040143267793994605993438);
 
-  T K = 1.0 / (1.0 + 0.2316419 * fabs(d));
+  T K = static_cast<T>(1.0 / (1.0 + 0.2316419 * fabs(d)));
 
-  T val = RSQRT2PI * exp(-0.5 * d * d) *
-          (K * (A1 + K * (A2 + K * (A3 + K * (A4 + K * A5)))));
+  T val = static_cast<T>(RSQRT2PI * exp(-0.5 * d * d) *
+                         (K * (A1 + K * (A2 + K * (A3 + K * (A4 + K * A5))))));
 
   if (d > 0.)
-    val = 1.0 - val;
+    val = static_cast<T>(1.0 - val);
 
   return val;
 }
@@ -108,15 +114,18 @@ template <typename T> inline T cnd(T d) {
 template <typename T>
 inline void black_scholes_cpu(const T riskfree, const T volatility, const T t,
                               const T x, const T s, T &call, T &put) {
+  static_assert(std::is_floating_point_v<T>,
+                "black_scholes_cpu() needs a floating-point type");
   const T c_half = 0.5;
 
-  T sqrtT = sqrt(t);
-  T d1 = (log(s / x) + (riskfree + c_half * volatility * volatility) * t) /
-         (volatility * sqrtT);
+  T sqrtT = static_cast<T>(sqrt(t));
+  T d1 = static_cast<T>(
+      (log(s / x) + (riskfree + c_half * volatility * volatility) * t) /
+      (volatility * sqrtT));
   T d2 = d1 - volatility * sqrtT;
   T CNDD1 = cnd(d1);
   T CNDD2 = cnd(d2);
-  T expRT = exp(-riskfree * t);
+  T expRT = static_cast<T>(exp(-riskfree * t));
 
   call = s * CNDD1 - x * expRT * CNDD2;
   put = call + expRT - s;
@@ -135,19 +144,19 @@ struct SobelKernel {
 };
 
 inline int compute_horizontal_derivative(const SobelKernel p) {
-  return -p.upper_left - 2 * p.middle_left - p.lower_left + p.upper_right +
-         2 * p.middle_right + p.lower_right;
+  return static_cast<int>(-p.upper_left - 2 * p.middle_left - p.lower_left +
+                          p.upper_right + 2 * p.middle_right + p.lower_right);
 }
 
 inline int compute_vertical_derivative(const SobelKernel p) {
-  return -p.upper_left - 2 * p.upper_middle - p.upper_right + p.lower_left +
-         2 * p.lower_middle + p.lower_right;
+  return static_cast<int>(-p.upper_left - 2 * p.upper_middle - p.upper_right +
+                          p.lower_left + 2 * p.lower_middle + p.lower_right);
 }
 
 inline int compute_gradient(SobelKernel p) {
   float h = (float)compute_horizontal_derivative(p);
   float v = (float)compute_vertical_derivative(p);
-  return (uint32_t)sqrt(h * h + v * v);
+  return static_cast<int>(static_cast<uint32_t>(sqrt(h * h + v * v)));
 }
 
 inline bool is_boundary(const int x, const int y, const int width,
@@ -180,7 +189,7 @@ inline void sobel_cpu(uint32_t *inputBuffer, uint32_t *outputBuffer,
       pixels.lower_right = inputBuffer[offset + 1 + width];
 
       int g = compute_gradient(pixels);
-      uint32_t pixel = g < 0 ? 0 : g > 255 ? 255 : g;
+      uint32_t pixel = static_cast<uint32_t>(g < 0 ? 0 : g > 255 ? 255 : g);
       outputBuffer[offset] = pixel;
     }
   }
@@ -198,8 +207,10 @@ inline float get_color(const uint32_t iterations,
                        const uint32_t max_iteration) {
   float pixel = 0.0f;
   if (iterations != max_iteration) {
-    const float factor = sqrt((float)iterations / (float)max_iteration);
-    const float raw_value = round((float)max_iteration * factor);
+    const float factor =
+        static_cast<float>(sqrt((float)iterations / (float)max_iteration));
+    const float raw_value =
+        static_cast<float>(round((float)max_iteration * factor));
     pixel = (raw_value / (float)max_iteration);
   }
   return pixel;
@@ -226,8 +237,9 @@ inline void mandelbrot_cpu(float *pixels, int width, int height) {
       }
       const int iterations = i;
 
-      const uint32_t pixel_offset = y * width + x;
-      pixels[pixel_offset] = get_color(iterations, MAXITERATION);
+      const uint32_t pixel_offset = static_cast<uint32_t>(y * width + x);
+      pixels[pixel_offset] =
+          get_color(static_cast<uint32_t>(iterations), MAXITERATION);
     }
   }
 }

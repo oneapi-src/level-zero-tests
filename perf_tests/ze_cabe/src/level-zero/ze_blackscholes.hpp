@@ -10,11 +10,15 @@
 
 #include <vector>
 #include <string>
+#include <type_traits>
 #include "ze_workload.hpp"
 
 namespace compute_api_bench {
 
 template <class T> class ZeBlackScholes : public ZeWorkload {
+  static_assert(std::is_floating_point_v<T>,
+                "ZeBlackScholes needs a floating-point type");
+
 public:
   ZeBlackScholes(BlackScholesData<T> *bs_io_data, unsigned int num_iterations);
   ~ZeBlackScholes();
@@ -41,8 +45,8 @@ private:
   ze_command_list_handle_t command_list = nullptr;
   unsigned int num_iterations;
   unsigned int num_options;
-  const T riskfree = 0.02;
-  const T volatility = 0.3;
+  const T riskfree = static_cast<T>(0.02);
+  const T volatility = static_cast<T>(0.3);
   T max_delta;
   std::vector<T> option_years;
   std::vector<T> option_strike;

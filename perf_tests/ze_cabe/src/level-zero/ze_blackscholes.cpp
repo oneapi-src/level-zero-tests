@@ -26,12 +26,12 @@ ZeBlackScholes<T>::ZeBlackScholes(BlackScholesData<T> *bs_io_data,
   if (sizeof(T) == sizeof(float)) {
     kernel_spv =
         load_binary_file(kernel_length, "ze_cabe_blackscholes_fp32.spv");
-    max_delta = 1e-4;
+    max_delta = static_cast<T>(1e-4);
     workload_name = "BlackScholesFP32";
   } else {
     kernel_spv =
         load_binary_file(kernel_length, "ze_cabe_blackscholes_fp64.spv");
-    max_delta = 1e-13;
+    max_delta = static_cast<T>(1e-13);
     workload_name = "BlackScholesFP64";
   }
 }

@@ -18,7 +18,8 @@ OCLMandelbrot::OCLMandelbrot(unsigned int width, unsigned int height,
   workload_name = "Mandelbrot";
   result.assign(width * height, 0);
   result_CPU.assign(width * height, 0);
-  mandelbrot_cpu(result_CPU.data(), width, height);
+  mandelbrot_cpu(result_CPU.data(), static_cast<int>(width),
+                 static_cast<int>(height));
   kernel_spv = load_binary_file(kernel_length, "ze_cabe_mandelbrot.spv");
 }
 

@@ -37,9 +37,10 @@ std::vector<uint8_t> load_binary_file(size_t &length,
   length = static_cast<size_t>(stream.tellg());
   stream.seekg(0, stream.beg);
 
-  length = ceil(length / 4.0) * 4;
+  length = static_cast<size_t>(ceil(static_cast<double>(length) / 4.0) * 4);
   binary_file.resize(length);
-  stream.read(reinterpret_cast<char *>(binary_file.data()), length);
+  stream.read(reinterpret_cast<char *>(binary_file.data()),
+              static_cast<std::streamsize>(length));
   stream.close();
   return binary_file;
 }

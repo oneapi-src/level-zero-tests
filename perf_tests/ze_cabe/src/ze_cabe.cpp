@@ -61,7 +61,8 @@ int main(int argc, char *argv[]) {
   std::string api = "all";
   std::string scenario = "all";
   unsigned int iterations = NUM_ITERATIONS;
-  unsigned int number_of_scenarios = valid_scenarios.size() - 1;
+  unsigned int number_of_scenarios =
+      static_cast<unsigned int>(valid_scenarios.size() - 1);
   bool write_csv = false;
   std::string csv_filename;
   level_zero_tests::ImageBMP8Bit image("lena512.bmp");
@@ -71,7 +72,7 @@ int main(int argc, char *argv[]) {
 #endif
   bool useMedian = false;
 
-  for (uint32_t argIndex = 1; argIndex < argc; argIndex++) {
+  for (int argIndex = 1; argIndex < argc; argIndex++) {
     if (!strcmp(argv[argIndex], "-h") || !strcmp(argv[argIndex], "-help")) {
       print_help();
       exit(0);
@@ -95,7 +96,7 @@ int main(int argc, char *argv[]) {
       argIndex++;
     } else if (!strcmp(argv[argIndex], "-iterations") &&
                (argIndex + 1 < argc)) {
-      iterations = std::stoi(argv[argIndex + 1]);
+      iterations = static_cast<unsigned int>(std::stoi(argv[argIndex + 1]));
       if (iterations < 1 || iterations > 200) {
         std::cout << "Invalid number of iterations!" << std::endl;
         exit(EXIT_FAILURE);
@@ -209,7 +210,7 @@ int main(int argc, char *argv[]) {
     reset_color = reset;
   }
 
-  for (int i = 0; i < number_of_scenarios; ++i) {
+  for (unsigned int i = 0; i < number_of_scenarios; ++i) {
 
     if (number_of_scenarios == 1) {
       std::cout << color << std::left << std::setw(25) << scenario

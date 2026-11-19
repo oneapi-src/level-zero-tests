@@ -11,7 +11,7 @@
 namespace compute_api_bench {
 
 ZeSimpleAdd::ZeSimpleAdd(unsigned int num_elements)
-    : ZeWorkload(), num(num_elements) {
+    : ZeWorkload(), num(static_cast<int>(num_elements)) {
   workload_name = "SimpleAdd";
   x.assign(num_elements, 1);
   y.assign(num_elements, 0);
@@ -45,9 +45,11 @@ void ZeSimpleAdd::create_buffers() {
       ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC, nullptr};
   device_desc.ordinal = 0;
   device_desc.flags = 0;
-  ZE_CHECK_RESULT(zeMemAllocDevice(context, &device_desc, sizeof(int) * num, 1,
+  ZE_CHECK_RESULT(zeMemAllocDevice(context, &device_desc,
+                                   sizeof(int) * static_cast<size_t>(num), 1,
                                    device, &input_buffer));
-  ZE_CHECK_RESULT(zeMemAllocDevice(context, &device_desc, sizeof(int) * num, 1,
+  ZE_CHECK_RESULT(zeMemAllocDevice(context, &device_desc,
+                                   sizeof(int) * static_cast<size_t>(num), 1,
                                    device, &output_buffer));
 }
 
@@ -69,9 +71,9 @@ void ZeSimpleAdd::create_cmdlist() {
   command_list_description.pNext = nullptr;
   ZE_CHECK_RESULT(zeCommandListCreate(
       context, device, &command_list_description, &command_list));
-  ZE_CHECK_RESULT(zeCommandListAppendMemoryCopy(command_list, input_buffer,
-                                                x.data(), sizeof(int) * num,
-                                                nullptr, 0, nullptr));
+  ZE_CHECK_RESULT(zeCommandListAppendMemoryCopy(
+      command_list, input_buffer, x.data(),
+      sizeof(int) * static_cast<size_t>(num), nullptr, 0, nullptr));
   ZE_CHECK_RESULT(
       zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
 
@@ -83,9 +85,9 @@ void ZeSimpleAdd::create_cmdlist() {
       command_list, function, &group_count, nullptr, 0, nullptr));
   ZE_CHECK_RESULT(
       zeCommandListAppendBarrier(command_list, nullptr, 0, nullptr));
-  ZE_CHECK_RESULT(
-      zeCommandListAppendMemoryCopy(command_list, y.data(), output_buffer,
-                                    sizeof(int) * num, nullptr, 0, nullptr));
+  ZE_CHECK_RESULT(zeCommandListAppendMemoryCopy(
+      command_list, y.data(), output_buffer,
+      sizeof(int) * static_cast<size_t>(num), nullptr, 0, nullptr));
   ZE_CHECK_RESULT(zeCommandListClose(command_list));
 
   const uint32_t command_queue_id = 0;

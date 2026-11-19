@@ -27,7 +27,8 @@ ZeSobel::ZeSobel(level_zero_tests::ImageBMP8Bit image,
     }
   }
 
-  sobel_cpu(lena_original.data(), lena_filtered_CPU.data(), width, height);
+  sobel_cpu(lena_original.data(), lena_filtered_CPU.data(),
+            static_cast<int>(width), static_cast<int>(height));
   kernel_spv = load_binary_file(kernel_length, "ze_cabe_sobel.spv");
 }
 
