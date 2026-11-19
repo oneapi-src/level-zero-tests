@@ -420,7 +420,8 @@ if (MSVC)
     add_compile_options(/W4)
     add_compile_options(/MP)
 else()
-    add_compile_options(-Wsign-compare -Wnarrowing -Wsign-conversion -Wfloat-conversion -Wconversion)
+    add_compile_options(-Wall -Werror)
+    add_compile_options(-Wsign-compare -Wsign-conversion -Wconversion)
 endif()
 
 option(ENABLE_ZESYSMAN

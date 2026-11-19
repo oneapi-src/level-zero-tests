@@ -28,6 +28,10 @@ swig_link_libraries(zes_wrap
           ${LZT_LEVEL_ZERO_TARGET}
      )
 
+if(NOT MSVC)
+    target_compile_options(${SWIG_MODULE_zes_wrap_REAL_NAME} PRIVATE -Wno-error)
+endif()
+
 set(destination "${CMAKE_INSTALL_PREFIX}/zesysman")
 
 
