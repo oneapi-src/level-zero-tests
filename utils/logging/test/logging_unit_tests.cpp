@@ -12,8 +12,7 @@
 
 #include <boost/smart_ptr/make_shared_object.hpp>
 
-#include <boost/program_options.hpp>
-namespace po = boost::program_options;
+#include "command_line/command_line.hpp"
 
 #include <regex>
 
@@ -85,7 +84,7 @@ LZT_TEST(LoggingCommandLineParser, PreciseFormatIsDefault) {
 
 LZT_TEST(LoggingCommandLineParser, ChooseUnknownFormatFromCommandLine) {
   std::vector<std::string> cmd = {"--logging-format=unknown"};
-  EXPECT_THROW(lzt::parse_command_line(cmd), po::validation_error);
+  EXPECT_THROW(lzt::parse_command_line(cmd), lzt::command_line_error);
 }
 
 LZT_TEST(LoggingCommandLineParser, ConsumeOnlyKnownOptionsFromCommandLine) {
@@ -139,7 +138,7 @@ LZT_TEST(LoggingCommandLineParser, InfoLevelIsDefault) {
 
 LZT_TEST(LoggingCommandLineParser, ChooseUnknownLevelFromCommandLine) {
   std::vector<std::string> cmd = {"--logging-level=unknown"};
-  EXPECT_THROW(lzt::parse_command_line(cmd), po::validation_error);
+  EXPECT_THROW(lzt::parse_command_line(cmd), lzt::command_line_error);
 }
 
 class LoggingInitTest : public ::testing::Test {

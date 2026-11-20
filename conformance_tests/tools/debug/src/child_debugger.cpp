@@ -8,12 +8,9 @@
 
 #include <thread>
 
-#include <boost/program_options.hpp>
-
+#include "command_line/command_line.hpp"
 #include "test_debug.hpp"
 #include "test_debug_utils.hpp"
-
-namespace po = boost::program_options;
 
 using lzt::to_u32;
 
@@ -21,53 +18,38 @@ struct debugger_options {
 public:
   void parse_options(int argc, char **argv) {
 
-    po::options_description desc("Allowed Options");
-    auto options = desc.add_options();
+    lzt::command_line_options options("Allowed Options");
 
     std::string device_id_string = "device_id";
     std::string index_string = "index";
     std::string pid_string = "app_pid";
     std::string verify_events_string = "verify_events";
 
-    options(pid_string.c_str(), po::value<uint32_t>(&app_pid_in),
-            "Application PID");
-    options(verify_events_string.c_str(), "Verify Events");
-    options(use_sub_devices_string, "Use subdevices");
+    options.value(pid_string, app_pid_in, "Application PID");
+    options.flag(verify_events_string, "Verify Events");
+    options.flag(use_sub_devices_string, "Use subdevices");
 
     // Required Options:
-    options(device_id_string.c_str(),
-            po::value<std::string>(&sub_device_id_in)->required(),
-            "Device ID of device to test");
-    options(index_string.c_str(), po::value<uint64_t>(&index_in)->required(),
-            "Index of this debuggee");
-    options(test_type_string,
-            po::value<uint32_t>((uint32_t *)&test_selected)->required(),
-            "the test type to run");
+    options.required(device_id_string, sub_device_id_in,
+                     "Device ID of device to test");
+    options.required(index_string, index_in, "Index of this debuggee");
+    options.required(test_type_string, test_selected, "the test type to run");
 
-    std::vector<std::string> parser(argv + 1, argv + argc);
-    po::parsed_options parsed_options = po::command_line_parser(parser)
-                                            .options(desc)
-                                            .allow_unregistered()
-                                            .run();
+    options.parse(argc, argv, true);
 
-    po::variables_map variables_map;
-    po::store(parsed_options, variables_map);
-    po::notify(variables_map);
+    LOG_INFO << "[Child Debugger] sub device ID: " << sub_device_id_in;
 
-    LOG_INFO << "[Child Debugger] sub device ID: "
-             << variables_map[device_id_string].as<std::string>();
-
-    if (variables_map.count(use_sub_devices_string)) {
+    if (options.given(use_sub_devices_string)) {
       LOG_INFO << "[Child Debugger] Using sub devices";
       use_sub_devices = true;
     }
 
-    if (variables_map.count(verify_events_string)) {
+    if (options.given(verify_events_string)) {
       LOG_INFO << "[Child Debugger] Verifying events from debuggee";
       verify_events = true;
     }
 
-    if (variables_map.count(pid_string)) {
+    if (options.given(pid_string)) {
       LOG_INFO << "[Child Debugger] Application PID: " << app_pid_in;
     }
   }
@@ -83,7 +65,12 @@ public:
 int main(int argc, char **argv) {
 
   debugger_options options;
-  options.parse_options(argc, argv);
+  try {
+    options.parse_options(argc, argv);
+  } catch (const lzt::command_line_error &e) {
+    LOG_ERROR << e.what();
+    exit(1);
+  }
 
   LOG_DEBUG << "[Child Debugger] INDEX:  " << options.index_in;
   auto index = options.index_in;

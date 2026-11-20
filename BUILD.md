@@ -54,7 +54,6 @@ cd (Join-Path $LZT_TEMP 'Boost')
   -j 16 `
   address-model=64 `
   --with-log `
-  --with-program_options `
   --with-process `
   --with-date_time
 
@@ -90,7 +89,6 @@ cd boost
   -j 4 \
   address-model=64 \
   --with-log \
-  --with-program_options \
   --with-process \
   --with-date_time
 ```

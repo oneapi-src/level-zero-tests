@@ -10,7 +10,7 @@ target_link_libraries(logging
     PUBLIC
     Boost::log
     Boost::log_setup
-    Boost::program_options
+    level_zero_tests::command_line
 )
 
 if (NOT BUILD_ZE_PERF_TESTS_ONLY)

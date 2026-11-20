@@ -20,8 +20,7 @@ namespace logging = boost::log;
 namespace sinks = boost::log::sinks;
 namespace expr = boost::log::expressions;
 
-#include <boost/program_options.hpp>
-namespace po = boost::program_options;
+#include "command_line/command_line.hpp"
 
 namespace level_zero_tests {
 
@@ -63,11 +62,14 @@ void init_logging(const LoggingSettings settings) {
 }
 
 void init_logging(std::vector<std::string> &command_line) {
+  LoggingSettings settings;
   try {
-    init_logging(parse_command_line(command_line));
-  } catch (const boost::bad_lexical_cast &e) {
-    std::cerr << "Error initializing logging parsing command line: " << e.what()
-              << std::endl;
+    settings = parse_command_line(command_line);
+  } catch (const command_line_error &e) {
+    std::cerr << "Error parsing command line: " << e.what() << std::endl;
+  }
+  try {
+    init_logging(settings);
   } catch (std::exception &e) {
     std::cerr << "Error initializing logging: " << e.what() << std::endl;
   }
@@ -109,29 +111,10 @@ std::istream &operator>>(std::istream &is, logging_format &f) {
 LoggingSettings parse_command_line(std::vector<std::string> &command_line) {
   LoggingSettings settings;
 
-  po::options_description desc("Allowed options");
-  auto options = desc.add_options();
-  options("logging-format",
-          po::value(&settings.format)->default_value(logging_format::precise),
-          "format of logged messages");
-  options("logging-level",
-          po::value(&settings.level)->default_value(logging_level::info),
-          "minimal logging level to print");
-
-  try {
-    po::parsed_options parsed = po::command_line_parser(command_line)
-                                    .options(desc)
-                                    .allow_unregistered()
-                                    .run();
-    po::variables_map vm;
-    po::store(parsed, vm);
-    po::notify(vm);
-
-    command_line =
-        po::collect_unrecognized(parsed.options, po::include_positional);
-  } catch (const po::error &e) {
-    std::cerr << "Error parsing command line: " << e.what() << std::endl;
-  }
+  command_line_options options;
+  options.value("logging-format", settings.format, "format of logged messages")
+      .value("logging-level", settings.level, "minimal logging level to print");
+  command_line = options.parse(command_line, true);
   return settings;
 }
 

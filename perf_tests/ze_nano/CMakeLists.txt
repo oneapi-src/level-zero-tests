@@ -28,6 +28,6 @@ add_lzt_test(
     src/benchmark.cpp
   LINK_LIBRARIES
     ${OS_SPECIFIC_LIBS}
-    Boost::program_options
+    level_zero_tests::command_line
   KERNELS ze_nano_benchmarks
 )

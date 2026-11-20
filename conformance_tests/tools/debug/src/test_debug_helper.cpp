@@ -1125,7 +1125,7 @@ int main(int argc, char **argv) {
   debug_options options;
   try {
     options.parse_options(argc, argv);
-  } catch (const boost::bad_any_cast &e) {
+  } catch (const lzt::command_line_error &e) {
     LOG_ERROR << e.what();
     exit(1);
   }

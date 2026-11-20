@@ -6,7 +6,7 @@
 get_filename_component(logging_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 
 include(CMakeFindDependencyMacro)
-find_dependency(Boost 1.64 REQUIRED COMPONENTS log program_options)
+find_dependency(Boost 1.64 REQUIRED COMPONENTS log)
 
 if(NOT TARGET level_zero_tests::logging)
     include("${logging_CMAKE_DIR}/logging-targets.cmake")

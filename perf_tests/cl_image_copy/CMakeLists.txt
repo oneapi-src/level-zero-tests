@@ -8,12 +8,12 @@ add_lzt_test(
   NAME cl_image_copy
   GROUP "/perf_tests"
   SOURCES
+    ../common/src/benchmark_json.cpp
     ../common/src/ze_app.cpp
     src/cl_image_copy.cpp
     src/options.cpp
     src/utils.cpp
   LINK_LIBRARIES
     OpenCL::OpenCL
-    Boost::boost
-    Boost::program_options
+    level_zero_tests::command_line
 )

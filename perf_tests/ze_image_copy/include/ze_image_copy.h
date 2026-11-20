@@ -16,14 +16,9 @@
 #include <assert.h>
 #include <iomanip>
 #include <iostream>
-#include <boost/program_options.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/optional.hpp>
+#include <string>
 
-namespace po = boost::program_options;
-namespace pt = boost::property_tree;
-using namespace pt;
+#include "benchmark_json.hpp"
 
 class ZeImageCopy {
 public:
@@ -40,7 +35,6 @@ public:
   bool validRet = false;
   long double gbps;
   long double latency;
-  ptree param_array;
   ze_image_format_layout_t Imagelayout = ZE_IMAGE_FORMAT_LAYOUT_8;
   ze_image_flags_t Imageflags = 0;
   ze_image_type_t Imagetype = ZE_IMAGE_TYPE_2D;

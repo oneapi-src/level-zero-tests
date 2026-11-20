@@ -21,6 +21,7 @@
 #
 
 
+add_subdirectory(command_line)
 add_subdirectory(image)
 add_subdirectory(logging)
 add_subdirectory(net)

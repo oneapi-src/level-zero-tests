@@ -9,10 +9,13 @@
 #include "common.hpp"
 #include "benchmark.hpp"
 
-#include <iomanip>
-#include <boost/program_options.hpp>
+#include "command_line/command_line.hpp"
 
-namespace po = boost::program_options;
+#include <algorithm>
+#include <iomanip>
+#include <utility>
+#include <vector>
+
 using namespace ze_api_benchmarks;
 
 namespace {
@@ -143,40 +146,48 @@ void zeNano_zeDeviceGroupGetMemIpcHandle() {
 } /* end namespace */
 
 int main(int argc, char **argv) {
+  const std::vector<std::pair<const char *, void (*)()>> tests = {
+      {"zeKernelSetArgumentValue_Buffer",
+       zeNano_zeKernelSetArgumentValue_Buffer},
+      {"zeKernelSetArgumentValue_Immediate",
+       zeNano_zeKernelSetArgumentValue_Immediate},
+      {"zeKernelSetArgumentValue_Image", zeNano_zeKernelSetArgumentValue_Image},
+      {"zeCommandListAppendLaunchKernel",
+       zeNano_zeCommandListAppendLaunchKernel},
+      {"zeCommandQueueExecuteCommandLists",
+       zeNano_zeCommandQueueExecuteCommandLists},
+      {"zeDeviceGroupGetMemIpcHandle", zeNano_zeDeviceGroupGetMemIpcHandle}};
+
   // Parse Options
-  po::options_description desc("Select tests to be run. If none specified, all "
-                               "test cases will be run.\n\nAllowed options");
-  desc.add_options()("help", "produce help message")(
-      "zeKernelSetArgumentValue_Buffer", "enable this test case")(
-      "zeKernelSetArgumentValue_Immediate", "enable this test case")(
-      "zeKernelSetArgumentValue_Image", "enable this test case")(
-      "zeCommandListAppendLaunchKernel", "enable this test case")(
-      "zeCommandQueueExecuteCommandLists", "enable this test case")(
-      "zeDeviceGroupGetMemIpcHandle", "enable this test case");
-  po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc), vm);
-  po::notify(vm);
+  level_zero_tests::command_line_options options(
+      "Select tests to be run. If none specified, all test cases will be "
+      "run.\n\nAllowed options");
+  options.flag("help", "produce help message");
+  for (const auto &test : tests) {
+    options.flag(test.first, "enable this test case");
+  }
+  try {
+    options.parse(argc, argv);
+  } catch (const level_zero_tests::command_line_error &e) {
+    std::cerr << e.what() << std::endl;
+    std::cout << options << std::endl;
+    return 1;
+  }
 
   // Run Tests
-  bool runAllTests = false;
-  if (vm.count("help")) {
-    std::cout << desc << std::endl;
+  if (options.given("help")) {
+    std::cout << options << std::endl;
     exit(0);
   }
-  if (vm.size() == 0)
-    runAllTests = true;
-  if (runAllTests || vm.count("zeKernelSetArgumentValue_Buffer"))
-    zeNano_zeKernelSetArgumentValue_Buffer();
-  if (runAllTests || vm.count("zeKernelSetArgumentValue_Immediate"))
-    zeNano_zeKernelSetArgumentValue_Immediate();
-  if (runAllTests || vm.count("zeKernelSetArgumentValue_Image"))
-    zeNano_zeKernelSetArgumentValue_Image();
-  if (runAllTests || vm.count("zeCommandListAppendLaunchKernel"))
-    zeNano_zeCommandListAppendLaunchKernel();
-  if (runAllTests || vm.count("zeCommandQueueExecuteCommandLists"))
-    zeNano_zeCommandQueueExecuteCommandLists();
-  if (runAllTests || vm.count("zeDeviceGroupGetMemIpcHandle"))
-    zeNano_zeDeviceGroupGetMemIpcHandle();
+  const bool runAllTests =
+      std::none_of(tests.begin(), tests.end(), [&options](const auto &test) {
+        return options.given(test.first);
+      });
+  for (const auto &test : tests) {
+    if (runAllTests || options.given(test.first)) {
+      test.second();
+    }
+  }
 
   std::cout << "All Tests Complete" << std::endl << std::flush;
   return 0;

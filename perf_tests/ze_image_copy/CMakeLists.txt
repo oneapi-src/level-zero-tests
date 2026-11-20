@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 set(ze_imagecopy_libraries
-Boost::program_options
+level_zero_tests::command_line
 ${OS_SPECIFIC_LIBS}
 level_zero_tests::utils_string
 )
@@ -13,6 +13,7 @@ add_lzt_test(
   NAME ze_image_copy
   GROUP "/perf_tests"
   SOURCES
+    ../common/src/benchmark_json.cpp
     ../common/src/ze_app.cpp
     src/ze_image_copy.cpp
     src/options.cpp

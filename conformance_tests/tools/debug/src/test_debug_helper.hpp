@@ -11,85 +11,68 @@
 #include <chrono>
 #include <thread>
 
-#include <boost/program_options.hpp>
-
+#include "command_line/command_line.hpp"
 #include "test_debug_common.hpp"
 
-namespace po = boost::program_options;
 namespace lzt = level_zero_tests;
 
 struct debug_options {
 public:
   void parse_options(int argc, char **argv) {
 
-    po::options_description desc("Allowed Options");
-    auto options = desc.add_options();
+    lzt::command_line_options options("Allowed Options");
 
     // Required Options:
-    options(test_type_string,
-            po::value<uint32_t>((uint32_t *)&test_selected)->required(),
-            "the test type to run");
+    options.required(test_type_string, test_selected, "the test type to run");
 
     // Optional options:
-    options(device_id_string, po::value<std::string>(&device_id_in),
-            "Device ID of device to test");
-    options(module_string, po::value<std::string>(&module_name_in),
-            "spv file to use");
-    options(module_options_string, po::value<std::string>(&module_options_in),
-            "Build options for the module");
-    options(
+    options.value(device_id_string, device_id_in,
+                  "Device ID of device to test");
+    options.value(module_string, module_name_in, "spv file to use");
+    options.value(module_options_string, module_options_in,
+                  "Build options for the module");
+    options.flag(
         "no_ipc",
         "Disable process controls so tests can be run without parent process");
-    options(use_sub_devices_string, "run the test on subdevices if available");
-    options(index_string, po::value<uint64_t>(&index_in),
-            "Index of this debuggee");
-    options(use_many_threads_string,
-            "use a larger number of threads than usual");
+    options.flag(use_sub_devices_string,
+                 "run the test on subdevices if available");
+    options.value(index_string, index_in, "Index of this debuggee");
+    options.flag(use_many_threads_string,
+                 "use a larger number of threads than usual");
 
-    std::vector<std::string> parser(argv + 1, argv + argc);
-    po::parsed_options parsed_options = po::command_line_parser(parser)
-                                            .options(desc)
-                                            .allow_unregistered()
-                                            .run();
-
-    po::variables_map variables_map;
-    po::store(parsed_options, variables_map);
-    po::notify(variables_map);
+    options.parse(argc, argv, true);
 
     LOG_INFO << "[Application] TEST TYPE: " << test_selected;
 
-    if (variables_map.count(device_id_string)) {
-      LOG_INFO << "[Application] Device ID option: "
-               << variables_map[device_id_string].as<std::string>() << " "
-               << device_id_in;
+    if (options.given(device_id_string)) {
+      LOG_INFO << "[Application] Device ID option: " << device_id_in;
     }
 
-    if (variables_map.count(use_sub_devices_string)) {
+    if (options.given(use_sub_devices_string)) {
       LOG_INFO << "[Application] Using sub devices";
       use_sub_devices = true;
     }
 
-    if (variables_map.count(module_string)) {
+    if (options.given(module_string)) {
       use_custom_module = true;
       LOG_INFO << "[Application] Using Custom Module:  " << module_name_in;
     }
 
-    if (variables_map.count(module_options_string)) {
+    if (options.given(module_options_string)) {
       LOG_INFO << "[Application] Using Custom Module Options:  "
                << module_options_in;
     }
 
-    if (variables_map.count("no_ipc")) {
+    if (options.given("no_ipc")) {
       LOG_INFO << "[Application] Disabling IPC controls";
       enable_synchro = false;
     }
 
-    if (variables_map.count(index_string)) {
-      index_in = variables_map[index_string].as<uint64_t>();
+    if (options.given(index_string)) {
       LOG_INFO << "[Application] Setting index: " << index_in;
     }
 
-    if (variables_map.count(use_many_threads_string)) {
+    if (options.given(use_many_threads_string)) {
       use_many_threads = true;
       LOG_INFO << "[Application] Using many threads";
     }

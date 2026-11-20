@@ -17,15 +17,10 @@
 #include <assert.h>
 #include <iomanip>
 #include <iostream>
-#include <boost/program_options.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/optional.hpp>
 
-namespace po = boost::program_options;
-namespace pt = boost::property_tree;
+#include "benchmark_json.hpp"
+
 using namespace std;
-using namespace pt;
 
 class ClImageCopy {
 
@@ -43,8 +38,6 @@ public:
   bool validRet = false;
   long double gbps;
   long double latency;
-  ptree param_array;
-  ptree main_tree;
   string JsonFileName;
 
   cl_channel_order clImageChannelOrder = CL_RGBA;
