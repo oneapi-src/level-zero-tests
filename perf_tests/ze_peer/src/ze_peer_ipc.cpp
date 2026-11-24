@@ -163,13 +163,13 @@ void ZePeer::bandwidth_latency_ipc(peer_test_t test_type,
   if (is_server == false) {
     if (transfer_type == PEER_READ) {
       if (ZePeer::use_immediate_cmdlist) {
-        perform_copy_immediate(test_type, command_list,
-                               ze_buffers[local_device_id],
-                               ze_buffers[remote_device_id], buffer_size);
+        perform_copy_immediate(
+            test_type, command_list, ze_buffers[local_device_id],
+            ze_buffers[remote_device_id], buffer_size, local_device_id);
       } else {
         perform_copy(test_type, command_list, command_queue,
                      ze_buffers[local_device_id], ze_buffers[remote_device_id],
-                     buffer_size);
+                     buffer_size, local_device_id);
       }
       if (validate_results) {
         bool validated = false;
@@ -190,13 +190,13 @@ void ZePeer::bandwidth_latency_ipc(peer_test_t test_type,
       }
     } else {
       if (ZePeer::use_immediate_cmdlist) {
-        perform_copy_immediate(test_type, command_list,
-                               ze_buffers[remote_device_id],
-                               ze_buffers[local_device_id], buffer_size);
+        perform_copy_immediate(
+            test_type, command_list, ze_buffers[remote_device_id],
+            ze_buffers[local_device_id], buffer_size, local_device_id);
       } else {
         perform_copy(test_type, command_list, command_queue,
                      ze_buffers[remote_device_id], ze_buffers[local_device_id],
-                     buffer_size);
+                     buffer_size, local_device_id);
       }
     }
 

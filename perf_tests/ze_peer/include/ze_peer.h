@@ -146,12 +146,19 @@ public:
   void perform_copy(peer_test_t test_type,
                     ze_command_list_handle_t command_list,
                     ze_command_queue_handle_t command_queue, void *dst_buffer,
-                    void *src_buffer, size_t buffer_size);
+                    void *src_buffer, size_t buffer_size, uint32_t device_id);
 
   void perform_copy_immediate(peer_test_t test_type,
                               ze_command_list_handle_t command_list,
                               void *dst_buffer, void *src_buffer,
-                              size_t buffer_size);
+                              size_t buffer_size, uint32_t device_id);
+
+  void create_timestamp_event(uint32_t device_id,
+                              ze_event_pool_handle_t &timestamp_pool,
+                              ze_event_handle_t &timestamp_event);
+
+  long double timestamp_event_time_us(ze_event_handle_t timestamp_event,
+                                      uint32_t device_id);
 
   void bidirectional_perform_copy(uint32_t dst_device_id,
                                   uint32_t src_device_id, uint32_t queue_index,
@@ -260,6 +267,7 @@ public:
   static bool parallel_copy_to_pair_targets;
   static bool parallel_divide_buffers;
   static bool use_immediate_cmdlist;
+  static bool use_event_timer;
 
   // Size of the host buffers that initialize and validate the device
   // buffers, chunk by chunk.

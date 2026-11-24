@@ -63,6 +63,13 @@ first compute engine in the device.
   --ipc                       perform a copy between two devices, specified by options -s and -d,
                               with each device being managed by a separate process.
 
+  --regular_cmdlist           use regular command list instead of immediate
+
+  --useEvents                 measure with GPU timestamps of the copy instead of the
+                              host timer, so submission and host synchronization are
+                              not counted. Unidirectional single pair and IPC tests only.
+                              Default: Not set.
+
   --version                   display version
   -h, --help                  display help message
   ```

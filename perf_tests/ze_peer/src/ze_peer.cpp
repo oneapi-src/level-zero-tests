@@ -84,6 +84,11 @@ first compute engine in the device.
 
   --regular_cmdlist           use regular command list instead of immediate
 
+  --useEvents                 measure with GPU timestamps of the copy instead of the
+                              host timer, so submission and host synchronization are
+                              not counted. Unidirectional single pair and IPC tests only.
+                              Default: Not set.
+
   --version                   display version
   -h, --help                  display help message
 )HELP";
@@ -99,6 +104,7 @@ bool ZePeer::parallel_copy_to_multiple_targets = false;
 bool ZePeer::parallel_copy_to_pair_targets = false;
 bool ZePeer::parallel_divide_buffers = false;
 bool ZePeer::use_immediate_cmdlist = true;
+bool ZePeer::use_event_timer = false;
 uint32_t ZePeer::number_iterations = 50;
 
 const size_t max_elems = 268435456; /* 256 MB */
@@ -562,10 +568,21 @@ int main(int argc, char **argv) {
       ZePeer::validate_results = true;
     } else if (strcmp(argv[i], "--regular_cmdlist") == 0) {
       ZePeer::use_immediate_cmdlist = false;
+    } else if (strcmp(argv[i], "--useEvents") == 0) {
+      ZePeer::use_event_timer = true;
     } else {
       std::cout << usage_str;
       exit(-1);
     }
+  }
+
+  if (ZePeer::use_event_timer &&
+      (ZePeer::bidirectional || ZePeer::parallel_copy_to_single_target ||
+       ZePeer::parallel_copy_to_multiple_targets ||
+       ZePeer::parallel_copy_to_pair_targets)) {
+    std::cerr << "[ERROR] --useEvents supports only unidirectional single "
+                 "pair and IPC tests\n";
+    exit(-1);
   }
 
   if (run_ipc == false) {
