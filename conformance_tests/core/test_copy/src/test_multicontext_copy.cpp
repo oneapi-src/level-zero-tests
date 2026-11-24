@@ -128,11 +128,12 @@ LZT_TEST(
   auto module0 = lzt::create_module(context0, device0, "copy_module.spv");
   auto kernel0 = lzt::create_function(module0, "copy_data");
   int offset = 0;
+  const int element_count = static_cast<int>(size / sizeof(int));
 
   lzt::set_argument_value(kernel0, 0, sizeof(buffer_1_0), &buffer_1_0);
   lzt::set_argument_value(kernel0, 1, sizeof(buffer_1_1), &buffer_1_1);
   lzt::set_argument_value(kernel0, 2, sizeof(int), &offset);
-  lzt::set_argument_value(kernel0, 3, sizeof(int), &size);
+  lzt::set_argument_value(kernel0, 3, sizeof(int), &element_count);
 
   lzt::set_group_size(kernel0, 1, 1, 1);
 
@@ -163,7 +164,7 @@ LZT_TEST(
   lzt::set_argument_value(kernel1, 0, sizeof(buffer_0_0), &buffer_0_0);
   lzt::set_argument_value(kernel1, 1, sizeof(buffer_0_1), &buffer_0_1);
   lzt::set_argument_value(kernel1, 2, sizeof(int), &offset);
-  lzt::set_argument_value(kernel1, 3, sizeof(int), &size);
+  lzt::set_argument_value(kernel1, 3, sizeof(int), &element_count);
 
   lzt::set_group_size(kernel1, 1, 1, 1);
 
