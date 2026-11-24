@@ -946,6 +946,8 @@ std::string to_string(const ze_ipc_property_flag_t flag) {
     return "ZE_IPC_PROPERTY_FLAG_MEMORY";
   case ZE_IPC_PROPERTY_FLAG_EVENT_POOL:
     return "ZE_IPC_PROPERTY_FLAG_EVENT_POOL";
+  case ZE_IPC_PROPERTY_FLAG_FABRIC_ACCESSIBLE:
+    return "ZE_IPC_PROPERTY_FLAG_FABRIC_ACCESSIBLE";
   case ZE_IPC_PROPERTY_FLAG_FORCE_UINT32:
     return "ZE_IPC_PROPERTY_FLAG_FORCE_UINT32";
   default:
