@@ -6,10 +6,10 @@ add_core_library(logging
     "include/logging/logging.hpp"
     "src/logging.cpp"
 )
+find_package(Threads REQUIRED)
 target_link_libraries(logging
     PUBLIC
-    Boost::log
-    Boost::log_setup
+    Threads::Threads
     level_zero_tests::command_line
 )
 

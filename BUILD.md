@@ -53,9 +53,7 @@ cd (Join-Path $LZT_TEMP 'Boost')
   --prefix=$LZT_WORKSPACE\Boost `
   -j 16 `
   address-model=64 `
-  --with-log `
-  --with-process `
-  --with-date_time
+  --with-process
 
 if (-not (Test-Path (Join-Path $LZT_WORKSPACE 'level-zero-tests'))) {
   git clone https://github.com/oneapi-src/level-zero-tests.git (Join-Path $LZT_WORKSPACE 'level-zero-tests')
@@ -88,9 +86,7 @@ cd boost
 ./b2 install \
   -j 4 \
   address-model=64 \
-  --with-log \
-  --with-process \
-  --with-date_time
+  --with-process
 ```
 
 ### Dependencies

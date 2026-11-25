@@ -16,6 +16,7 @@
 namespace lzt = level_zero_tests;
 
 #include <level_zero/zes_api.h>
+#include <cstring>
 
 namespace {
 

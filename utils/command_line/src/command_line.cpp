@@ -47,18 +47,13 @@ void command_line_options::add(const std::string &names,
   options_.push_back(std::move(entry));
 }
 
-template <typename Predicate>
-const command_line_options::option *
-command_line_options::find_if(Predicate predicate) const {
-  const auto it = std::find_if(options_.begin(), options_.end(), predicate);
-  return it == options_.end() ? nullptr : &*it;
-}
-
 command_line_options::option *
 command_line_options::find_long(const std::string &name) {
-  if (const option *exact =
-          find_if([&](const option &o) { return o.long_name == name; })) {
-    return const_cast<option *>(exact);
+  const auto exact =
+      std::find_if(options_.begin(), options_.end(),
+                   [&](const option &o) { return o.long_name == name; });
+  if (exact != options_.end()) {
+    return &*exact;
   }
   if (name.empty()) {
     return nullptr;
@@ -81,8 +76,10 @@ command_line_options::find_long(const std::string &name) {
 }
 
 command_line_options::option *command_line_options::find_short(char name) {
-  return const_cast<option *>(
-      find_if([&](const option &o) { return o.short_name == name; }));
+  const auto it =
+      std::find_if(options_.begin(), options_.end(),
+                   [&](const option &o) { return o.short_name == name; });
+  return it == options_.end() ? nullptr : &*it;
 }
 
 std::vector<std::string> command_line_options::parse(int argc, char **argv,
@@ -158,9 +155,9 @@ command_line_options::parse(const std::vector<std::string> &arguments,
 }
 
 bool command_line_options::given(const std::string &name) const {
-  const option *entry =
-      find_if([&](const option &o) { return o.long_name == name; });
-  return entry && entry->is_given;
+  return std::any_of(options_.begin(), options_.end(), [&](const option &o) {
+    return o.long_name == name && o.is_given;
+  });
 }
 
 std::ostream &operator<<(std::ostream &os,

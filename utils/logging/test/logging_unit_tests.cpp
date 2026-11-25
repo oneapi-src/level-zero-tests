@@ -10,11 +10,11 @@
 #include "utils/utils.hpp"
 #include "gtest/gtest.h"
 
-#include <boost/smart_ptr/make_shared_object.hpp>
-
 #include "command_line/command_line.hpp"
 
 #include <regex>
+#include <sstream>
+#include <thread>
 
 namespace lzt = level_zero_tests;
 
@@ -25,13 +25,13 @@ protected:
     settings.level = lzt::logging_level::trace;
     settings.format = lzt::logging_format::simple;
     lzt::init_logging(settings);
-    logs = boost::make_shared<std::stringstream>();
+    logs = std::make_shared<std::stringstream>();
     lzt::add_stream(logs);
   }
 
   void TearDown() override { lzt::stop_logging(); }
 
-  boost::shared_ptr<std::stringstream> logs;
+  std::shared_ptr<std::stringstream> logs;
 };
 
 LZT_TEST_F(LoggingTest, PrintTrace) {
@@ -62,6 +62,18 @@ LZT_TEST_F(LoggingTest, PrintError) {
 LZT_TEST_F(LoggingTest, PrintFatal) {
   LOG_FATAL << "Message";
   EXPECT_EQ("[fatal] Message\n", logs->str());
+}
+
+LZT_TEST_F(LoggingTest, MessageEndingWithNewlineIsNotDoubled) {
+  LOG_INFO << "Message" << std::endl;
+  EXPECT_EQ("[info] Message\n", logs->str());
+}
+
+static int throw_error() { throw std::runtime_error("error"); }
+
+LZT_TEST_F(LoggingTest, MessageIsDroppedWhenExpressionThrows) {
+  EXPECT_THROW(LOG_INFO << "Message" << throw_error(), std::runtime_error);
+  EXPECT_EQ("", logs->str());
 }
 
 LZT_TEST(LoggingCommandLineParser, ChooseSimpleFormatFromCommandLine) {
@@ -143,11 +155,11 @@ LZT_TEST(LoggingCommandLineParser, ChooseUnknownLevelFromCommandLine) {
 
 class LoggingInitTest : public ::testing::Test {
 protected:
-  void SetUp() override { logs = boost::make_shared<std::stringstream>(); }
+  void SetUp() override { logs = std::make_shared<std::stringstream>(); }
 
   void TearDown() override { lzt::stop_logging(); }
 
-  boost::shared_ptr<std::stringstream> logs;
+  std::shared_ptr<std::stringstream> logs;
 };
 
 LZT_TEST_F(LoggingInitTest, SimpleFormatFromSettings) {
@@ -185,6 +197,40 @@ LZT_TEST_F(LoggingInitTest, WarningLevelFromSettings) {
   EXPECT_EQ("", logs->str());
   LOG_WARNING << "Message";
   EXPECT_EQ("[warning] Message\n", logs->str());
+}
+
+LZT_TEST(LoggingDefaultOutput, PrintsToStdoutWhenNotInitialized) {
+  testing::internal::CaptureStdout();
+  LOG_FATAL << "Message";
+  const std::string output = testing::internal::GetCapturedStdout();
+
+  const std::regex r("\\[\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{6}\\] "
+                     "\\[0x[0-9a-f]{16}\\] \\[fatal\\]   Message\\n");
+  EXPECT_TRUE(std::regex_match(output, r)) << output;
+}
+
+LZT_TEST(LoggingDefaultOutput, ThreadIdIsPrintedInHex) {
+  testing::internal::CaptureStdout();
+  LOG_FATAL << "Message";
+  const std::string output = testing::internal::GetCapturedStdout();
+
+  std::smatch match;
+  const std::regex r("\\[[^\\]]+\\] \\[0x([0-9a-f]{16})\\] .*\\n");
+  ASSERT_TRUE(std::regex_match(output, match, r)) << output;
+
+  std::ostringstream expected;
+  expected << std::this_thread::get_id();
+  EXPECT_EQ(std::stoull(expected.str()), std::stoull(match[1], nullptr, 16))
+      << output;
+}
+
+LZT_TEST(LoggingDefaultOutput, MessageEndingWithNewlineIsNotDoubled) {
+  testing::internal::CaptureStdout();
+  LOG_FATAL << "Message" << std::endl;
+  const std::string output = testing::internal::GetCapturedStdout();
+
+  const std::regex r("\\[[^\\]]+\\] \\[[^\\]]+\\] \\[fatal\\]   Message\\n");
+  EXPECT_TRUE(std::regex_match(output, r)) << output;
 }
 
 LZT_TEST(VectorToString, Empty) {

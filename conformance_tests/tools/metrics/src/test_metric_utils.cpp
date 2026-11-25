@@ -14,6 +14,7 @@ namespace lzt = level_zero_tests;
 #include <chrono>
 #include <ctime>
 #include <thread>
+#include <cstring>
 
 using lzt::to_nanoseconds;
 

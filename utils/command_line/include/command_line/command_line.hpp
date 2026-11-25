@@ -88,6 +88,15 @@ private:
       }
       target = static_cast<T>(raw);
       return true;
+    } else if constexpr (std::is_integral_v<T> && sizeof(T) == 1 &&
+                         !std::is_same_v<T, bool>) {
+      std::conditional_t<std::is_signed_v<T>, int, unsigned> wide{};
+      if (!parse_value(text, wide) ||
+          static_cast<decltype(wide)>(static_cast<T>(wide)) != wide) {
+        return false;
+      }
+      target = static_cast<T>(wide);
+      return true;
     } else {
       const auto first = text.find_first_not_of(" \t\n\r\f\v");
       if (std::is_unsigned_v<T> && first != std::string::npos &&
@@ -112,8 +121,6 @@ private:
 
   void add(const std::string &names, const std::string &description,
            assign_function assign, bool is_required);
-  template <typename Predicate>
-  const option *find_if(Predicate predicate) const;
   option *find_long(const std::string &name);
   option *find_short(char name);
 

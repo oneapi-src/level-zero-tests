@@ -19,6 +19,7 @@ namespace lzt = level_zero_tests;
 #include <level_zero/ze_api.h>
 #include <chrono>
 #include <numeric>
+#include <cstring>
 
 namespace {
 

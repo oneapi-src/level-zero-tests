@@ -699,6 +699,7 @@ int main(int argc, char **argv) {
   SUCCESS_OR_TERMINATE(Imagecopy.parse_command_line(argc, argv));
   benchmark_report report(Imagecopy.JsonFileName);
   measure_bandwidth(Imagecopy, report);
+  report.write();
 
   ZeImageCopyLatency imageCopyLatency;
   imageCopyLatency.JsonFileName = Imagecopy.JsonFileName;

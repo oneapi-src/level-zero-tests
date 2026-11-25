@@ -8,22 +8,48 @@
 
 #pragma once
 
-#include <string>
-#include <sstream>
-#include <vector>
+#include <algorithm>
 #include <iostream>
-
-#include <boost/log/trivial.hpp>
-#include <boost/smart_ptr/shared_ptr.hpp>
+#include <iterator>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace level_zero_tests {
 
-#define LOG_TRACE BOOST_LOG_TRIVIAL(trace)
-#define LOG_DEBUG BOOST_LOG_TRIVIAL(debug)
-#define LOG_INFO BOOST_LOG_TRIVIAL(info)
-#define LOG_WARNING BOOST_LOG_TRIVIAL(warning)
-#define LOG_ERROR BOOST_LOG_TRIVIAL(error)
-#define LOG_FATAL BOOST_LOG_TRIVIAL(fatal)
+enum class logging_level { trace, debug, info, warning, error, fatal };
+std::ostream &operator<<(std::ostream &os, const logging_level &level);
+std::istream &operator>>(std::istream &is, logging_level &level);
+
+class log_record {
+public:
+  explicit log_record(logging_level level);
+  log_record(const log_record &) = delete;
+  log_record &operator=(const log_record &) = delete;
+
+  bool pending() const { return stream_.has_value(); }
+  std::ostream &stream() { return *stream_; }
+  void emit();
+
+private:
+  logging_level level_;
+  std::optional<std::ostringstream> stream_;
+};
+
+#define LZT_LOG(level)                                                         \
+  for (::level_zero_tests::log_record lzt_log_record(                          \
+           ::level_zero_tests::logging_level::level);                          \
+       lzt_log_record.pending(); lzt_log_record.emit())                        \
+  lzt_log_record.stream()
+
+#define LOG_TRACE LZT_LOG(trace)
+#define LOG_DEBUG LZT_LOG(debug)
+#define LOG_INFO LZT_LOG(info)
+#define LOG_WARNING LZT_LOG(warning)
+#define LOG_ERROR LZT_LOG(error)
+#define LOG_FATAL LZT_LOG(fatal)
 
 #define LOG_ENTER_FUNCTION LOG_TRACE << "Enter function: " << __func__;
 #define LOG_EXIT_FUNCTION LOG_TRACE << "Exit function: " << __func__;
@@ -31,8 +57,6 @@ namespace level_zero_tests {
 enum class logging_format { simple, precise };
 std::ostream &operator<<(std::ostream &os, const logging_format &f);
 std::istream &operator>>(std::istream &is, logging_format &f);
-
-using logging_level = boost::log::trivial::severity_level;
 
 struct LoggingSettings {
   logging_format format = logging_format::precise;
@@ -43,7 +67,7 @@ void init_logging();
 void init_logging(const LoggingSettings settings);
 void init_logging(std::vector<std::string> &command_line);
 void stop_logging();
-void add_stream(const boost::shared_ptr<std::ostream> &stream);
+void add_stream(const std::shared_ptr<std::ostream> &stream);
 LoggingSettings parse_command_line(std::vector<std::string> &command_line);
 
 template <typename T> std::string to_string(const std::vector<T> &x) {

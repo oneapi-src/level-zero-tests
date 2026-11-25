@@ -95,6 +95,35 @@ LZT_TEST(CommandLineOptions, ParsesEnumThroughUnderlyingType) {
   EXPECT_THROW(options.parse({"--mode=abc"}), lzt::command_line_error);
 }
 
+LZT_TEST(CommandLineOptions, ParsesByteSizedIntegersAsNumbers) {
+  uint8_t count = 1;
+  int8_t offset = 1;
+  lzt::command_line_options options;
+  options.value("count", count, "").value("offset", offset, "");
+  options.parse({"--count=12", "--offset=-5"});
+  EXPECT_EQ(12u, count);
+  EXPECT_EQ(-5, offset);
+  options.parse({"--count=255", "--offset=-128"});
+  EXPECT_EQ(255u, count);
+  EXPECT_EQ(-128, offset);
+  EXPECT_THROW(options.parse({"--count=256"}), lzt::command_line_error);
+  EXPECT_THROW(options.parse({"--count=-1"}), lzt::command_line_error);
+  EXPECT_THROW(options.parse({"--offset=128"}), lzt::command_line_error);
+  EXPECT_THROW(options.parse({"--count=a"}), lzt::command_line_error);
+  EXPECT_EQ(255u, count);
+  EXPECT_EQ(-128, offset);
+}
+
+enum class byte_mode : uint8_t { low = 1, high = 200 };
+
+LZT_TEST(CommandLineOptions, ParsesByteSizedEnumAsNumber) {
+  byte_mode mode = byte_mode::low;
+  lzt::command_line_options options;
+  options.value("mode", mode, "");
+  options.parse({"--mode=200"});
+  EXPECT_EQ(byte_mode::high, mode);
+}
+
 LZT_TEST(CommandLineOptions, AcceptsEmptyStringValue) {
   std::string module = "default";
   lzt::command_line_options options;
