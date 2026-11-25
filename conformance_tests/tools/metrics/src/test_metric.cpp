@@ -1235,7 +1235,8 @@ LZT_TEST_F(
     zetMetricStreamerTestNReports,
     GivenValidMetricGroupWithTimerBasedStreamerThenEventHostSynchronizeWithNotifyOnNreportsEventSignalsDataPresent) {
 
-  notifyEveryNReports = 50;
+  constexpr uint32_t maxWorkloadSubmissions = 100;
+  constexpr uint64_t eventWaitTimeoutNs = 100'000'000;
 
   for (auto device : devices) {
 
@@ -1286,31 +1287,50 @@ LZT_TEST_F(
                                       nullptr);
       lzt::close_command_list(commandList);
 
+      // Streamer open overwrites these with the values it used, so start every
+      // group from the requested ones.
+      uint32_t groupNotifyEveryNReports = 50;
+      uint32_t groupSamplingPeriod = samplingPeriod;
       zet_metric_streamer_handle_t metricStreamerHandle =
           lzt::metric_streamer_open_for_device(
               device, groupInfo.metricGroupHandle, eventHandle,
-              notifyEveryNReports, samplingPeriod);
+              groupNotifyEveryNReports, groupSamplingPeriod);
       ASSERT_NE(nullptr, metricStreamerHandle);
 
-      lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
-      lzt::event_host_synchronize(eventHandle, UINT64_MAX);
-      size_t rawDataSize = 0;
-      std::vector<uint8_t> rawData;
-      rawDataSize = lzt::metric_streamer_read_data_size(metricStreamerHandle,
-                                                        notifyEveryNReports);
-      EXPECT_GT(rawDataSize, 0);
-      rawData.resize(rawDataSize);
-      lzt::metric_streamer_read_data(metricStreamerHandle, notifyEveryNReports,
-                                     rawDataSize, &rawData,
-                                     groupInfo.metricGroupHandle);
+      // Some metric groups produce reports only while the kernel runs, so one
+      // run can end with fewer than groupNotifyEveryNReports reports.
+      ze_result_t eventResult = ZE_RESULT_NOT_READY;
+      for (uint32_t submission = 0; submission < maxWorkloadSubmissions;
+           submission++) {
+        lzt::execute_command_lists(commandQueue, 1, &commandList, nullptr);
+        eventResult = zeEventHostSynchronize(eventHandle, eventWaitTimeoutNs);
+        if (eventResult != ZE_RESULT_NOT_READY) {
+          break;
+        }
+        lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
+      }
+      EXPECT_ZE_RESULT_SUCCESS(eventResult);
+      if (eventResult != ZE_RESULT_SUCCESS) {
+        LOG_ERROR << "notification event not signaled within "
+                  << maxWorkloadSubmissions << " workload submissions";
+      } else {
+        size_t rawDataSize = 0;
+        std::vector<uint8_t> rawData;
+        rawDataSize = lzt::metric_streamer_read_data_size(
+            metricStreamerHandle, groupNotifyEveryNReports);
+        EXPECT_GT(rawDataSize, 0);
+        rawData.resize(rawDataSize);
+        lzt::metric_streamer_read_data(metricStreamerHandle,
+                                       groupNotifyEveryNReports, rawDataSize,
+                                       &rawData, groupInfo.metricGroupHandle);
 
-      LOG_INFO << "raw data size " << rawDataSize;
-      EXPECT_GT(rawDataSize, 0);
+        LOG_INFO << "raw data size " << rawDataSize;
+        EXPECT_GT(rawDataSize, 0);
 
+        lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
+                              rawData.data());
+      }
       lzt::synchronize(commandQueue, std::numeric_limits<uint64_t>::max());
-
-      lzt::validate_metrics(groupInfo.metricGroupHandle, rawDataSize,
-                            rawData.data());
 
       lzt::metric_streamer_close(metricStreamerHandle);
       lzt::deactivate_metric_groups(device);
