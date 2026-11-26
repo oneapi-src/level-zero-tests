@@ -163,6 +163,7 @@ private:
   void note_shared_context_placement(void);
   void print_host_placement(void);
   void allocate_host_buffer(uint32_t device_id, size_t size, void **ptr);
+  void allocate_host_buffer_memory(uint32_t device_id, size_t size, void **ptr);
   void free_host_buffer(void *ptr);
   void signal_wait_events(void);
   void signal_wait_events(uint32_t first_device);

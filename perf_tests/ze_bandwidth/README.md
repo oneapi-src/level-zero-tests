@@ -128,6 +128,8 @@ Notes on the table:
   than following the one that was named.
 * Where a test names a compute engine, a copy only engine is rejected rather
   than substituted.
+* Every timed host buffer is written by the CPU right after allocation, before
+  any copy, so a Host->Device copy never reads memory nothing wrote.
 * `-v` sets the iteration count to 1, so a verified run reports a bandwidth
   figure that includes the first-touch cost and should not be compared against
   an unverified one.

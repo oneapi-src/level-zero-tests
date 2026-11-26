@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -368,10 +369,19 @@ void ZeBandwidth::print_host_placement(void) {
   info() << "\n";
 }
 
+constexpr int host_buffer_fill_byte = 0x5a;
+
 // Timed host buffers only; staging and verification buffers come straight
-// from the device's context.
+// from the device's context. The CPU writes every timed host buffer, so no
+// copy reads memory the application never wrote.
 void ZeBandwidth::allocate_host_buffer(uint32_t device_id, size_t size,
                                        void **ptr) {
+  allocate_host_buffer_memory(device_id, size, ptr);
+  std::memset(*ptr, host_buffer_fill_byte, size);
+}
+
+void ZeBandwidth::allocate_host_buffer_memory(uint32_t device_id, size_t size,
+                                              void **ptr) {
   if (host_buffers_from == host_buffer_source::placed) {
     std::string error;
     size_t mapped_bytes = 0;
