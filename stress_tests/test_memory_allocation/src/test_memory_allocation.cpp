@@ -41,7 +41,7 @@ protected:
     kernel_copy_unit_t *data;
   };
 
-  bool verify_results(kernel_copy_unit_t *allocation,
+  bool verify_results(const kernel_copy_unit_t *allocation,
                       uint64_t test_single_allocation_count) {
     for (uint64_t i = 0; i < test_single_allocation_count; i++) {
       if (init_value_2_ != allocation[i]) {
@@ -298,9 +298,7 @@ LZT_TEST_P(
     input_allocations.push_back(input_allocation);
     output_allocations.push_back(output_allocation);
     if (test_arguments_.memory_type == ZE_MEMORY_TYPE_DEVICE) {
-      std::vector<kernel_copy_unit_t> data_out(
-          test_single_allocation_count * kernel_copy_unit_size, init_value_1_);
-      data_out_vector.push_back(data_out);
+      data_out_vector.emplace_back(test_single_allocation_count, init_value_1_);
     }
 
     std::stringstream kernel_name_ss;
@@ -331,7 +329,7 @@ LZT_TEST_P(
 
   uint32_t counter = 0;
   if (test_arguments_.memory_type == ZE_MEMORY_TYPE_DEVICE) {
-    for (auto output : data_out_vector) {
+    for (const auto &output : data_out_vector) {
       counter++;
       memory_test_failure |=
           verify_results(output.data(), test_single_allocation_count);
