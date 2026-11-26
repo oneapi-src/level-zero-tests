@@ -1836,6 +1836,7 @@ void ZeBandwidth::ze_bandwidth_query_engines() {
       command_queue_description.pNext = nullptr;
       command_queue_description.ordinal = command_queue_group_ordinal;
       command_queue_description.index = command_queue_index;
+      command_queue_description.flags = ZE_COMMAND_QUEUE_FLAG_IN_ORDER;
       command_queue_description.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
 
       SUCCESS_OR_TERMINATE(zeCommandListCreateImmediate(

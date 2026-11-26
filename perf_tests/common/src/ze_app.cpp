@@ -350,6 +350,7 @@ void ZeApp::commandListCreate(uint32_t device_index,
   ze_command_list_desc_t command_list_description{};
   command_list_description.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
   command_list_description.pNext = nullptr;
+  command_list_description.flags = ZE_COMMAND_LIST_FLAG_IN_ORDER;
 
   SUCCESS_OR_TERMINATE(
       zeCommandListCreate(deviceContext(device_index), _devices[device_index],
@@ -364,6 +365,7 @@ void ZeApp::commandListCreate(uint32_t device_index,
   command_list_description.commandQueueGroupOrdinal =
       command_queue_group_ordinal;
   command_list_description.pNext = nullptr;
+  command_list_description.flags = ZE_COMMAND_LIST_FLAG_IN_ORDER;
 
   SUCCESS_OR_TERMINATE(
       zeCommandListCreate(deviceContext(device_index), _devices[device_index],

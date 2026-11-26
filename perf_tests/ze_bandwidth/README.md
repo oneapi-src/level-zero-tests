@@ -178,6 +178,8 @@ on `bcs1` and above.
 The kernel driven tests (`h2d_kernel`, `d2h_kernel`, `bidir_kernel`) need a compute engine,
 because a copy only queue group cannot run a kernel.
 
+All command lists are in-order, regular lists and `--immediate` lists alike.
+
 # Bidirectional tests
 
 Both directions are enqueued behind a single event that the host signals once
