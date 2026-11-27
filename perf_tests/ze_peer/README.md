@@ -75,7 +75,11 @@ first compute engine in the device.
 
   --useEvents                 measure with GPU timestamps of the copy instead of the
                               host timer, so submission and host synchronization are
-                              not counted. Unidirectional single pair and IPC tests only.
+                              not counted. With -b, each direction is timed on its own
+                              device and reported on its own line. Bandwidth tests
+                              print first the data of both copies divided by the
+                              time of the slower one.
+                              Single pair and IPC tests only.
                               Default: Not set.
 
   --version                   display version
@@ -178,4 +182,18 @@ and 1, 512 MB, on a compute engine, timed with GPU timestamps:
 ```
 ./ze_peer -t transfer_bw -o write -s 0 -d 1 -z 536870912 --kernel --useEvents
 ./ze_peer -t transfer_bw -o read -s 0 -d 1 -z 536870912 --kernel --useEvents
+```
+
+## Bidirectional results per direction
+
+With `-b --useEvents`, each copy is timed with GPU timestamps on the device
+that submits it. Each direction is printed on its own line. Bandwidth tests
+print before them the combined bandwidth: the data of both copies divided by
+the time of the slower copy. One gate event releases both copies, so this
+assumes that they run at the same time:
+```
+./ze_peer -t transfer_bw -o write -b -s 0 -d 1 -z 536870912 --useEvents
+BW [GBPS]:  512 MB:    78.58
+BW [GBPS]:  512 MB:    39.29 Device( 0 )->Device( 1 )
+BW [GBPS]:  512 MB:    39.29 Device( 1 )->Device( 0 )
 ```

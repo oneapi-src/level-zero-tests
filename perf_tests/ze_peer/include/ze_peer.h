@@ -229,6 +229,28 @@ public:
   void print_results(bool bidirectional, peer_test_t test_type,
                      size_t buffer_size, long double total_time_us);
 
+  void print_value(peer_test_t test_type, size_t buffer_size, long double value,
+                   const std::string &label);
+
+  static long double bandwidth_gbps(size_t buffer_size, long double time_us);
+
+  void bidirectional_append_copies(uint32_t remote_device_id,
+                                   uint32_t local_device_id,
+                                   peer_transfer_t transfer_type,
+                                   ze_command_list_handle_t local_command_list,
+                                   ze_command_list_handle_t remote_command_list,
+                                   size_t buffer_size,
+                                   ze_event_handle_t local_timestamp_event,
+                                   ze_event_handle_t remote_timestamp_event);
+
+  void bidirectional_print_results(uint32_t remote_device_id,
+                                   uint32_t local_device_id,
+                                   peer_test_t test_type,
+                                   peer_transfer_t transfer_type,
+                                   size_t buffer_size, long double host_time_us,
+                                   long double local_time_us,
+                                   long double remote_time_us);
+
   void query_engines();
 
   // IPC

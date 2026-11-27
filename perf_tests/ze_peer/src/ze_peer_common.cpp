@@ -272,20 +272,29 @@ void ZePeer::print_results(bool bidirectional, peer_test_t test_type,
   print_results(bidirectional, test_type, buffer_size, total_time_usec);
 }
 
+long double ZePeer::bandwidth_gbps(size_t buffer_size, long double time_us) {
+  const long double data_gb =
+      buffer_size / static_cast<long double>(ONE_GB); /* Units in Gigabytes */
+  return data_gb / (time_us / 1e6);
+}
+
 void ZePeer::print_results(bool bidirectional, peer_test_t test_type,
                            size_t buffer_size, long double total_time_us) {
   long double total_time_usec =
       total_time_us / static_cast<long double>(number_iterations);
 
-  long double total_time_s = total_time_usec / 1e6;
-
-  long double total_data_transfer =
-      buffer_size / static_cast<long double>(ONE_GB); /* Units in Gigabytes */
+  long double total_bandwidth = bandwidth_gbps(buffer_size, total_time_usec);
   if (bidirectional) {
-    total_data_transfer = 2 * total_data_transfer;
+    total_bandwidth = 2 * total_bandwidth;
   }
-  long double total_bandwidth = total_data_transfer / total_time_s;
 
+  print_value(test_type, buffer_size,
+              (test_type == PEER_BANDWIDTH) ? total_bandwidth : total_time_usec,
+              "");
+}
+
+void ZePeer::print_value(peer_test_t test_type, size_t buffer_size,
+                         long double value, const std::string &label) {
   size_t buffer_size_formatted;
   std::string buffer_format_str;
 
@@ -306,17 +315,15 @@ void ZePeer::print_results(bool bidirectional, peer_test_t test_type,
     buffer_format_str = "  B";
   }
 
-  if (test_type == PEER_BANDWIDTH) {
-    std::cout << "BW [GBPS]: " << std::fixed << std::setw(4)
-              << buffer_size_formatted << buffer_format_str << ": "
-              << std::fixed << std::setw(8) << std::setprecision(2)
-              << total_bandwidth << std::endl;
-  } else {
-    std::cout << "Latency [us]: " << std::fixed << std::setw(4)
-              << buffer_size_formatted << buffer_format_str << ": "
-              << std::fixed << std::setw(8) << std::setprecision(2)
-              << total_time_usec << std::endl;
+  std::cout << ((test_type == PEER_BANDWIDTH) ? "BW [GBPS]: "
+                                              : "Latency [us]: ")
+            << std::fixed << std::setw(4) << buffer_size_formatted
+            << buffer_format_str << ": " << std::fixed << std::setw(8)
+            << std::setprecision(2) << value;
+  if (!label.empty()) {
+    std::cout << " " << label;
   }
+  std::cout << std::endl;
 }
 
 // Stops the run when the devices cannot hold the buffers of a size, instead

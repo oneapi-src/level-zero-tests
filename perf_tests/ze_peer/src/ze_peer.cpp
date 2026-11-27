@@ -94,7 +94,11 @@ first compute engine in the device.
 
   --useEvents                 measure with GPU timestamps of the copy instead of the
                               host timer, so submission and host synchronization are
-                              not counted. Unidirectional single pair and IPC tests only.
+                              not counted. With -b, each direction is timed on its own
+                              device and reported on its own line. Bandwidth tests
+                              print first the data of both copies divided by the
+                              time of the slower one.
+                              Single pair and IPC tests only.
                               Default: Not set.
 
   --version                   display version
@@ -587,12 +591,11 @@ int main(int argc, char **argv) {
     }
   }
 
-  if (ZePeer::use_event_timer &&
-      (ZePeer::bidirectional || ZePeer::parallel_copy_to_single_target ||
-       ZePeer::parallel_copy_to_multiple_targets ||
-       ZePeer::parallel_copy_to_pair_targets)) {
-    std::cerr << "[ERROR] --useEvents supports only unidirectional single "
-                 "pair and IPC tests\n";
+  if (ZePeer::use_event_timer && (ZePeer::parallel_copy_to_single_target ||
+                                  ZePeer::parallel_copy_to_multiple_targets ||
+                                  ZePeer::parallel_copy_to_pair_targets)) {
+    std::cerr << "[ERROR] --useEvents supports only single pair and IPC "
+                 "tests\n";
     exit(-1);
   }
 
