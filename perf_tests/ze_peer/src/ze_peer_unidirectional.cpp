@@ -60,9 +60,8 @@ void ZePeer::perform_copy(peer_test_t test_type,
     create_timestamp_event(device_id, timestamp_pool, timestamp_event);
   }
 
-  SUCCESS_OR_TERMINATE(
-      zeCommandListAppendMemoryCopy(command_list, dst_buffer, src_buffer,
-                                    buffer_size, timestamp_event, 0, nullptr));
+  append_copy(command_list, device_id, dst_buffer, src_buffer, buffer_size,
+              timestamp_event, 0, nullptr);
   SUCCESS_OR_TERMINATE(zeCommandListClose(command_list));
 
   Timer<std::chrono::microseconds::period> timer;
@@ -122,9 +121,8 @@ void ZePeer::perform_copy_immediate(peer_test_t test_type,
 
   /* Warm up */
   for (uint32_t i = 0U; i < warm_up_iterations; i++) {
-    SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-        command_list, dst_buffer, src_buffer, buffer_size, timestamp_event, 0,
-        nullptr));
+    append_copy(command_list, device_id, dst_buffer, src_buffer, buffer_size,
+                timestamp_event, 0, nullptr);
     SUCCESS_OR_TERMINATE(zeCommandListHostSynchronize(
         command_list, std::numeric_limits<uint64_t>::max()));
     if (timestamp_event) {
@@ -136,9 +134,8 @@ void ZePeer::perform_copy_immediate(peer_test_t test_type,
     long double device_time_us = 0;
     timer.start();
     for (uint32_t i = 0U; i < number_iterations; i++) {
-      SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-          command_list, dst_buffer, src_buffer, buffer_size, timestamp_event, 0,
-          nullptr));
+      append_copy(command_list, device_id, dst_buffer, src_buffer, buffer_size,
+                  timestamp_event, 0, nullptr);
       SUCCESS_OR_TERMINATE(zeCommandListHostSynchronize(
           command_list, std::numeric_limits<uint64_t>::max()));
       if (timestamp_event) {
@@ -175,6 +172,8 @@ void ZePeer::bandwidth_latency(peer_test_t test_type,
       ze_peer_devices[local_device_id].engines[queue_index].first;
   ze_command_list_handle_t command_list =
       ze_peer_devices[local_device_id].engines[queue_index].second;
+
+  set_up_kernel_copy(local_device_id, queue_index, number_buffer_elements);
 
   std::vector<uint32_t> remote_device_ids = {remote_device_id};
   std::vector<uint32_t> local_device_ids = {local_device_id};

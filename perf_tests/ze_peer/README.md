@@ -65,6 +65,14 @@ first compute engine in the device.
 
   --regular_cmdlist           use regular command list instead of immediate
 
+  --kernel                    copy with a kernel that loads from and stores to the
+                              buffers, instead of zeCommandListAppendMemoryCopy.
+                              The kernel runs on the device that submits the copy:
+                              read loads from the remote device, write stores to it.
+                              Needs an engine with compute capability (see -q).
+                              Unidirectional, bidirectional and IPC tests only.
+                              Default: Not set.
+
   --useEvents                 measure with GPU timestamps of the copy instead of the
                               host timer, so submission and host synchronization are
                               not counted. Unidirectional single pair and IPC tests only.
@@ -157,4 +165,17 @@ Same as above, but bidirectional. In this case, two additional copies are submit
 devices 2 and 3, in addition to those in device 1. All copies are done in parallel.
 ```
 ./ze_peer --parallel_multiple_targets -t transfer_bw -z 268435456 -s 1 -d 2,3 -u 0,1 -b
+```
+
+## Kernel copy
+
+With `--kernel`, the copy is done by the `copy_peer` kernel from
+`ze_peer_benchmarks.cl` instead of zeCommandListAppendMemoryCopy. The kernel
+copies 16 bytes per work-item and loops over the buffer, with one work-group
+of up to 512 work-items per subslice. It is built from OpenCL C source, so run
+ze_peer from its install directory. Kernel write and read between devices 0
+and 1, 512 MB, on a compute engine, timed with GPU timestamps:
+```
+./ze_peer -t transfer_bw -o write -s 0 -d 1 -z 536870912 --kernel --useEvents
+./ze_peer -t transfer_bw -o read -s 0 -d 1 -z 536870912 --kernel --useEvents
 ```

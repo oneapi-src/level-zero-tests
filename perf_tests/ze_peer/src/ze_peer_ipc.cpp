@@ -106,6 +106,7 @@ void ZePeer::bandwidth_latency_ipc(peer_test_t test_type,
              command_queue, command_list);
 
   if (is_server == false) {
+    set_up_kernel_copy(local_device_id, 0, buffer_size);
     if (transfer_type == PEER_READ) {
       initialize_buffers(command_list, command_queue, nullptr, ze_host_buffer,
                          buffer_size);

@@ -42,6 +42,7 @@ typedef enum _peer_test_t {
 typedef struct _ze_peer_device_t {
   std::vector<std::pair<ze_command_queue_handle_t, ze_command_list_handle_t>>
       engines;
+  std::vector<bool> compute_engines;
 } ze_peer_device_t;
 
 class ZePeer {
@@ -153,6 +154,16 @@ public:
                               void *dst_buffer, void *src_buffer,
                               size_t buffer_size, uint32_t device_id);
 
+  void append_copy(ze_command_list_handle_t command_list, uint32_t device_id,
+                   void *dst_buffer, void *src_buffer, size_t buffer_size,
+                   ze_event_handle_t signal_event, uint32_t num_wait_events,
+                   ze_event_handle_t *wait_events);
+
+  void create_copy_kernel(uint32_t device_id, size_t buffer_size);
+
+  void set_up_kernel_copy(uint32_t device_id, uint32_t queue_index,
+                          size_t buffer_size);
+
   void create_timestamp_event(uint32_t device_id,
                               ze_event_pool_handle_t &timestamp_pool,
                               ze_event_handle_t &timestamp_event);
@@ -251,6 +262,10 @@ public:
   char *ze_host_validate_buffer = nullptr;
 
   std::vector<ze_peer_device_t> ze_peer_devices;
+  std::vector<ze_module_handle_t> copy_modules;
+  std::vector<ze_kernel_handle_t> copy_kernels;
+  std::vector<uint32_t> copy_kernel_group_count;
+  std::vector<uint32_t> copy_kernel_group_size;
   ze_ipc_mem_handle_t pIpcHandle = {};
 
   uint32_t device_count = 0;
@@ -268,6 +283,7 @@ public:
   static bool parallel_divide_buffers;
   static bool use_immediate_cmdlist;
   static bool use_event_timer;
+  static bool use_kernel;
 
   // Size of the host buffers that initialize and validate the device
   // buffers, chunk by chunk.

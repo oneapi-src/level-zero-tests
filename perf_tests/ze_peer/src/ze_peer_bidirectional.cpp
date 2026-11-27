@@ -21,19 +21,19 @@ void ZePeer::bidirectional_perform_copy(
       ze_peer_devices[remote_device_id].engines[queue_index].first;
 
   if (transfer_type == PEER_WRITE) {
-    SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-        local_command_list, ze_dst_buffers[remote_device_id],
-        ze_src_buffers[local_device_id], buffer_size, nullptr, 1, &event));
-    SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-        remote_command_list, ze_dst_buffers[local_device_id],
-        ze_src_buffers[remote_device_id], buffer_size, nullptr, 1, &event));
+    append_copy(
+        local_command_list, local_device_id, ze_dst_buffers[remote_device_id],
+        ze_src_buffers[local_device_id], buffer_size, nullptr, 1, &event);
+    append_copy(
+        remote_command_list, remote_device_id, ze_dst_buffers[local_device_id],
+        ze_src_buffers[remote_device_id], buffer_size, nullptr, 1, &event);
   } else {
-    SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-        local_command_list, ze_dst_buffers[local_device_id],
-        ze_src_buffers[remote_device_id], buffer_size, nullptr, 1, &event));
-    SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-        remote_command_list, ze_dst_buffers[remote_device_id],
-        ze_src_buffers[local_device_id], buffer_size, nullptr, 1, &event));
+    append_copy(
+        local_command_list, local_device_id, ze_dst_buffers[local_device_id],
+        ze_src_buffers[remote_device_id], buffer_size, nullptr, 1, &event);
+    append_copy(
+        remote_command_list, remote_device_id, ze_dst_buffers[remote_device_id],
+        ze_src_buffers[local_device_id], buffer_size, nullptr, 1, &event);
   }
   SUCCESS_OR_TERMINATE(zeCommandListClose(local_command_list));
   SUCCESS_OR_TERMINATE(zeCommandListClose(remote_command_list));
@@ -93,19 +93,21 @@ void ZePeer::bidirectional_perform_copy_immediate(
   /* Warm up */
   for (uint32_t i = 0U; i < warm_up_iterations; i++) {
     if (transfer_type == PEER_WRITE) {
-      SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-          local_command_list, ze_dst_buffers[remote_device_id],
-          ze_src_buffers[local_device_id], buffer_size, nullptr, 1, &event));
-      SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-          remote_command_list, ze_dst_buffers[local_device_id],
-          ze_src_buffers[remote_device_id], buffer_size, nullptr, 1, &event));
+      append_copy(
+          local_command_list, local_device_id, ze_dst_buffers[remote_device_id],
+          ze_src_buffers[local_device_id], buffer_size, nullptr, 1, &event);
+      append_copy(remote_command_list, remote_device_id,
+                  ze_dst_buffers[local_device_id],
+                  ze_src_buffers[remote_device_id], buffer_size, nullptr, 1,
+                  &event);
     } else {
-      SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-          local_command_list, ze_dst_buffers[local_device_id],
-          ze_src_buffers[remote_device_id], buffer_size, nullptr, 1, &event));
-      SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-          remote_command_list, ze_dst_buffers[remote_device_id],
-          ze_src_buffers[local_device_id], buffer_size, nullptr, 1, &event));
+      append_copy(
+          local_command_list, local_device_id, ze_dst_buffers[local_device_id],
+          ze_src_buffers[remote_device_id], buffer_size, nullptr, 1, &event);
+      append_copy(remote_command_list, remote_device_id,
+                  ze_dst_buffers[remote_device_id],
+                  ze_src_buffers[local_device_id], buffer_size, nullptr, 1,
+                  &event);
     }
     SUCCESS_OR_TERMINATE(zeEventHostSignal(event));
     SUCCESS_OR_TERMINATE(zeCommandListHostSynchronize(
@@ -119,19 +121,23 @@ void ZePeer::bidirectional_perform_copy_immediate(
     long double time_usec = 0;
     for (uint32_t i = 0U; i < number_iterations; i++) {
       if (transfer_type == PEER_WRITE) {
-        SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-            local_command_list, ze_dst_buffers[remote_device_id],
-            ze_src_buffers[local_device_id], buffer_size, nullptr, 1, &event));
-        SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-            remote_command_list, ze_dst_buffers[local_device_id],
-            ze_src_buffers[remote_device_id], buffer_size, nullptr, 1, &event));
+        append_copy(local_command_list, local_device_id,
+                    ze_dst_buffers[remote_device_id],
+                    ze_src_buffers[local_device_id], buffer_size, nullptr, 1,
+                    &event);
+        append_copy(remote_command_list, remote_device_id,
+                    ze_dst_buffers[local_device_id],
+                    ze_src_buffers[remote_device_id], buffer_size, nullptr, 1,
+                    &event);
       } else {
-        SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-            local_command_list, ze_dst_buffers[local_device_id],
-            ze_src_buffers[remote_device_id], buffer_size, nullptr, 1, &event));
-        SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
-            remote_command_list, ze_dst_buffers[remote_device_id],
-            ze_src_buffers[local_device_id], buffer_size, nullptr, 1, &event));
+        append_copy(local_command_list, local_device_id,
+                    ze_dst_buffers[local_device_id],
+                    ze_src_buffers[remote_device_id], buffer_size, nullptr, 1,
+                    &event);
+        append_copy(remote_command_list, remote_device_id,
+                    ze_dst_buffers[remote_device_id],
+                    ze_src_buffers[local_device_id], buffer_size, nullptr, 1,
+                    &event);
       }
 
       timer.start();
@@ -157,6 +163,9 @@ void ZePeer::bidirectional_bandwidth_latency(peer_test_t test_type,
                                              uint32_t queue_index) {
 
   size_t buffer_size = 0;
+
+  set_up_kernel_copy(local_device_id, queue_index, number_buffer_elements);
+  set_up_kernel_copy(remote_device_id, queue_index, number_buffer_elements);
 
   std::vector<uint32_t> remote_device_ids = {remote_device_id};
   std::vector<uint32_t> local_device_ids = {local_device_id};

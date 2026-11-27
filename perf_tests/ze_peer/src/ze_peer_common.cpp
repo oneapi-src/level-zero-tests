@@ -9,6 +9,8 @@
 #include "ze_peer.h"
 
 #include <array>
+#include <fstream>
+#include <sstream>
 
 namespace {
 // The source pattern x[k] = x[k - 2] + x[k - 1] (char), starting with 1, 2,
@@ -69,6 +71,138 @@ ze_result_t ZePeer::try_copy(ze_command_list_handle_t command_list,
     return result;
   }
   return zeCommandListReset(command_list);
+}
+
+static const char *copy_kernel_source_name = "ze_peer_benchmarks.cl";
+static const char *copy_kernel_name = "copy_peer";
+
+// 512 work-items per work-group, one work-group per subslice.
+static const uint32_t copy_kernel_preferred_group_size = 512;
+
+void ZePeer::create_copy_kernel(uint32_t device_id, size_t buffer_size) {
+  if (copy_kernels[device_id]) {
+    return;
+  }
+
+  std::ifstream source_file(copy_kernel_source_name, std::ios::in);
+  if (!source_file.is_open()) {
+    std::cerr << "ERROR: could not open " << copy_kernel_source_name
+              << ". It is installed next to the ze_peer binary, so run the "
+                 "benchmark from its install directory.\n";
+    exit(1);
+  }
+  std::stringstream source_stream;
+  source_stream << source_file.rdbuf();
+  std::string source = source_stream.str();
+  source.push_back('\0');
+
+  ze_module_desc_t module_desc = {ZE_STRUCTURE_TYPE_MODULE_DESC};
+  module_desc.format = ZE_MODULE_FORMAT_OCLC;
+  module_desc.inputSize = source.size();
+  module_desc.pInputModule = reinterpret_cast<const uint8_t *>(source.data());
+  module_desc.pBuildFlags = (buffer_size >= (size_t{1} << 32))
+                                ? "-ze-opt-greater-than-4GB-buffer-required"
+                                : "";
+
+  ze_module_build_log_handle_t build_log = nullptr;
+  const ze_result_t result = zeModuleCreate(
+      benchmark->deviceContext(device_id), benchmark->_devices[device_id],
+      &module_desc, &copy_modules[device_id], &build_log);
+  if (build_log != nullptr) {
+    size_t log_size = 0;
+    if (zeModuleBuildLogGetString(build_log, &log_size, nullptr) ==
+            ZE_RESULT_SUCCESS &&
+        log_size > 1) {
+      std::string log(log_size, '\0');
+      zeModuleBuildLogGetString(build_log, &log_size, log.data());
+      std::cerr << "Build log for " << copy_kernel_source_name << ":\n"
+                << log << std::endl;
+    }
+    zeModuleBuildLogDestroy(build_log);
+  }
+  if (result != ZE_RESULT_SUCCESS) {
+    std::cerr << "ERROR: zeModuleCreate failed with " << result
+              << ". The kernel is built from OpenCL C source, which requires "
+                 "a driver supporting that module format.\n";
+    exit(1);
+  }
+
+  ze_kernel_desc_t kernel_desc = {ZE_STRUCTURE_TYPE_KERNEL_DESC};
+  kernel_desc.pKernelName = copy_kernel_name;
+  SUCCESS_OR_TERMINATE(zeKernelCreate(copy_modules[device_id], &kernel_desc,
+                                      &copy_kernels[device_id]));
+
+  ze_device_properties_t device_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
+  SUCCESS_OR_TERMINATE(zeDeviceGetProperties(benchmark->_devices[device_id],
+                                             &device_properties));
+  ze_device_compute_properties_t compute_properties = {
+      ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES};
+  SUCCESS_OR_TERMINATE(zeDeviceGetComputeProperties(
+      benchmark->_devices[device_id], &compute_properties));
+
+  uint32_t group_size_x = 0;
+  uint32_t group_size_y = 0;
+  uint32_t group_size_z = 0;
+  SUCCESS_OR_TERMINATE(zeKernelSuggestGroupSize(
+      copy_kernels[device_id],
+      std::min({copy_kernel_preferred_group_size,
+                compute_properties.maxTotalGroupSize,
+                compute_properties.maxGroupSizeX}),
+      1, 1, &group_size_x, &group_size_y, &group_size_z));
+  copy_kernel_group_size[device_id] = std::max(1u, group_size_x);
+  copy_kernel_group_count[device_id] = std::max(
+      1u, device_properties.numSlices * device_properties.numSubslicesPerSlice);
+  SUCCESS_OR_TERMINATE(zeKernelSetGroupSize(
+      copy_kernels[device_id], copy_kernel_group_size[device_id], 1, 1));
+}
+
+void ZePeer::set_up_kernel_copy(uint32_t device_id, uint32_t queue_index,
+                                size_t buffer_size) {
+  if (!use_kernel) {
+    return;
+  }
+  if (!ze_peer_devices[device_id].compute_engines[queue_index]) {
+    std::cerr << "ERROR: --kernel needs an engine with compute capability, "
+              << "engine " << queue_index << " of device " << device_id
+              << " has none (see -q)\n";
+    exit(1);
+  }
+  create_copy_kernel(device_id, buffer_size);
+}
+
+void ZePeer::append_copy(ze_command_list_handle_t command_list,
+                         uint32_t device_id, void *dst_buffer, void *src_buffer,
+                         size_t buffer_size, ze_event_handle_t signal_event,
+                         uint32_t num_wait_events,
+                         ze_event_handle_t *wait_events) {
+  if (!use_kernel) {
+    SUCCESS_OR_TERMINATE(zeCommandListAppendMemoryCopy(
+        command_list, dst_buffer, src_buffer, buffer_size, signal_event,
+        num_wait_events, wait_events));
+    return;
+  }
+
+  ze_kernel_handle_t kernel = copy_kernels[device_id];
+  const uint64_t size = buffer_size;
+  SUCCESS_OR_TERMINATE(
+      zeKernelSetArgumentValue(kernel, 0, sizeof(src_buffer), &src_buffer));
+  SUCCESS_OR_TERMINATE(
+      zeKernelSetArgumentValue(kernel, 1, sizeof(dst_buffer), &dst_buffer));
+  SUCCESS_OR_TERMINATE(
+      zeKernelSetArgumentValue(kernel, 2, sizeof(size), &size));
+
+  const size_t group_size = copy_kernel_group_size[device_id];
+  const size_t elements = buffer_size / sizeof(uint32_t[4]);
+  const size_t groups_needed =
+      std::max<size_t>(1, (elements + group_size - 1) / group_size);
+  ze_group_count_t group_count = {
+      static_cast<uint32_t>(
+          std::min<size_t>(copy_kernel_group_count[device_id], groups_needed)),
+      1, 1};
+  SUCCESS_OR_TERMINATE(zeCommandListAppendLaunchKernel(
+      command_list, kernel, &group_count, signal_event, num_wait_events,
+      wait_events));
 }
 
 void ZePeer::query_engines() {

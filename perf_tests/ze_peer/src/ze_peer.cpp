@@ -84,6 +84,14 @@ first compute engine in the device.
 
   --regular_cmdlist           use regular command list instead of immediate
 
+  --kernel                    copy with a kernel that loads from and stores to the
+                              buffers, instead of zeCommandListAppendMemoryCopy.
+                              The kernel runs on the device that submits the copy:
+                              read loads from the remote device, write stores to it.
+                              Needs an engine with compute capability (see -q).
+                              Unidirectional, bidirectional and IPC tests only.
+                              Default: Not set.
+
   --useEvents                 measure with GPU timestamps of the copy instead of the
                               host timer, so submission and host synchronization are
                               not counted. Unidirectional single pair and IPC tests only.
@@ -105,6 +113,7 @@ bool ZePeer::parallel_copy_to_pair_targets = false;
 bool ZePeer::parallel_divide_buffers = false;
 bool ZePeer::use_immediate_cmdlist = true;
 bool ZePeer::use_event_timer = false;
+bool ZePeer::use_kernel = false;
 uint32_t ZePeer::number_iterations = 50;
 
 const size_t max_elems = 268435456; /* 256 MB */
@@ -570,6 +579,8 @@ int main(int argc, char **argv) {
       ZePeer::use_immediate_cmdlist = false;
     } else if (strcmp(argv[i], "--useEvents") == 0) {
       ZePeer::use_event_timer = true;
+    } else if (strcmp(argv[i], "--kernel") == 0) {
+      ZePeer::use_kernel = true;
     } else {
       std::cout << usage_str;
       exit(-1);
@@ -582,6 +593,14 @@ int main(int argc, char **argv) {
        ZePeer::parallel_copy_to_pair_targets)) {
     std::cerr << "[ERROR] --useEvents supports only unidirectional single "
                  "pair and IPC tests\n";
+    exit(-1);
+  }
+
+  if (ZePeer::use_kernel && (ZePeer::parallel_copy_to_single_target ||
+                             ZePeer::parallel_copy_to_multiple_targets ||
+                             ZePeer::parallel_copy_to_pair_targets)) {
+    std::cerr << "[ERROR] --kernel supports only unidirectional, "
+                 "bidirectional and IPC tests\n";
     exit(-1);
   }
 
@@ -804,6 +823,10 @@ ZePeer::ZePeer(std::vector<uint32_t> &remote_device_ids,
   }
 
   ze_peer_devices.resize(benchmark->_devices.size());
+  copy_modules.resize(benchmark->_devices.size());
+  copy_kernels.resize(benchmark->_devices.size());
+  copy_kernel_group_count.resize(benchmark->_devices.size());
+  copy_kernel_group_size.resize(benchmark->_devices.size());
 
   ze_buffers.resize(benchmark->_devices.size());
   ze_src_buffers.resize(benchmark->_devices.size());
@@ -824,7 +847,7 @@ ZePeer::ZePeer(std::vector<uint32_t> &remote_device_ids,
 
     std::vector<ze_command_queue_group_properties_t> queueProperties(
         numQueueGroups);
-    for (auto queueProperty : queueProperties) {
+    for (auto &queueProperty : queueProperties) {
       queueProperty = {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES,
                        nullptr};
     }
@@ -858,6 +881,9 @@ ZePeer::ZePeer(std::vector<uint32_t> &remote_device_ids,
         }
 
         ze_peer_devices[d].engines.push_back(enginePair);
+        ze_peer_devices[d].compute_engines.push_back(
+            (queueProperties[g].flags &
+             ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) != 0);
         if (option_u_empty) {
           this->queues.push_back(engineIndex);
         }
@@ -890,6 +916,16 @@ ZePeer::~ZePeer() {
   if (event) {
     SUCCESS_OR_TERMINATE(zeEventDestroy(event));
     SUCCESS_OR_TERMINATE(zeEventPoolDestroy(event_pool));
+  }
+  for (auto kernel : copy_kernels) {
+    if (kernel) {
+      SUCCESS_OR_TERMINATE(zeKernelDestroy(kernel));
+    }
+  }
+  for (auto module : copy_modules) {
+    if (module) {
+      SUCCESS_OR_TERMINATE(zeModuleDestroy(module));
+    }
   }
   benchmark->allDevicesCleanup();
   delete benchmark;
