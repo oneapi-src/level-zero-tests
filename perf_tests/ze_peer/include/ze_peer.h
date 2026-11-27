@@ -43,6 +43,8 @@ typedef struct _ze_peer_device_t {
   std::vector<std::pair<ze_command_queue_handle_t, ze_command_list_handle_t>>
       engines;
   std::vector<bool> compute_engines;
+  // Command queue group ordinal and index of each engine.
+  std::vector<std::pair<uint32_t, uint32_t>> engine_ordinals;
 } ze_peer_device_t;
 
 class ZePeer {
@@ -131,6 +133,10 @@ public:
       peer_test_t test_type, peer_transfer_t transfer_type,
       size_t number_buffer_elements, std::vector<uint32_t> &remote_device_ids,
       std::vector<uint32_t> &local_device_ids, bool divide_buffers);
+
+  bool bandwidth_all_to_one(peer_transfer_t transfer_type, size_t buffer_size,
+                            uint32_t one_device_id,
+                            const std::vector<uint32_t> &all_device_ids);
 
   void bandwidth_latency(peer_test_t test_type, peer_transfer_t transfer_type,
                          size_t number_buffer_elements,
@@ -306,6 +312,8 @@ public:
   static bool use_immediate_cmdlist;
   static bool use_event_timer;
   static bool use_kernel;
+  static bool all_to_one;
+  static bool one_to_all;
 
   // Size of the host buffers that initialize and validate the device
   // buffers, chunk by chunk.

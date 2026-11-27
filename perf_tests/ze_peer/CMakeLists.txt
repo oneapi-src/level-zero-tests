@@ -16,6 +16,7 @@ add_lzt_test(
     src/ze_peer_ipc.cpp
     src/ze_peer_unidirectional.cpp
     src/ze_peer_bidirectional.cpp
+    src/ze_peer_all_to_one.cpp
     src/ze_peer_parallel_multiple_targets.cpp
     src/ze_peer_parallel_pair_targets.cpp
     src/ze_peer_parallel_single_target.cpp

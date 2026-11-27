@@ -70,7 +70,8 @@ first compute engine in the device.
                               The kernel runs on the device that submits the copy:
                               read loads from the remote device, write stores to it.
                               Needs an engine with compute capability (see -q).
-                              Unidirectional, bidirectional and IPC tests only.
+                              Unidirectional, bidirectional, IPC, all to one and
+                              one to all tests only.
                               Default: Not set.
 
   --useEvents                 measure with GPU timestamps of the copy instead of the
@@ -79,7 +80,7 @@ first compute engine in the device.
                               device and reported on its own line. Bandwidth tests
                               print first the data of both copies divided by the
                               time of the slower one.
-                              Single pair and IPC tests only.
+                              Single pair, IPC, all to one and one to all tests only.
                               Default: Not set.
 
   --version                   display version
@@ -196,4 +197,24 @@ assumes that they run at the same time:
 BW [GBPS]:  512 MB:    78.58
 BW [GBPS]:  512 MB:    39.29 Device( 0 )->Device( 1 )
 BW [GBPS]:  512 MB:    39.29 Device( 1 )->Device( 0 )
+```
+
+## All to one and one to all
+
+`--all_to_one` runs once for every device as the one device: all other
+devices copy to it (`-o write`) or read from it (`-o read`) at the same time.
+`--one_to_all` makes the one device write to or read from every other device
+at the same time. Every copy has its own source and destination buffers and
+its own immediate command list. Copies submitted by the same device take the
+engines passed with `-u` in turn (default: engine 0). Copies that end up on
+the same engine may run one after another, as copy engine copies do on some
+devices, so the total shows the bandwidth of one engine; or at the same time,
+as `--kernel` copies on a compute engine do, sharing it. The first line is the
+total of all copies, timed with the host clock from releasing the copies
+together until the last one completes. With `--useEvents`, every copy follows
+on its own line, timed with GPU timestamps. Use `ZE_AFFINITY_MASK` to limit
+the devices.
+```
+./ze_peer --all_to_one -o write -z 536870912 --useEvents
+./ze_peer --one_to_all -o read -z 536870912 --useEvents --kernel
 ```

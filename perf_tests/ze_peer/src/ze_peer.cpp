@@ -72,6 +72,18 @@ first compute engine in the device.
                               Example pair list: src1:dst1,src2:dst2
                               Extra options: -x, --divide_buffers
 
+  --all_to_one                For every device as the one device, all other devices
+                              copy to it (-o write) or from it (-o read) at the same
+                              time, each copy with its own buffers and command list.
+                              Bandwidth only. Prints the total of all copies, timed
+                              from their common start until the last one completes,
+                              and with --useEvents also each copy, timed with GPU
+                              timestamps. Extra options: -u, --kernel, --useEvents
+
+  --one_to_all                Like --all_to_one, but the one device copies to (-o write)
+                              or from (-o read) every other device. Its copies use
+                              the engines passed with -u in turn.
+
   --divide_buffers            for parallel multiple targets test, divide buffers across available
                               engines specified with option -u.
 
@@ -89,7 +101,8 @@ first compute engine in the device.
                               The kernel runs on the device that submits the copy:
                               read loads from the remote device, write stores to it.
                               Needs an engine with compute capability (see -q).
-                              Unidirectional, bidirectional and IPC tests only.
+                              Unidirectional, bidirectional, IPC, all to one and
+                              one to all tests only.
                               Default: Not set.
 
   --useEvents                 measure with GPU timestamps of the copy instead of the
@@ -98,7 +111,7 @@ first compute engine in the device.
                               device and reported on its own line. Bandwidth tests
                               print first the data of both copies divided by the
                               time of the slower one.
-                              Single pair and IPC tests only.
+                              Single pair, IPC, all to one and one to all tests only.
                               Default: Not set.
 
   --version                   display version
@@ -118,6 +131,8 @@ bool ZePeer::parallel_divide_buffers = false;
 bool ZePeer::use_immediate_cmdlist = true;
 bool ZePeer::use_event_timer = false;
 bool ZePeer::use_kernel = false;
+bool ZePeer::all_to_one = false;
+bool ZePeer::one_to_all = false;
 uint32_t ZePeer::number_iterations = 50;
 
 const size_t max_elems = 268435456; /* 256 MB */
@@ -373,6 +388,7 @@ void run_test(size_t size_to_run, std::vector<uint32_t> &remote_device_ids,
 
 int main(int argc, char **argv) {
   bool run_ipc = false;
+  bool queue_placement_set = false;
   std::vector<uint32_t> remote_device_ids{};
   std::vector<uint32_t> local_device_ids{};
   std::vector<std::pair<uint32_t, uint32_t>> pair_device_ids{};
@@ -512,6 +528,7 @@ int main(int argc, char **argv) {
         std::cout << usage_str;
         exit(-1);
       }
+      queue_placement_set = true;
       if (strcmp(argv[i + 1], "src") == 0) {
         ZePeer::use_queue_in_destination = false;
         i++;
@@ -585,6 +602,10 @@ int main(int argc, char **argv) {
       ZePeer::use_event_timer = true;
     } else if (strcmp(argv[i], "--kernel") == 0) {
       ZePeer::use_kernel = true;
+    } else if (strcmp(argv[i], "--all_to_one") == 0) {
+      ZePeer::all_to_one = true;
+    } else if (strcmp(argv[i], "--one_to_all") == 0) {
+      ZePeer::one_to_all = true;
     } else {
       std::cout << usage_str;
       exit(-1);
@@ -594,8 +615,8 @@ int main(int argc, char **argv) {
   if (ZePeer::use_event_timer && (ZePeer::parallel_copy_to_single_target ||
                                   ZePeer::parallel_copy_to_multiple_targets ||
                                   ZePeer::parallel_copy_to_pair_targets)) {
-    std::cerr << "[ERROR] --useEvents supports only single pair and IPC "
-                 "tests\n";
+    std::cerr << "[ERROR] --useEvents supports only single pair, IPC, all "
+                 "to one and one to all tests\n";
     exit(-1);
   }
 
@@ -603,8 +624,76 @@ int main(int argc, char **argv) {
                              ZePeer::parallel_copy_to_multiple_targets ||
                              ZePeer::parallel_copy_to_pair_targets)) {
     std::cerr << "[ERROR] --kernel supports only unidirectional, "
-                 "bidirectional and IPC tests\n";
+                 "bidirectional, IPC, all to one and one to all tests\n";
     exit(-1);
+  }
+
+  if (ZePeer::all_to_one || ZePeer::one_to_all) {
+    if ((ZePeer::all_to_one && ZePeer::one_to_all) || ZePeer::bidirectional ||
+        run_ipc || ZePeer::parallel_copy_to_single_target ||
+        ZePeer::parallel_copy_to_multiple_targets ||
+        ZePeer::parallel_copy_to_pair_targets ||
+        !ZePeer::use_immediate_cmdlist || test_type_to_run == PEER_LATENCY ||
+        !local_device_ids.empty() || !remote_device_ids.empty() ||
+        queue_placement_set || ZePeer::parallel_divide_buffers) {
+      std::cerr << "[ERROR] --all_to_one and --one_to_all run alone, with "
+                   "immediate command lists, on all devices, bandwidth "
+                   "only. Options: -o, -z, -i, -c, -v, -u, --kernel, "
+                   "--useEvents\n";
+      exit(-1);
+    }
+    ZePeer peerQueryDevices(&num_devices);
+    if (queues.empty()) {
+      queues.push_back(0);
+    }
+    for (uint32_t transfer_type = 0;
+         transfer_type < static_cast<uint32_t>(PEER_TRANSFER_MAX);
+         transfer_type++) {
+      if (transfer_type_to_run != PEER_TRANSFER_MAX &&
+          static_cast<peer_transfer_t>(transfer_type) != transfer_type_to_run) {
+        continue;
+      }
+      for (uint32_t one = 0; one < num_devices; one++) {
+        std::vector<uint32_t> one_device_ids{one};
+        std::vector<uint32_t> all_device_ids;
+        for (uint32_t device_id = 0; device_id < num_devices; device_id++) {
+          if (device_id != one) {
+            all_device_ids.push_back(device_id);
+          }
+        }
+        std::stringstream all_devices;
+        for (auto device_id : all_device_ids) {
+          all_devices << device_id << " ";
+        }
+        const bool write = transfer_type == PEER_WRITE;
+        std::cout << "-----------------------------------------------------"
+                     "---------------------------\n"
+                  << "Bandwidth " << (write ? "Write" : "Read") << " "
+                  << (ZePeer::all_to_one ? "all to one" : "one to all")
+                  << " : Device( " << all_devices.str() << ")"
+                  << (ZePeer::all_to_one == write ? "->" : "<-") << "Device( "
+                  << one << " )\n";
+        for (size_t num_elems = 8; num_elems <= max_elems; num_elems *= 2) {
+          if (size_to_run != 0) {
+            num_elems = size_to_run;
+          }
+          ZePeer peer(one_device_ids, all_device_ids, pair_device_ids, queues);
+          if (ZePeer::validate_results) {
+            peer.warm_up_iterations = 0;
+            peer.number_iterations = 1;
+          }
+          if (!peer.bandwidth_all_to_one(
+                  static_cast<peer_transfer_t>(transfer_type), num_elems, one,
+                  all_device_ids)) {
+            tests_passed = false;
+          }
+          if (size_to_run != 0) {
+            break;
+          }
+        }
+      }
+    }
+    return tests_passed ? 0 : 1;
   }
 
   if (run_ipc == false) {
@@ -884,6 +973,7 @@ ZePeer::ZePeer(std::vector<uint32_t> &remote_device_ids,
         }
 
         ze_peer_devices[d].engines.push_back(enginePair);
+        ze_peer_devices[d].engine_ordinals.push_back(std::make_pair(g, q));
         ze_peer_devices[d].compute_engines.push_back(
             (queueProperties[g].flags &
              ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) != 0);
